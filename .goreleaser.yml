@@ -31,7 +31,6 @@ builds:
 archive:
   files:
   - README.md
-  - example.json
   - example.config.toml
   replacements:
     darwin: Darwin
@@ -76,7 +75,6 @@ nfpm:
   - /var/log/cagent
   - /etc/cagent
 
-  # Put example.json
   files:
     "example.config.toml": "/etc/cagent/example.config.toml"
     "cacert.pem": "/etc/cagent/cacert.pem"
