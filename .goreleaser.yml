@@ -1,0 +1,87 @@
+builds:
+- main: cmd/cagent/main.go
+  binary: cagent
+  goos:
+  - windows
+  - darwin
+  - linux
+  goarch:
+  - 386
+  - amd64
+  - arm
+  - arm64
+  goarm:
+  - 7
+  # List of combinations of GOOS + GOARCH + GOARM to ignore.
+  ignore:
+  - goos: darwin
+    goarch: 386
+  - goos: windows
+    goarch: arm
+  - goos: darwin
+    goarch: arm
+  - goos: windows
+    goarch: arm64
+  - goos: darwin
+    goarch: arm64
+  ldflags:
+  - -X "main.VERSION={{.Env.CAGENT_VERSION}}"
+  env:
+  - CGO_ENABLED=0
+archive:
+  files:
+  - README.md
+  - example.json
+  - example.config.toml
+  replacements:
+    darwin: Darwin
+    linux: Linux
+    windows: Windows
+    386: i386
+    amd64: x86_64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+nfpm:
+  # Default: `{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}`
+  name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+  vendor: CloudRadar UG
+  homepage: https://cloudradar.io
+  description: Monitoring agent to report CPU, disk, mem and net metrics
+  license: MIT
+
+  # Formats to be generated.
+  formats:
+  - deb
+  - rpm
+
+  # Recommend to install root SSL certificates
+  recommends:
+  - ca-certificates
+
+  # Override default /usr/local/bin destination for binaries
+  bindir: /usr/bin
+
+  # Empty folders that should be created and managed by the packager
+  # implementation.
+  empty_folders:
+  - /var/log/cagent
+  - /etc/cagent
+
+  # Put example.json
+  files:
+    "example.config.toml": "/etc/cagent/example.config.toml"
+    "cacert.pem": "/etc/cagent/cacert.pem"
+
+  scripts:
+    preinstall: "pkg-scripts/preinstall.sh"
+    postinstall: "pkg-scripts/postinstall.sh"
+    preremove: "pkg-scripts/preremove.sh"
