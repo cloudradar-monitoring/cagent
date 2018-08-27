@@ -174,6 +174,12 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 
 		results.Measurements = results.Measurements.AddWithPrefix("fs.", fsResults)
 
+		if len(errs) == 0 {
+			results.Measurements["cagent.success"] = 1
+		} else {
+			results.Measurements["cagent.success"] = 0
+		}
+		
 		if outputFile != nil {
 			err = jsonEncoder.Encode(results)
 			if err != nil {
