@@ -1,0 +1,29 @@
+# This is example config
+
+sleep = 5.0 # delay before starting a new round of checks in seconds; number must contains decimal point
+pid = "/tmp/cagent.pid" # pid file location
+
+# Logging
+log = "/var/log/cagent/cagent.log" # log file location
+log_level = "info" # "debug", "info", "error" verbose level; can be overriden with -v flag
+
+# Hub
+hub_url = "" # requires io_mode to be "http"
+hub_user = "" # requires io_mode to be "http"
+hub_password = "" # requires io_mode to be "http"
+hub_proxy = "" # HTTP proxy to use with HUB, requires io_mode to be "http"
+hub_proxy_user = "" # requires hub_proxy to be set
+hub_proxy_password = "" # requires hub_proxy_user to be set
+
+# CPU
+cpu_load_data_gathering_mode = ['avg1','avg5','avg15'] # default ['avg1']
+cpu_utilisation_gathering_mode = ['avg1','avg5','avg15'] # default ['avg1']
+cpu_utilisation_types = ['user','system','nice','idle','iowait','interrupt','softirq','steal'] # default ['user','system','nice','idle','iowait']
+
+# FS
+fs_type_include = ['ext3','ext4','xfs','jfs','ntfs','btrfs','hfs','apfs']
+fs_path_exclude = ['/mnt/*','h:'] # default []
+fs_metrics = ['free_B','free_percent','used_B','used_percent','total_B','inodes_used_percent'] # default ['free_B','free_percent','total_B']
+
+# System
+system_fields = ['unname','os_kernel','os_family','memory_total_B','os_arch','cpu_model','fqdn','memory_total_B'] # default ['uname']

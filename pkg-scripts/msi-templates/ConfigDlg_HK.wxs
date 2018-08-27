@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+   <Fragment>
+      <UI>
+      <Dialog Id="ConfigDlg_Error" Width="260" Height="85" NoMinimize="yes" Title="Configuration error">
+          <Control Id="MyDlgSkipDesc" Type="Text" Width="194" X="48" Y="15" Height="30" Text="Please specify the HUB URL" />
+          <Control Id="Ok" Type="PushButton" X="97" Y="57" Width="66" Height="17" Text="!(loc.WixUIOK)" >
+                <Publish  Event="EndDialog" Value="Return">1</Publish>
+          </Control>
+      </Dialog>
+      <Dialog Id="ConfigDlg_HK" Width="370" Height="270" Title="Configuration">
+           <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)" >
+                 <Publish Event="SpawnWaitDialog" Value="WaitForCostingDlg">CostingComplete = 1</Publish>
+           </Control>
+           <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="!(loc.WixUICancel)">
+                 <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+           </Control>
+           <Control Id="HubURLText" Type="Text" X="20" Y="60" Width="290" Height="13"
+                 NoPrefix="yes" Text="HUB URL (*required)" />
+           <Control Id="HubURL" Type="Edit" X="20" Y="72" Width="290" Height="18"
+                 Property="HUB_URL" />
+           <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)">
+                  <Publish Event="NewDialog" Value="VerifyReadyDlg">2</Publish>
+                  <Publish Event="SpawnDialog" Value="ConfigDlg_Error"><![CDATA[HUB_URL = ""]]></Publish>
+           </Control>
+     </Dialog>
+      </UI>
+   </Fragment>
+</Wix>
