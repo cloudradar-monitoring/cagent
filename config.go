@@ -17,14 +17,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	IOModeFile = "file"
-	IOModeHTTP = "http"
-
-	SenderModeWait     = "wait"
-	SenderModeInterval = "interval"
-)
-
 var DefaultCfgPath string
 
 type Cagent struct {
@@ -84,7 +76,7 @@ func New() *Cagent {
 
 	ca := &Cagent{
 		LogFile:  defaultLogPath,
-		Interval: 30,
+		Interval: 90,
 
 		CPULoadDataGather: []string{"avg1"},
 		CPUUtilTypes:      []string{"user", "system", "nice", "idle", "iowait"},

@@ -8,10 +8,10 @@ log = "/var/log/cagent/cagent.log" # log file location
 log_level = "info" # "debug", "info", "error" verbose level; can be overriden with -v flag
 
 # Hub
-hub_url = "" # requires io_mode to be "http"
-hub_user = "" # requires io_mode to be "http"
-hub_password = "" # requires io_mode to be "http"
-hub_proxy = "" # HTTP proxy to use with HUB, requires io_mode to be "http"
+hub_url = ""
+hub_user = ""
+hub_password = ""
+hub_proxy = "" # HTTP proxy to use with HUB
 hub_proxy_user = "" # requires hub_proxy to be set
 hub_proxy_password = "" # requires hub_proxy_user to be set
 
@@ -21,7 +21,7 @@ cpu_utilisation_gathering_mode = ['avg1','avg5','avg15'] # default ['avg1']
 cpu_utilisation_types = ['user','system','nice','idle','iowait','interrupt','softirq','steal'] # default ['user','system','nice','idle','iowait']
 
 # FS
-fs_type_include = ['ext3','ext4','xfs','jfs','ntfs','btrfs','hfs','apfs']
+fs_type_include = ['ext3','ext4','xfs','jfs','ntfs','btrfs','hfs','apfs','fat32'] # default ['ext3','ext4','xfs','jfs','ntfs','btrfs','hfs','apfs','fat32']
 fs_path_exclude = ['/mnt/*','h:'] # default []
 fs_metrics = ['free_B','free_percent','used_B','used_percent','total_B','inodes_used_percent'] # default ['free_B','free_percent','total_B']
 
