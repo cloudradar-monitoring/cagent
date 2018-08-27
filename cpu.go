@@ -16,7 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const measureInterval = time.Second * 5
+const measureInterval = time.Minute
 const cpuGetUtilisationTimeout = time.Second * 10
 
 var utilisationMetricsByOS = map[string][]string{
@@ -123,25 +123,26 @@ func (tsa *TimeSeriesAverage) Percentage() (map[int]ValuesMap, error) {
 	last := tsa.TimeSeries[len(tsa.TimeSeries)-1]
 	for _, d := range tsa._DurationInMinutes {
 		sum[d] = make(ValuesMap)
-		keyInt := len(tsa.TimeSeries) - int(int64(d)*int64(time.Minute)/int64(measureInterval))
+		keyInt := len(tsa.TimeSeries) - int(int64(d)*int64(time.Minute)/int64(measureInterval)) - 1
 
 		if keyInt < 0 {
 			log.Debugf("cpu.util metrics for %d min avg calculation are not collected yet", d)
+			continue
 		}
-
+		
 		for key, lastVal := range last.Values {
 			if keyInt < 0 {
 				sum[d][key] = -1
 				continue
 			}
-			sum[d][key] = float64(int64(((lastVal-tsa.TimeSeries[keyInt].Values[key])/last.Time.Sub(tsa.TimeSeries[keyInt].Time).Seconds())*10000+0.5)) / 10000
+			sum[d][key] = float64(int64(((lastVal-tsa.TimeSeries[keyInt].Values[key])/last.Time.Sub(tsa.TimeSeries[keyInt].Time).Seconds())*10000+0.5)) / 100
 		}
 	}
 
 	return sum, nil
 }
 
-func (ca *Cagent) CPUWatcher() CPUWatcher {
+func (ca *Cagent) CPUWatcher() *CPUWatcher {
 	stat := CPUWatcher{}
 	stat.UtilAvg.mu.Lock()
 
@@ -202,7 +203,7 @@ func (ca *Cagent) CPUWatcher() CPUWatcher {
 	stat.UtilAvg.SetDurationsMinutes(durations...)
 	stat.UtilAvg.mu.Unlock()
 
-	return stat
+	return &stat
 }
 
 func (stat *CPUWatcher) Once() error {

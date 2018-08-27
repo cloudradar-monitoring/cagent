@@ -127,7 +127,7 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 
 	if len(ca.CPUUtilTypes) > 0 && len(ca.CPUUtilDataGather) > 0 || len(ca.CPULoadDataGather) > 0 {
 		// optimization to prevent CPU watcher to run in case CPU util metrics not are not needed
-		cpu := ca.CPUWatcher()
+		cpu = ca.CPUWatcher()
 		if once {
 			err := cpu.Once()
 			if err != nil {
