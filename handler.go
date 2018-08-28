@@ -128,12 +128,11 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 	if len(ca.CPUUtilTypes) > 0 && len(ca.CPUUtilDataGather) > 0 || len(ca.CPULoadDataGather) > 0 {
 		// optimization to prevent CPU watcher to run in case CPU util metrics not are not needed
 		cpu = ca.CPUWatcher()
-		if once {
-			err := cpu.Once()
-			if err != nil {
-				log.Error("[CPU] Failed to read utilisation metrics: " + err.Error())
-			}
-		} else {
+		err := cpu.Once()
+		if err != nil {
+			log.Error("[CPU] Failed to read utilisation metrics: " + err.Error())
+		}
+		if !once {
 			go cpu.Run()
 		}
 	}
@@ -147,7 +146,7 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 		if cpu != nil {
 			cpum, err := cpu.Results()
 
-			log.Debugf("[CPU] Got %d metrics", len(cpum))
+			log.Debugf("[CPU] got %d metrics", len(cpum))
 
 			if err != nil {
 				// no need to log because already done inside cpu.Results()
@@ -177,9 +176,10 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 		if len(errs) == 0 {
 			results.Measurements["cagent.success"] = 1
 		} else {
+			results.Message = strings.Join(errs, "; ")
 			results.Measurements["cagent.success"] = 0
 		}
-		
+
 		if outputFile != nil {
 			err = jsonEncoder.Encode(results)
 			if err != nil {

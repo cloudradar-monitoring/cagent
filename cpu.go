@@ -16,9 +16,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const measureInterval = time.Minute
+const measureInterval = time.Second * 10
 const cpuGetUtilisationTimeout = time.Second * 10
 
+var errMetricsAreNotCollectedYet = errors.New("metrics are not collected yet")
 var utilisationMetricsByOS = map[string][]string{
 	"windows": {"system", "user", "idle", "irq"},
 	"linux":   {"system", "user", "nice", "iowait", "idle", "softirq", "irq"},
@@ -73,7 +74,7 @@ func minutes(mins int) time.Duration {
 
 func (tsa *TimeSeriesAverage) Add(t time.Time, valuesMap ValuesMap) {
 	for {
-		if len(tsa.TimeSeries) > 0 && time.Since(tsa.TimeSeries[0].Time) > minutes(tsa._DurationInMinutes[len(tsa._DurationInMinutes)-1]) {
+		if len(tsa.TimeSeries) > 0 && time.Since(tsa.TimeSeries[0].Time) > minutes(tsa._DurationInMinutes[len(tsa._DurationInMinutes)-1]+1) {
 			tsa.TimeSeries = tsa.TimeSeries[1:]
 		} else {
 			break
@@ -117,9 +118,11 @@ func (tsa *TimeSeriesAverage) Percentage() (map[int]ValuesMap, error) {
 
 	tsa.mu.Lock()
 	defer tsa.mu.Unlock()
+
 	if len(tsa.TimeSeries) == 0 {
-		return nil, errors.New("CPU metrics are not collected yet")
+		return nil, errMetricsAreNotCollectedYet
 	}
+
 	last := tsa.TimeSeries[len(tsa.TimeSeries)-1]
 	for _, d := range tsa._DurationInMinutes {
 		sum[d] = make(ValuesMap)
@@ -127,9 +130,8 @@ func (tsa *TimeSeriesAverage) Percentage() (map[int]ValuesMap, error) {
 
 		if keyInt < 0 {
 			log.Debugf("cpu.util metrics for %d min avg calculation are not collected yet", d)
-			continue
 		}
-		
+
 		for key, lastVal := range last.Values {
 			if keyInt < 0 {
 				sum[d][key] = -1
@@ -209,6 +211,7 @@ func (ca *Cagent) CPUWatcher() *CPUWatcher {
 func (stat *CPUWatcher) Once() error {
 
 	stat.UtilAvg.mu.Lock()
+	defer stat.UtilAvg.mu.Unlock()
 
 	ctx, _ := context.WithTimeout(context.Background(), cpuGetUtilisationTimeout)
 	times, err := cpu.TimesWithContext(ctx, true)
@@ -253,17 +256,16 @@ func (stat *CPUWatcher) Once() error {
 	}
 
 	stat.UtilAvg.Add(time.Now(), values)
-	stat.UtilAvg.mu.Unlock()
 	return nil
 }
 
 func (stat *CPUWatcher) Run() {
 	for {
+		time.Sleep(measureInterval)
 		err := stat.Once()
 		if err != nil {
 			log.Errorf("[CPU] Failed to read utilisation metrics: " + err.Error())
 		}
-		time.Sleep(measureInterval)
 	}
 }
 
