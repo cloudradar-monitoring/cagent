@@ -138,6 +138,7 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 	}
 
 	fs := ca.FSWatcher()
+	net := ca.NetWatcher()
 
 	for {
 		results := Result{Timestamp: time.Now().Unix(), Measurements: make(MeasurementsMap)}
@@ -172,6 +173,14 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 		}
 
 		results.Measurements = results.Measurements.AddWithPrefix("fs.", fsResults)
+
+		netResults, err := net.Results()
+		if err != nil {
+			// no need to log because already done inside fs.Results()
+			errs = append(errs, err.Error())
+		}
+
+		results.Measurements = results.Measurements.AddWithPrefix("net.", netResults)
 
 		if len(errs) == 0 {
 			results.Measurements["cagent.success"] = 1

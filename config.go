@@ -42,6 +42,13 @@ type Cagent struct {
 	FSPathExclude []string `toml:"fs_path_exclude"`
 	FSMetrics     []string `toml:"fs_metrics"`
 
+	NetInterfaceExclude             []string `toml:"net_interface_exclude"`
+	NetInterfaceExcludeRegex        []string `toml:"net_interface_exclude_regex"`
+	NetInterfaceExcludeDisconnected bool     `toml:"net_interface_exclude_disconnected"`
+	NetInterfaceExcludeLoopback     bool     `toml:"net_interface_exclude_loopback"`
+
+	NetMetrics []string `toml:"net_metrics"`
+
 	SystemFields []string `toml:"system_fields"`
 
 	// internal use
@@ -84,6 +91,10 @@ func New() *Cagent {
 
 		FSTypeInclude: []string{"ext3", "ext4", "xfs", "jfs", "ntfs", "btrfs", "hfs", "apfs", "fat32"},
 		FSMetrics:     []string{"free_B", "free_percent", "total_B"},
+
+		NetMetrics:                      []string{"in_B_per_s", "out_B_per_s"},
+		NetInterfaceExcludeDisconnected: true,
+		NetInterfaceExcludeLoopback:     true,
 	}
 
 	if rootCertsPath != "" {

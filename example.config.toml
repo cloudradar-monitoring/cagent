@@ -25,5 +25,12 @@ fs_type_include = ['ext3','ext4','xfs','jfs','ntfs','btrfs','hfs','apfs','fat32'
 fs_path_exclude = ['/mnt/*','h:'] # default []
 fs_metrics = ['free_B','free_percent','used_B','used_percent','total_B','inodes_used_percent'] # default ['free_B','free_percent','total_B']
 
+# Network
+net_interface_exclude = ['QoS Packet','LightWeight Filter','Kernel Debug','Software Loopback','Pseudo-Interface','ISATAP','utun', 'awdl']
+net_interface_exclude_regex = ["en[1-9]"]
+net_interface_exclude_disconnected = true
+net_interface_exclude_loopback = true
+net_metrics = ['in_B_per_s', 'out_B_per_s', 'errors_per_s','dropped_per_s'] # default['in_B_per_s', 'out_B_per_s']
+
 # System
 system_fields = ['unname','os_kernel','os_family','memory_total_B','os_arch','cpu_model','fqdn','memory_total_B'] # default ['uname']
