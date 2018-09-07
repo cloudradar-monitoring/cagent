@@ -16,19 +16,15 @@ const fsGetPartitionsTimeout = time.Second * 10
 
 type fsWatcher struct {
 	AllowedTypes      map[string]struct{}
-	ExcludedPathGlob  []string
 	ExcludedPathCache map[string]bool
-	Metrics           []string
+	cagent            *Cagent
 }
 
 func (ca *Cagent) FSWatcher() *fsWatcher {
-	fsWatcher := fsWatcher{AllowedTypes: map[string]struct{}{}, ExcludedPathCache: map[string]bool{}}
+	fsWatcher := fsWatcher{AllowedTypes: map[string]struct{}{}, ExcludedPathCache: map[string]bool{}, cagent: ca}
 	for _, t := range ca.FSTypeInclude {
 		fsWatcher.AllowedTypes[strings.ToLower(t)] = struct{}{}
 	}
-
-	fsWatcher.ExcludedPathGlob = ca.FSPathExclude
-	fsWatcher.Metrics = ca.FSMetrics
 
 	return &fsWatcher
 }
@@ -60,7 +56,7 @@ func (fw *fsWatcher) Results() (MeasurementsMap, error) {
 			}
 		} else {
 			pathExcluded := false
-			for _, glob := range fw.ExcludedPathGlob {
+			for _, glob := range fw.cagent.FSPathExclude {
 				pathExcluded, _ = filepath.Match(glob, partition.Mountpoint)
 				if pathExcluded {
 					break
@@ -80,13 +76,13 @@ func (fw *fsWatcher) Results() (MeasurementsMap, error) {
 		if err != nil {
 			log.Errorf("[FS] Failed to read '%s'(%s): %s", partition.Mountpoint, partition.Device, err.Error())
 			errs = append(errs, err.Error())
-			for _, metric := range fw.Metrics {
+			for _, metric := range fw.cagent.FSMetrics {
 				results[metric+"."+partition.Mountpoint] = nil
 			}
 			continue
 		}
 
-		for _, metric := range fw.Metrics {
+		for _, metric := range fw.cagent.FSMetrics {
 			switch strings.ToLower(metric) {
 			case "free_b":
 				results[metric+"."+partition.Mountpoint] = float64(usage.Free)
