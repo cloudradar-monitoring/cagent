@@ -113,8 +113,16 @@ func New() *Cagent {
 		}
 	}
 
-	if ca.HubURL == "" && os.Getenv("CAGENT_HUB_URL") != "" {
+	if ca.HubURL == ""  {
 		ca.HubURL = os.Getenv("CAGENT_HUB_URL")
+	}
+
+	if ca.HubUser == "" {
+		ca.HubUser = os.Getenv("CAGENT_HUB_USER")
+	}
+
+	if ca.HubPassword == "" {
+		ca.HubPassword = os.Getenv("CAGENT_HUB_PASSWORD")
 	}
 
 	ca.SetLogLevel(LogLevelInfo)
