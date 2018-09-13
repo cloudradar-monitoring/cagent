@@ -20,6 +20,14 @@
                  NoPrefix="yes" Text="HUB URL (*required)" />
            <Control Id="HubURL" Type="Edit" X="20" Y="72" Width="290" Height="18"
                  Property="HUB_URL" />
+           <Control Id="HubUserText" Type="Text" X="20" Y="92" Width="290" Height="13"
+                 NoPrefix="yes" Text="HUB User" />
+           <Control Id="HubUser" Type="Edit" X="20" Y="104" Width="290" Height="18"
+                 Property="HUB_USER" />
+           <Control Id="HubPasswordText" Type="Text" X="20" Y="124" Width="290" Height="13"
+                 NoPrefix="yes" Text="HUB Password" />
+           <Control Id="HubPassword" Type="Edit" X="20" Y="136" Width="290" Height="18"
+                Property="HUB_PASSWORD" />
            <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)">
                   <Publish Event="NewDialog" Value="VerifyReadyDlg">2</Publish>
                   <Publish Event="SpawnDialog" Value="ConfigDlg_Error"><![CDATA[HUB_URL = ""]]></Publish>

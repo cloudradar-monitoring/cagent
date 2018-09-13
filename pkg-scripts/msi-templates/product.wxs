@@ -58,6 +58,22 @@
                       Part="all"
                       Action="set"
                       System="yes" />
+
+                      <Environment Id="ENV_HUB_USER"
+                      Name="CAGENT_HUB_USER"
+                      Value="[HUB_USER]"
+                      Permanent="no"
+                      Part="all"
+                      Action="set"
+                      System="yes" />
+
+                      <Environment Id="ENV_HUB_PASSWORD"
+                      Name="CAGENT_HUB_USER"
+                      Value="[HUB_PASSWORD]"
+                      Permanent="no"
+                      Part="all"
+                      Action="set"
+                      System="yes" />
            </Component>
 
          {{if gt (.Shortcuts.Items | len) 0}}
@@ -128,6 +144,8 @@
          <UIRef Id="WixUI_HK" />
       </UI>
       <Property Id="HUB_URL" Secure="yes"/>
+      <Property Id="HUB_USER" Secure="yes"/>
+      <Property Id="HUB_PASSWORD" Secure="yes"/>
 
       <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
       <Property Id="MSIUSEREALADMINDETECTION" Value="1" />
