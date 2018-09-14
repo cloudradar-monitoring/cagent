@@ -68,7 +68,7 @@
                       System="yes" />
 
                       <Environment Id="ENV_HUB_PASSWORD"
-                      Name="CAGENT_HUB_USER"
+                      Name="CAGENT_HUB_PASSWORD"
                       Value="[HUB_PASSWORD]"
                       Permanent="no"
                       Part="all"
