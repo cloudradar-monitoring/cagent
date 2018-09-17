@@ -132,7 +132,7 @@ func main() {
 		if serviceInstallPtr != nil && *serviceInstallPtr || serviceInstallUserPtr != nil && *serviceInstallUserPtr != "" {
 			fmt.Println(" ****** Before start you need to set 'hub_url' config param at ", *cfgPathPtr)
 		} else {
-			fmt.Println("Missing input file flag(-i) or hub_url param in config")
+			fmt.Println("Missing hub_url in config")
 			flag.PrintDefaults()
 			return
 		}
