@@ -94,6 +94,8 @@ func New() *Cagent {
 
 		NetMetrics:                      []string{"in_B_per_s", "out_B_per_s"},
 		NetInterfaceExcludeDisconnected: true,
+		NetInterfaceExclude:     []string{},
+		NetInterfaceExcludeRegex:     []string{},
 		NetInterfaceExcludeLoopback:     true,
 	}
 
