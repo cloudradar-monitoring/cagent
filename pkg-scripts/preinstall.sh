@@ -7,5 +7,5 @@ fi
 
 # check that user exists
 if [ -z `getent passwd cagent` ]; then
-  useradd  --gid cagent --system --shell /bin/false cagent
+  useradd  --gid cagent --system -d /nonexistent --shell /bin/false cagent
 fi
