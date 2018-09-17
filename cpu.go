@@ -251,8 +251,10 @@ func (stat *CPUWatcher) Once() error {
 		}
 	}
 
-	for _, k := range []string{"system.%d.total", "user.%d.total", "nice.%d.total", "idle.%d.total", "iowait.%d.total", "interrupt.%d.total", "softirq.%d.total", "steal.%d.total"} {
-		values[k] = values[k] / float64(len(times))
+	for k, v := range values {
+		if strings.HasSuffix(k, ".total") {
+			values[k] = v / float64(len(times))
+		}
 	}
 
 	stat.UtilAvg.Add(time.Now(), values)
