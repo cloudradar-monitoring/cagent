@@ -195,12 +195,15 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 			if err != nil {
 				log.Errorf("Results json encode error: %s", err.Error())
 			}
-			break
+		} else {
+			err = ca.PostResultsToHub(results)
+			if err != nil {
+				log.Errorf("POST to hub error: %s", err.Error())
+			}
 		}
 
-		err = ca.PostResultsToHub(results)
-		if err != nil {
-			log.Errorf("POST to hub error: %s", err.Error())
+		if once {
+			break
 		}
 
 		select {

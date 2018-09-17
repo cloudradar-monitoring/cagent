@@ -63,7 +63,7 @@ func main() {
 
 	var serviceInstallUserPtr *string
 	var serviceInstallPtr *bool
-	outputFilePtr := flag.String("o", "", "file to write the results (default ./results.out)")
+	outputFilePtr := flag.String("o", "", "file to write the results")
 
 	cfgPathPtr := flag.String("c", cagent.DefaultCfgPath, "config file path")
 	logLevelPtr := flag.String("v", "", "log level – overrides the level in config file (values \"error\",\"info\",\"debug\")")
@@ -128,7 +128,7 @@ func main() {
 	if *logLevelPtr == string(cagent.LogLevelError) || *logLevelPtr == string(cagent.LogLevelInfo) || *logLevelPtr == string(cagent.LogLevelDebug) {
 		ca.SetLogLevel(cagent.LogLevel(*logLevelPtr))
 	}
-	if ca.HubURL == "" && !*serviceUninstallPtr && !*oneRunOnlyModePtr {
+	if ca.HubURL == "" && !*serviceUninstallPtr && *outputFilePtr == "" {
 		if serviceInstallPtr != nil && *serviceInstallPtr || serviceInstallUserPtr != nil && *serviceInstallUserPtr != "" {
 			fmt.Println(" ****** Before start you need to set 'hub_url' config param at ", *cfgPathPtr)
 		} else {
@@ -141,7 +141,7 @@ func main() {
 	var err error
 	var output *os.File
 
-	if *outputFilePtr == "_" {
+	if *outputFilePtr == "-" {
 		log.SetOutput(ioutil.Discard)
 		output = os.Stdout
 	} else if *outputFilePtr != "" {
