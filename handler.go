@@ -75,6 +75,7 @@ func (ca *Cagent) PostResultsToHub(result Result) error {
 	} else {
 		req, err = http.NewRequest("POST", ca.HubURL, bytes.NewBuffer(b))
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	if err != nil {
 		return err
