@@ -18,7 +18,7 @@ hub_proxy_password = "" # requires hub_proxy_user to be set
 # CPU
 cpu_load_data_gathering_mode = ['avg1','avg5','avg15'] # default ['avg1']
 cpu_utilisation_gathering_mode = ['avg1','avg5','avg15'] # default ['avg1']
-cpu_utilisation_types = ['user','system','nice','idle','iowait','interrupt','softirq','steal'] # default ['user','system','nice','idle','iowait']
+cpu_utilisation_types = ['user','system','nice','idle','iowait','interrupt','softirq','steal'] # default ['user','system','idle','iowait']
 
 # FS
 fs_type_include = ['ext3','ext4','xfs','jfs','ntfs','btrfs','hfs','apfs','fat32'] # default ['ext3','ext4','xfs','jfs','ntfs','btrfs','hfs','apfs','fat32']

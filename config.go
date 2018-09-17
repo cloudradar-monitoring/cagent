@@ -86,7 +86,7 @@ func New() *Cagent {
 		Interval: 90,
 
 		CPULoadDataGather: []string{"avg1"},
-		CPUUtilTypes:      []string{"user", "system", "nice", "idle", "iowait"},
+		CPUUtilTypes:      []string{"user", "system", "idle", "iowait"},
 		CPUUtilDataGather: []string{"avg1"},
 
 		FSTypeInclude: []string{"ext3", "ext4", "xfs", "jfs", "ntfs", "btrfs", "hfs", "apfs", "fat32"},
