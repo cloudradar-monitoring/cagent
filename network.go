@@ -3,17 +3,15 @@ package cagent
 import (
 	"context"
 	"errors"
+	"regexp"
 	"strings"
 	"time"
-
-	"regexp"
 
 	"github.com/shirou/gopsutil/net"
 	log "github.com/sirupsen/logrus"
 )
 
 const fsGetNetInterfacesTimeout = time.Second * 10
-
 
 type netWatcher struct {
 	cagent           *Cagent

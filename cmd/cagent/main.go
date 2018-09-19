@@ -1,27 +1,23 @@
 package main
 
 import (
-	"os"
-	"os/signal"
-	"path/filepath"
-	"syscall"
-
-	"github.com/cloudradar-monitoring/cagent"
-	log "github.com/sirupsen/logrus"
-
+	"bufio"
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
-	"runtime"
-	"strings"
-
+	"os/signal"
 	"os/user"
+	"path/filepath"
+	"runtime"
 	"strconv"
+	"strings"
+	"syscall"
 
-	"bufio"
-
+	"github.com/cloudradar-monitoring/cagent"
 	"github.com/kardianos/service"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -168,7 +164,7 @@ func main() {
 		defer output.Close()
 
 		if err != nil {
-			log.WithError(err).Fatalf("Failed to open the output file: '%s'")
+			log.WithError(err).Fatalf("Failed to open the output file: '%s'", *outputFilePtr)
 		}
 	}
 

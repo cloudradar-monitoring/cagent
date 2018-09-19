@@ -1,0 +1,46 @@
+---
+version: 2
+jobs:
+  test:
+    docker:
+      - image: cloudradario/go-build:0.0.3
+    working_directory: /go/src/github.com/cloudradar-monitoring/cagent
+    steps:
+      - checkout
+      - run: go test $(go list ./... | grep -v /vendor/)
+  
+  gorelease:
+    docker:
+      - image: cloudradario/go-build:0.0.3
+    working_directory: /go/src/github.com/cloudradar-monitoring/cagent
+    steps:
+      - checkout
+      - run: goreleaser --rm-dist
+      - store_artifacts:
+          path: /go/src/github.com/cloudradar-monitoring/cagent/dist
+
+workflows:
+  version: 2
+  test-on-commit:
+    jobs:
+      - test:
+          filters:
+            tags:
+              ignore: /.*/
+  
+  test-and-release:
+    jobs:
+      - test:
+          filters:
+            tags:
+              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$/
+            branches:
+              ignore: /.*/
+      - gorelease:
+          requires:
+            - test
+          filters:
+            tags:
+              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$/
+            branches:
+              ignore: /.*/
