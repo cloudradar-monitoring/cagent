@@ -2,7 +2,7 @@
 - [Install Golang 1.9 or newer](https://golang.org/dl/)
 ```bash
 go get -d -u github.com/cloudradar-monitoring/cagent
-go build -o -ldflags="-X main.VERSION=$(git --git-dir=src/github.com/cloudradar-monitoring/cagent/.git describe --always --long --dirty --tag)" cagent github.com/cloudradar-monitoring/cagent/cmd/cagent
+go build -o -ldflags="-X main.version=$(git --git-dir=src/github.com/cloudradar-monitoring/cagent/.git describe --always --long --dirty --tag)" cagent github.com/cloudradar-monitoring/cagent/cmd/cagent
 ```
 
 ## How to run
@@ -27,7 +27,7 @@ Default locations:
 ## Build binaries and deb/rpm packages
 – Install [goreleaser](https://goreleaser.com/introduction/)
 ```bash
-CAGENT_VERSION=$(git describe --always --long --dirty --tag) goreleaser --snapshot
+goreleaser --snapshot
 ```
 
 ## Build MSI package

@@ -24,8 +24,6 @@ builds:
     goarch: arm64
   - goos: darwin
     goarch: arm64
-  ldflags:
-  - -X "main.VERSION={{.Env.CAGENT_VERSION}}"
   env:
   - CGO_ENABLED=0
 archive:

@@ -26,8 +26,8 @@ import (
 
 var (
 	// set on build:
-	// go build -o cagent -ldflags="-X main.VERSION=$(git --git-dir=src/github.com/cloudradar-monitoring/cagent/.git describe --always --long --dirty --tag)" github.com/cloudradar-monitoring/cagent/cmd/cagent
-	VERSION string
+	// go build -o cagent -ldflags="-X main.version=$(git --git-dir=src/github.com/cloudradar-monitoring/cagent/.git describe --always --long --dirty --tag)" github.com/cloudradar-monitoring/cagent/cmd/cagent
+	version string
 )
 
 func askForConfirmation(s string) bool {
@@ -53,7 +53,7 @@ func askForConfirmation(s string) bool {
 
 func main() {
 	ca := cagent.New()
-	ca.SetVersion(VERSION)
+	ca.SetVersion(version)
 
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc,
@@ -83,7 +83,7 @@ func main() {
 	flag.Parse()
 
 	if *versionPtr {
-		fmt.Printf("cagent v%s released under MIT license. https://github.com/cloudradar-monitoring/cagent/\n", VERSION)
+		fmt.Printf("cagent v%s released under MIT license. https://github.com/cloudradar-monitoring/cagent/\n", version)
 		return
 	}
 	tfmt := log.TextFormatter{FullTimestamp: true}
