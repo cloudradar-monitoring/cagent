@@ -24,6 +24,8 @@ builds:
     goarch: arm64
   - goos: darwin
     goarch: arm64
+  ldflags:
+  - -s -w
   env:
   - CGO_ENABLED=0
 archive:
