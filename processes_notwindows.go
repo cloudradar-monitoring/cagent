@@ -65,13 +65,13 @@ func processesFromProc(fields map[string][]ProcStat) error {
 		comm, err := readProcFile(getHostProc() + "/" + string(stats[0]) + "/comm")
 
 		if err != nil {
-			log.Errorf("Failed to read comm: %s", stats[0], err.Error())
+			log.Errorf("Failed to read comm(%s): %s", stats[0], err.Error())
 		}
 
 		cmdline, err := readProcFile(getHostProc() + "/" + string(stats[0]) + "/cmdline")
 
 		if err != nil {
-			log.Errorf("Failed to read cmdline: %s", stats[0], err.Error())
+			log.Errorf("Failed to read cmdline(%s): %s", stats[0], err.Error())
 		}
 
 		stat := ProcStat{PID: pid, Name: string(bytes.TrimRight(comm, "\n")), Cmdline: strings.Replace(string(bytes.TrimRight(cmdline, "\x00")), "\x00", " ", -1)}

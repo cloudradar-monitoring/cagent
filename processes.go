@@ -15,17 +15,17 @@ type ProcStat struct {
 // Gets empty fields of metrics based on the OS
 func getEmptyFields() map[string][]ProcStat {
 	fields := map[string][]ProcStat{
-		"blocked":  []ProcStat{},
-		"zombies":  []ProcStat{},
-		"stopped":  []ProcStat{},
-		"running":  []ProcStat{},
-		"sleeping": []ProcStat{},
-		"total":    []ProcStat{},
-		"unknown":  []ProcStat{},
+		"blocked":  {},
+		"zombies":  {},
+		"stopped":  {},
+		"running":  {},
+		"sleeping": {},
+		"total":    {},
+		"unknown":  {},
 	}
 	switch runtime.GOOS {
 	case "windows":
-		fields = map[string][]ProcStat{"running": []ProcStat{}}
+		fields = map[string][]ProcStat{"running": {}}
 	case "freebsd":
 		fields["idle"] = []ProcStat{}
 		fields["wait"] = []ProcStat{}
