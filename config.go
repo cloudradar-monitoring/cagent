@@ -94,8 +94,8 @@ func New() *Cagent {
 
 		NetMetrics:                      []string{"in_B_per_s", "out_B_per_s"},
 		NetInterfaceExcludeDisconnected: true,
-		NetInterfaceExclude:     []string{},
-		NetInterfaceExcludeRegex:     []string{},
+		NetInterfaceExclude:             []string{},
+		NetInterfaceExcludeRegex:        []string{},
 		NetInterfaceExcludeLoopback:     true,
 	}
 
@@ -115,7 +115,7 @@ func New() *Cagent {
 		}
 	}
 
-	if ca.HubURL == ""  {
+	if ca.HubURL == "" {
 		ca.HubURL = os.Getenv("CAGENT_HUB_URL")
 	}
 

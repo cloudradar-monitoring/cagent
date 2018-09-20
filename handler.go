@@ -183,6 +183,15 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 
 		results.Measurements = results.Measurements.AddWithPrefix("net.", netResults)
 
+		proc, err := ca.ProcessesResult()
+		if err != nil {
+			// no need to log because already done inside HostInfoResults()
+			errs = append(errs, err.Error())
+		}
+
+		log.Infof("[PROC] got %d metrics", len(proc))
+		results.Measurements = results.Measurements.AddWithPrefix("proc.", proc)
+
 		if len(errs) == 0 {
 			results.Measurements["cagent.success"] = 1
 		} else {
