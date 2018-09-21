@@ -24,7 +24,7 @@ func getEmptyFields() map[string][]ProcStat {
 	}
 	switch runtime.GOOS {
 	case "windows":
-		fields = map[string][]ProcStat{"running": {}}
+		fields = map[string][]ProcStat{"running": {}, "total": {}}
 	case "freebsd":
 		fields["idle"] = []ProcStat{}
 		fields["wait"] = []ProcStat{}

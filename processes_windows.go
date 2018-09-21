@@ -48,7 +48,7 @@ func processes(fields map[string][]ProcStat) error {
 
 	for _, proc := range procs {
 		fields["running"] = append(fields["running"], ProcStat{PID: int(proc.ProcessID), Name: proc.Name, Cmdline: *proc.CommandLine})
-		fields["total"] = append(fields["running"], ProcStat{PID: int(proc.ProcessID), Name: proc.Name, Cmdline: *proc.CommandLine})
+		fields["total"] = append(fields["total"], ProcStat{PID: int(proc.ProcessID), Name: proc.Name, Cmdline: *proc.CommandLine})
 	}
 
 	return nil
