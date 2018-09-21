@@ -97,6 +97,7 @@ func New() *Cagent {
 		NetInterfaceExclude:             []string{},
 		NetInterfaceExcludeRegex:        []string{},
 		NetInterfaceExcludeLoopback:     true,
+		SystemFields:                    []string{"unname", "os_kernel", "os_family", "os_arch", "cpu_model", "fqdn", "memory_total_B"},
 	}
 
 	if rootCertsPath != "" {

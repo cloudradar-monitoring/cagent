@@ -189,7 +189,6 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 			errs = append(errs, err.Error())
 		}
 
-		log.Infof("[PROC] got %d metrics", len(proc))
 		results.Measurements = results.Measurements.AddWithPrefix("proc.", proc)
 
 		if len(errs) == 0 {
