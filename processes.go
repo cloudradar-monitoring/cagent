@@ -21,7 +21,6 @@ func getEmptyFields() map[string][]ProcStat {
 		"running":  {},
 		"sleeping": {},
 		"total":    {},
-		"unknown":  {},
 	}
 	switch runtime.GOOS {
 	case "windows":
