@@ -2,10 +2,10 @@ package cagent
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
-	"errors"
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
 )
@@ -21,7 +21,7 @@ func (ca *Cagent) SwapResults() (MeasurementsMap, error) {
 	swapStat, err := mem.SwapMemoryWithContext(ctx)
 
 	if err != nil {
-		log.Errorf("[SWAP] Failed to swap memory stat: %s", err.Error())
+		log.Errorf("[SWAP] Failed to get swap memory stat: %s", err.Error())
 		errs = append(errs, err.Error())
 	} else if swapStat.Total > 0 {
 		results["total_B"] = swapStat.Total

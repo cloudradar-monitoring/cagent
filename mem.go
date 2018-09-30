@@ -2,10 +2,10 @@ package cagent
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
-	"errors"
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
 )
@@ -21,7 +21,7 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 	memStat, err := mem.VirtualMemoryWithContext(ctx)
 
 	if err != nil {
-		log.Errorf("[MEM] Failed to virtual memory stat: %s", err.Error())
+		log.Errorf("[MEM] Failed to get virtual memory stat: %s", err.Error())
 		errs = append(errs, err.Error())
 		results["total_B"] = nil
 		results["used_B"] = nil
