@@ -156,7 +156,6 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 			}
 
 			results.Measurements = results.Measurements.AddWithPrefix("cpu.", cpum)
-
 		}
 
 		info, err := ca.HostInfoResults()
@@ -177,7 +176,7 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 
 		netResults, err := net.Results()
 		if err != nil {
-			// no need to log because already done inside fs.Results()
+			// no need to log because already done inside net.Results()
 			errs = append(errs, err.Error())
 		}
 
@@ -185,11 +184,27 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 
 		proc, err := ca.ProcessesResult()
 		if err != nil {
-			// no need to log because already done inside HostInfoResults()
+			// no need to log because already done inside ProcessesResult()
 			errs = append(errs, err.Error())
 		}
 
 		results.Measurements = results.Measurements.AddWithPrefix("proc.", proc)
+
+		mem, err := ca.MemResults()
+		if err != nil {
+			// no need to log because already done inside MemResults()
+			errs = append(errs, err.Error())
+		}
+
+		results.Measurements = results.Measurements.AddWithPrefix("mem.", mem)
+
+		swap, err := ca.SwapResults()
+		if err != nil {
+			// no need to log because already done inside MemResults()
+			errs = append(errs, err.Error())
+		}
+
+		results.Measurements = results.Measurements.AddWithPrefix("swap.", swap)
 
 		if len(errs) == 0 {
 			results.Measurements["cagent.success"] = 1
