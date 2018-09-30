@@ -2,21 +2,18 @@ package cagent
 
 import (
 	"bytes"
+	"compress/gzip"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"net/http"
-	"os"
-	"time"
-
 	"net/url"
+	"os"
+	"runtime"
 	"strconv"
 	"strings"
-
-	"compress/gzip"
-
-	"crypto/tls"
-	"runtime"
+	"time"
 
 	"github.com/shirou/gopsutil/load"
 	log "github.com/sirupsen/logrus"
@@ -105,11 +102,6 @@ func (ca *Cagent) PostResultsToHub(result Result) error {
 }
 
 func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
-	/*r,_:= cpu2.Info()
-		fmt.Printf("%+v\n\n\n",r)
-		r2,_:= cpu2.Times(true)
-		fmt.Printf("%+v\n",r2)
-	return*/
 
 	var jsonEncoder *json.Encoder
 	if ca.PidFile != "" && !once && runtime.GOOS != "windows" {
@@ -205,6 +197,17 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 		}
 
 		results.Measurements = results.Measurements.AddWithPrefix("swap.", swap)
+
+		if runtime.GOOS == "windows" {
+			wu, err := ca.WindowsUpdates()
+
+			results.Measurements = results.Measurements.AddWithPrefix("windows.", wu)
+
+			if err != nil {
+				// no need to log because already done inside MemResults()
+				errs = append(errs, err.Error())
+			}
+		}
 
 		if len(errs) == 0 {
 			results.Measurements["cagent.success"] = 1
