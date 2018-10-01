@@ -269,10 +269,12 @@ func main() {
 			switch systemManager.String() {
 			case "unix-systemv":
 				fmt.Printf("Run this command to stop/start it:\nservice %s stop\nservice %s start\n\n", svcConfig.Name, svcConfig.Name)
-			case "linux-upstart", "linux-systemd":
-				fmt.Printf("Run this command to stop/start it:\nstop %s\nstart %s\n\n", svcConfig.Name, svcConfig.Name)
+			case "linux-upstart":
+				fmt.Printf("Run this command to stop/start it:\ninitctl stop %s\ninitctl start %s\n\n", svcConfig.Name, svcConfig.Name)
+			case "linux-systemd":
+				fmt.Printf("Run this command to stop/start it:\nsystemctl stop %s\nsystemctl start %s.service\n\n", svcConfig.Name, svcConfig.Name)
 			case "darwin-launchd":
-				fmt.Printf("Run this command to stop/start it:\nlaunchctl unload %s\nlaunchctl load %s\n\n", svcConfig.Name, svcConfig.Name)
+				fmt.Printf("Run this command to stop/start it:\nlaunchctl unload %s\nlaunchctl load /Library/LaunchDaemons/%s.plist\n\n", svcConfig.Name, svcConfig.Name)
 			case "windows-service":
 				fmt.Printf("Use the Windows Service Manager to stop/start it\n\n")
 			}
