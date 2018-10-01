@@ -7,8 +7,7 @@
     "guid": "174d5f1a-04ae-4d99-8807-9e9ced201957",
     "items": [
       "cagent.exe",
-      "example.config.toml",
-      "example.json"
+      "example.config.toml"
     ]
   },
   "env": {
