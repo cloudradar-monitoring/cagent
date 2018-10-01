@@ -84,3 +84,9 @@ nfpm:
     preinstall: "pkg-scripts/preinstall.sh"
     postinstall: "pkg-scripts/postinstall.sh"
     preremove: "pkg-scripts/preremove.sh"
+
+release:
+  github:
+    owner: cloudradar-monitoring
+    name: cagent
+  draft: false
