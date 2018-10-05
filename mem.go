@@ -16,7 +16,8 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 	results := MeasurementsMap{}
 
 	var errs []string
-	ctx, _ := context.WithTimeout(context.Background(), memGetTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), memGetTimeout)
+	defer cancel()
 
 	memStat, err := mem.VirtualMemoryWithContext(ctx)
 

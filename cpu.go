@@ -213,7 +213,8 @@ func (stat *CPUWatcher) Once() error {
 	stat.UtilAvg.mu.Lock()
 	defer stat.UtilAvg.mu.Unlock()
 
-	ctx, _ := context.WithTimeout(context.Background(), cpuGetUtilisationTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), cpuGetUtilisationTimeout)
+	defer cancel()
 	times, err := cpu.TimesWithContext(ctx, true)
 
 	if err != nil {

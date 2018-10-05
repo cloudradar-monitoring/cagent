@@ -16,7 +16,8 @@ func (ca *Cagent) SwapResults() (MeasurementsMap, error) {
 	results := MeasurementsMap{}
 
 	var errs []string
-	ctx, _ := context.WithTimeout(context.Background(), swapGetTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), swapGetTimeout)
+	defer cancel()
 
 	swapStat, err := mem.SwapMemoryWithContext(ctx)
 

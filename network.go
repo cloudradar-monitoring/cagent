@@ -29,7 +29,9 @@ func (nw *netWatcher) Results() (MeasurementsMap, error) {
 	results := MeasurementsMap{}
 
 	var errs []string
-	ctx, _ := context.WithTimeout(context.Background(), fsGetNetInterfacesTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), fsGetNetInterfacesTimeout)
+	defer cancel()
+
 	interfaces, err := net.Interfaces()
 
 	if err != nil {

@@ -38,7 +38,9 @@ func WMIQueryWithContext(ctx context.Context, query string, dst interface{}, con
 }
 
 func processes(fields map[string][]ProcStat) error {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
 	procs := []Win32_Process{}
 
 	err := WMIQueryWithContext(ctx, `SELECT Name, CommandLine, ProcessID, ExecutionState FROM Win32_Process`, &procs)

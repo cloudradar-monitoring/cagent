@@ -78,7 +78,9 @@ func (ca *Cagent) HostInfoResults() (MeasurementsMap, error) {
 		return nil, nil
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
 	info, err := host.InfoWithContext(ctx)
 	errs := []string{}
 

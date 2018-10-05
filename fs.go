@@ -33,7 +33,9 @@ func (fw *fsWatcher) Results() (MeasurementsMap, error) {
 	results := MeasurementsMap{}
 
 	var errs []string
-	ctx, _ := context.WithTimeout(context.Background(), fsGetPartitionsTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), fsGetPartitionsTimeout)
+	defer cancel()
+
 	partitions, err := disk.PartitionsWithContext(ctx, true)
 
 	if err != nil {
@@ -70,7 +72,9 @@ func (fw *fsWatcher) Results() (MeasurementsMap, error) {
 			}
 		}
 
-		ctx, _ := context.WithTimeout(context.Background(), fsGetUsageTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), fsGetUsageTimeout)
+		defer cancel()
+
 		usage, err := disk.UsageWithContext(ctx, partition.Mountpoint)
 
 		if err != nil {
