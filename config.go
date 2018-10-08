@@ -104,6 +104,7 @@ func New() *Cagent {
 
 	if runtime.GOOS == "windows" {
 		ca.WindowsUpdatesWatcherInterval = 3600
+		ca.NetInterfaceExcludeRegex = []string{"Pseudo-Interface"}
 	}
 
 	if rootCertsPath != "" {
