@@ -180,3 +180,31 @@ func (nw *netWatcher) Results() (MeasurementsMap, error) {
 
 	return results, errors.New("NET: " + strings.Join(errs, "; "))
 }
+
+func (nw *netWatcher) IPAddresses() ([]string, error) {
+	var addresses []string
+
+	// Fetch all interfaces
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+
+	// Check all interfaces for their addresses
+INFLOOP:
+	for _, inf := range interfaces {
+		for _, flag := range inf.Flags {
+			// Ignore loopback addresses
+			if flag == "loopback" {
+				continue INFLOOP
+			}
+		}
+
+		// Append all addresses to our slice
+		for _, addr := range inf.Addrs {
+			addresses = append(addresses, addr.Addr)
+		}
+	}
+
+	return addresses, nil
+}
