@@ -199,6 +199,16 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 
 		results.Measurements = results.Measurements.AddWithPrefix("swap.", swap)
 
+		if runtime.GOOS == "linux" {
+			raid, err := ca.RaidState()
+			if err != nil {
+				// no need to log because already done inside RaidState()
+				errs = append(errs, err.Error())
+			}
+
+			results.Measurements = results.Measurements.AddWithPrefix("raid.", raid)
+		}
+
 		if runtime.GOOS == "windows" {
 			wu, err := wuw.WindowsUpdates()
 
