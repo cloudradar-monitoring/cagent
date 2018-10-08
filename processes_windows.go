@@ -37,21 +37,27 @@ func WMIQueryWithContext(ctx context.Context, query string, dst interface{}, con
 	}
 }
 
-func processes(fields map[string][]ProcStat) error {
+func processes() ([]ProcStat, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	procs := []Win32_Process{}
+	wmiProcs := []Win32_Process{}
 
-	err := WMIQueryWithContext(ctx, `SELECT Name, CommandLine, ProcessID, ExecutionState FROM Win32_Process`, &procs)
+	err := WMIQueryWithContext(ctx, `SELECT Name, CommandLine, ProcessID, ExecutionState FROM Win32_Process`, &wmiProcs)
 	if err != nil {
-		return errors.New("WMI query error: " + err.Error())
+		return nil, errors.New("WMI query error: " + err.Error())
 	}
 
-	for _, proc := range procs {
-		fields["running"] = append(fields["running"], ProcStat{PID: int(proc.ProcessID), Name: proc.Name, Cmdline: *proc.CommandLine})
-		fields["total"] = append(fields["total"], ProcStat{PID: int(proc.ProcessID), Name: proc.Name, Cmdline: *proc.CommandLine})
+	var procs []ProcStat
+	for _, proc := range wmiProcs {
+		procs = append(procs,
+			ProcStat{
+				PID:     int(proc.ProcessID),
+				Name:    proc.Name,
+				Cmdline: *proc.CommandLine,
+				State:   "running"},
+		)
 	}
 
-	return nil
+	return procs, nil
 }

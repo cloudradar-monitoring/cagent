@@ -10,50 +10,46 @@ type ProcStat struct {
 	PID     int
 	Name    string
 	Cmdline string
+	State   string
 }
 
-// Gets empty fields of metrics based on the OS
-func getEmptyFields() map[string][]ProcStat {
-	fields := map[string][]ProcStat{
-		"blocked":  {},
-		"zombies":  {},
-		"stopped":  {},
-		"running":  {},
-		"sleeping": {},
-		"total":    {},
+// Gets possible process states based on the OS
+func getPossibleProcStates() []string {
+	fields := []string{
+		"blocked",
+		"zombie",
+		"stopped",
+		"running",
+		"sleeping",
 	}
+
 	switch runtime.GOOS {
 	case "windows":
-		fields = map[string][]ProcStat{"running": {}, "total": {}}
+		fields = []string{"running"}
 	case "freebsd":
-		fields["idle"] = []ProcStat{}
-		fields["wait"] = []ProcStat{}
+		fields = append(fields, "idle", "wait")
 	case "darwin":
-		fields["idle"] = []ProcStat{}
+		fields = append(fields, "idle")
 	case "openbsd":
-		fields["idle"] = []ProcStat{}
+		fields = append(fields, "idle")
 	case "linux":
-		fields["dead"] = []ProcStat{}
-		fields["paging"] = []ProcStat{}
-		fields["idle"] = []ProcStat{}
+		fields = append(fields, "dead", "paging", "idle")
 	}
 	return fields
 }
 
 func (ca *Cagent) ProcessesResult() (m MeasurementsMap, err error) {
-	fields := getEmptyFields()
-	m = make(MeasurementsMap)
-	err = processes(fields)
+	states := getPossibleProcStates()
+	var procs []ProcStat
 
+	procs, err = processes()
 	if err != nil {
 		log.Error("[PROC] error: ", err.Error())
 		return nil, err
 	}
-	log.Info("[PROC] results: ", len(fields))
+	log.Info("[PROC] results: ", len(procs))
 
-	for key, val := range fields {
-		m[key+".list"] = val
-		m[key+".num"] = len(val)
-	}
+	m = MeasurementsMap{"list": procs, "possible_states": states}
+
 	return
 }

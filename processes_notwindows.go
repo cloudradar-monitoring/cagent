@@ -17,11 +17,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func processes(fields map[string][]ProcStat) error {
+func processes() ([]ProcStat, error) {
 	if runtime.GOOS == "linux" {
-		return processesFromProc(fields)
+		return processesFromProc()
 	} else {
-		return processesFromPS(fields)
+		return processesFromPS()
 	}
 }
 
@@ -34,18 +34,20 @@ func getHostProc() string {
 }
 
 // get process states from /proc/(pid)/stat
-func processesFromProc(fields map[string][]ProcStat) error {
+func processesFromProc() ([]ProcStat, error) {
 	filenames, err := filepath.Glob(getHostProc() + "/[0-9]*/stat")
 
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	var procs []ProcStat
 
 	for _, filename := range filenames {
 		_, err := os.Stat(filename)
 		data, err := readProcFile(filename)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if data == nil {
 			continue
@@ -53,7 +55,7 @@ func processesFromProc(fields map[string][]ProcStat) error {
 
 		stats := bytes.Fields(data)
 		if len(stats) < 3 {
-			return fmt.Errorf("Something is terribly wrong with %s", filename)
+			return nil, fmt.Errorf("Something is terribly wrong with %s", filename)
 		}
 
 		pid, err := strconv.Atoi(string(stats[0]))
@@ -78,25 +80,27 @@ func processesFromProc(fields map[string][]ProcStat) error {
 
 		switch stats[2][0] {
 		case 'R':
-			fields["running"] = append(fields["running"], stat)
+			stat.State = "running"
 		case 'S':
-			fields["sleeping"] = append(fields["sleeping"], stat)
+			stat.State = "sleeping"
 		case 'D':
-			fields["blocked"] = append(fields["blocked"], stat)
+			stat.State = "blocked"
 		case 'Z':
-			fields["zombies"] = append(fields["zombies"], stat)
+			stat.State = "zombie"
 		case 'X':
-			fields["dead"] = append(fields["dead"], stat)
+			stat.State = "dead"
 		case 'T', 't':
-			fields["stopped"] = append(fields["stopped"], stat)
+			stat.State = "stopped"
 		case 'W':
-			fields["paging"] = append(fields["paging"], stat)
+			stat.State = "paging"
 		case 'I':
-			fields["idle"] = append(fields["idle"], stat)
+			stat.State = "idle"
+		default:
+			stat.State = "unknown"
 		}
-		fields["total"] = append(fields["total"], stat)
+		procs = append(procs, stat)
 	}
-	return nil
+	return procs, nil
 }
 
 func readProcFile(filename string) ([]byte, error) {
@@ -132,13 +136,15 @@ func execPS() ([]byte, error) {
 	return out, err
 }
 
-func processesFromPS(fields map[string][]ProcStat) error {
+func processesFromPS() ([]ProcStat, error) {
 	out, err := execPS()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	lines := strings.Split(string(out), "\n")
+
+	var procs []ProcStat
 
 	for i, line := range lines {
 		if i == 0 {
@@ -162,26 +168,27 @@ func processesFromPS(fields map[string][]ProcStat) error {
 		stat := ProcStat{PID: pid, Name: fileBaseParts[0], Cmdline: last}
 		switch parts[1][0] {
 		case 'W':
-			fields["wait"] = append(fields["wait"], stat)
+			stat.State = "wait"
 		case 'U', 'D', 'L':
 			// Also known as uninterruptible sleep or disk sleep
-			fields["blocked"] = append(fields["blocked"], stat)
+			stat.State = "blocked"
 		case 'Z':
-			fields["zombies"] = append(fields["zombies"], stat)
+			stat.State = "zombie"
 		case 'X':
-			fields["dead"] = append(fields["dead"], stat)
+			stat.State = "dead"
 		case 'T':
-			fields["stopped"] = append(fields["stopped"], stat)
+			stat.State = "stopped"
 		case 'R':
-			fields["running"] = append(fields["running"], stat)
+			stat.State = "running"
 		case 'S':
-			fields["sleeping"] = append(fields["sleeping"], stat)
+			stat.State = "sleeping"
 		case 'I':
-			fields["idle"] = append(fields["idle"], stat)
-		case '?':
-			fields["unknown"] = append(fields["unknown"], stat)
+			stat.State = "idle"
+		default:
+			stat.State = "unknown"
 		}
-		fields["total"] = append(fields["total"], stat)
+
+		procs = append(procs, stat)
 	}
-	return nil
+	return procs, nil
 }

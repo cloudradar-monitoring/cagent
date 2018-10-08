@@ -132,6 +132,7 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 
 	fs := ca.FSWatcher()
 	net := ca.NetWatcher()
+	wuw := ca.WindowsUpdatesWatcher()
 
 	for {
 		results := Result{Timestamp: time.Now().Unix(), Measurements: make(MeasurementsMap)}
@@ -199,7 +200,7 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 		results.Measurements = results.Measurements.AddWithPrefix("swap.", swap)
 
 		if runtime.GOOS == "windows" {
-			wu, err := ca.WindowsUpdates()
+			wu, err := wuw.WindowsUpdates()
 
 			results.Measurements = results.Measurements.AddWithPrefix("windows.", wu)
 
