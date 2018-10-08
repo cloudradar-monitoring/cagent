@@ -33,4 +33,4 @@ net_interface_exclude_loopback = true
 net_metrics = ['in_B_per_s', 'out_B_per_s', 'errors_per_s','dropped_per_s'] # default['in_B_per_s', 'out_B_per_s']
 
 # System
-system_fields = ['unname','os_kernel','os_family','os_arch','cpu_model','fqdn','memory_total_B'] # default ['unname','os_kernel','os_family','os_arch','cpu_model','fqdn','memory_total_B']
+system_fields = ['uname','os_kernel','os_family','os_arch','cpu_model','fqdn','memory_total_B'] # default ['uname','os_kernel','os_family','os_arch','cpu_model','fqdn','memory_total_B']
