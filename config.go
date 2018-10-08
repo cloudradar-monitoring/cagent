@@ -51,6 +51,8 @@ type Cagent struct {
 
 	SystemFields []string `toml:"system_fields"`
 
+	WindowsUpdatesWatcherInterval     int     `toml:"windows_updates_watcher_interval"`
+
 	// internal use
 	hubHttpClient *http.Client
 
@@ -98,6 +100,10 @@ func New() *Cagent {
 		NetInterfaceExcludeRegex:        []string{},
 		NetInterfaceExcludeLoopback:     true,
 		SystemFields:                    []string{"uname", "os_kernel", "os_family", "os_arch", "cpu_model", "fqdn", "memory_total_B"},
+	}
+
+	if runtime.GOOS == "windows" {
+		ca.WindowsUpdatesWatcherInterval = 3600
 	}
 
 	if rootCertsPath != "" {

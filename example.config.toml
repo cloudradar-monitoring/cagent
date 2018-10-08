@@ -34,3 +34,6 @@ net_metrics = ['in_B_per_s', 'out_B_per_s', 'errors_per_s','dropped_per_s'] # de
 
 # System
 system_fields = ['uname','os_kernel','os_family','os_arch','cpu_model','fqdn','memory_total_B'] # default ['uname','os_kernel','os_family','os_arch','cpu_model','fqdn','memory_total_B']
+
+# Windows
+windows_updates_watcher_interval = 3600 # default 3600

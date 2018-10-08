@@ -3,7 +3,6 @@
 package cagent
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/go-ole/go-ole"
@@ -22,23 +21,34 @@ const (
 	WUStatusAborted
 )
 
-func (ca *Cagent) WindowsUpdates() (MeasurementsMap, error) {
-	results := MeasurementsMap{}
+type WindowsUpdateWatcher struct {
+	LastFetchedAt time.Time
+	Available     int
+	Pending       int
+	Err           error
+
+	ca *Cagent
+}
+
+func windowsUpdates() (available int, pending int, err error) {
 	start := time.Now()
-	err := ole.CoInitializeEx(0, 0)
+	err = ole.CoInitializeEx(0, 0)
 	if err != nil {
-		log.Error("OLE CoInitializeEx: ", err.Error())
+		log.Error("[Windows Updates] OLE CoInitializeEx: ", err.Error())
 	}
+
 	defer ole.CoUninitialize()
 	mus, err := oleutil.CreateObject("Microsoft.Update.Session")
 	if err != nil {
-		return nil, fmt.Errorf("Windows Updates: Failed to create Microsoft.Update.Session: %s", err.Error())
+		log.Errorf("[Windows Updates] Failed to create Microsoft.Update.Session: %s", err.Error())
+		return
 	}
 
 	defer mus.Release()
 	update, err := mus.QueryInterface(ole.IID_IDispatch)
 	if err != nil {
-		return nil, fmt.Errorf("Windows Updates: Failed to create QueryInterface: %s", err.Error())
+		log.Error("[Windows Updates] Failed to create QueryInterface:: ", err.Error())
+		return
 	}
 
 	defer update.Release()
@@ -46,7 +56,8 @@ func (ca *Cagent) WindowsUpdates() (MeasurementsMap, error) {
 
 	us, err := oleutil.CallMethod(update, "CreateUpdateSearcher")
 	if err != nil {
-		return nil, fmt.Errorf("Windows Updates: Failed CallMethod CreateUpdateSearcher: %s", err.Error())
+		log.Error("[Windows Updates] Failed CallMethod CreateUpdateSearcher: ", err.Error())
+		return
 	}
 
 	usd := us.ToIDispatch()
@@ -54,7 +65,8 @@ func (ca *Cagent) WindowsUpdates() (MeasurementsMap, error) {
 
 	usr, err := oleutil.CallMethod(usd, "Search", "IsInstalled=0 and Type='Software' and IsHidden=0")
 	if err != nil {
-		return nil, fmt.Errorf("Windows Updates: Failed CallMethod Search: %s", err.Error())
+		log.Error("[Windows Updates] Failed CallMethod Search: ", err.Error())
+		return
 	}
 	log.Debugf("[Windows Updates] OLE query took %.1fs", time.Since(start).Seconds())
 
@@ -63,7 +75,8 @@ func (ca *Cagent) WindowsUpdates() (MeasurementsMap, error) {
 
 	upd, err := oleutil.GetProperty(usrd, "Updates")
 	if err != nil {
-		return nil, fmt.Errorf("Windows Updates: Failed to get Updates property: %s", err.Error())
+		log.Error("[Windows Updates] Failed to get Updates property: ", err.Error())
+		return
 	}
 
 	updd := upd.ToIDispatch()
@@ -71,21 +84,24 @@ func (ca *Cagent) WindowsUpdates() (MeasurementsMap, error) {
 
 	updn, err := oleutil.GetProperty(updd, "Count")
 	if err != nil {
-		return nil, fmt.Errorf("Windows Updates: Failed to get Count property: %s", err.Error())
+		log.Error("[Windows Updates] Failed to get Count property: ", err.Error())
+		return
 	}
 
-	results["updates_available"] = updn.Val
+	available = int(updn.Val)
 
 	thc, err := oleutil.CallMethod(usd, "GetTotalHistoryCount")
 	if err != nil {
-		return nil, fmt.Errorf("Windows Updates: Failed CallMethod GetTotalHistoryCount: %s", err.Error())
+		log.Error("[Windows Updates] Failed CallMethod GetTotalHistoryCount: ", err.Error())
+		return
 	}
 
 	thcn := int(thc.Val)
 
 	uhistRaw, err := oleutil.CallMethod(usd, "QueryHistory", 0, thcn)
 	if err != nil {
-		return nil, fmt.Errorf("Windows Updates: Failed CallMethod QueryHistory: %s", err.Error())
+		log.Error("[Windows Updates] Failed CallMethod QueryHistory: ", err.Error())
+		return
 	}
 
 	uhist := uhistRaw.ToIDispatch()
@@ -93,10 +109,10 @@ func (ca *Cagent) WindowsUpdates() (MeasurementsMap, error) {
 
 	countUhist, err := oleutil.GetProperty(uhist, "Count")
 	if err != nil {
-		return nil, fmt.Errorf("Windows Updates: Failed to get Count property: %s", err.Error())
+		log.Error("[Windows Updates] Failed to get Count property: ", err.Error())
+		return
 	}
 
-	pendingCount := 0
 	for i := 0; i < int(countUhist.Val); i++ {
 		itemRaw, err := oleutil.GetProperty(uhist, "Item", i)
 		if err != nil {
@@ -115,11 +131,56 @@ func (ca *Cagent) WindowsUpdates() (MeasurementsMap, error) {
 		}
 
 		if WindowsUpdateStatus(int(resultCode.Val)) == WUStatusPending {
-			pendingCount++
+			pending++
 		}
 	}
+	return
+}
 
-	results["updates_needs_reboot"] = pendingCount
+func (ca *Cagent) WindowsUpdatesWatcher() *WindowsUpdateWatcher {
+	wuw := &WindowsUpdateWatcher{ca: ca}
+
+	go func() {
+		for {
+			available, pending, err := windowsUpdates()
+			wuw.LastFetchedAt = time.Now()
+			wuw.Err = err
+			wuw.Available = available
+			wuw.Pending = pending
+
+			time.Sleep(time.Second * time.Duration(ca.WindowsUpdatesWatcherInterval))
+		}
+	}()
+
+	return wuw
+}
+
+func (wuw *WindowsUpdateWatcher) WindowsUpdates() (MeasurementsMap, error) {
+	results := MeasurementsMap{}
+	if wuw.LastFetchedAt.IsZero() {
+		results["updates_available"] = nil
+		results["updates_pending"] = nil
+		results["query_state"] = "pending"
+		results["query_timestamp"] = nil
+
+		return results, nil
+	}
+
+	log.Debugf("[Windows Updates] last time fetched: %.1f seconds ago", time.Since(wuw.LastFetchedAt).Seconds())
+	results["query_timestamp"] = wuw.LastFetchedAt.Unix()
+
+	if wuw.Err != nil {
+		results["updates_available"] = nil
+		results["updates_pending"] = nil
+		results["query_state"] = "failed"
+		results["query_message"] = wuw.Err.Error()
+
+		return results, nil
+	}
+
+	results["updates_available"] = wuw.Available
+	results["updates_pending"] = wuw.Pending
+	results["query_state"] = "succeeded"
 
 	return results, nil
 }

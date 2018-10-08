@@ -202,7 +202,7 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 		if runtime.GOOS == "windows" {
 			wu, err := wuw.WindowsUpdates()
 
-			results.Measurements = results.Measurements.AddWithPrefix("windows.", wu)
+			results.Measurements = results.Measurements.AddWithPrefix("windows_update.", wu)
 
 			if err != nil {
 				// no need to log because already done inside MemResults()
