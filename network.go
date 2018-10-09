@@ -3,11 +3,13 @@ package cagent
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/shirou/gopsutil/net"
+	utilnet "github.com/shirou/gopsutil/net"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -15,7 +17,7 @@ const fsGetNetInterfacesTimeout = time.Second * 10
 
 type netWatcher struct {
 	cagent           *Cagent
-	lastIOCounters   []net.IOCountersStat
+	lastIOCounters   []utilnet.IOCountersStat
 	lastIOCountersAt *time.Time
 
 	ExcludedInterfaceCache map[string]bool
@@ -32,7 +34,7 @@ func (nw *netWatcher) Results() (MeasurementsMap, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), fsGetNetInterfacesTimeout)
 	defer cancel()
 
-	interfaces, err := net.Interfaces()
+	interfaces, err := utilnet.Interfaces()
 
 	if err != nil {
 		log.Errorf("[NET] Failed to read interfaces: %s", err.Error())
@@ -116,7 +118,7 @@ func (nw *netWatcher) Results() (MeasurementsMap, error) {
 	}
 
 	ctx, _ = context.WithTimeout(context.Background(), fsGetUsageTimeout)
-	counters, err := net.IOCountersWithContext(ctx, true)
+	counters, err := utilnet.IOCountersWithContext(ctx, true)
 
 	if err != nil {
 		log.Errorf("[NET] Failed to read IOCounters: %s", err.Error())
@@ -130,8 +132,8 @@ func (nw *netWatcher) Results() (MeasurementsMap, error) {
 		gotIOCountersAt := time.Now()
 		if nw.lastIOCounters != nil {
 			for _, counter := range counters {
-				if isExcluded, exists := nw.ExcludedInterfaceCache[counter.Name]; exists && !isExcluded {
-					var previousIOCounters *net.IOCountersStat
+				if ifIncluded, exists := nw.ExcludedInterfaceCache[counter.Name]; exists && !ifIncluded {
+					var previousIOCounters *utilnet.IOCountersStat
 					for _, lastIOCounter := range nw.lastIOCounters {
 						if lastIOCounter.Name == counter.Name {
 							previousIOCounters = &lastIOCounter
@@ -181,11 +183,11 @@ func (nw *netWatcher) Results() (MeasurementsMap, error) {
 	return results, errors.New("NET: " + strings.Join(errs, "; "))
 }
 
-func (nw *netWatcher) IPAddresses() ([]string, error) {
+func IPAddresses(prefix string) (MeasurementsMap, error) {
 	var addresses []string
 
 	// Fetch all interfaces
-	interfaces, err := net.Interfaces()
+	interfaces, err := utilnet.Interfaces()
 	if err != nil {
 		return nil, err
 	}
@@ -206,5 +208,31 @@ INFLOOP:
 		}
 	}
 
-	return addresses, nil
+	result := make(MeasurementsMap)
+	v4Count := uint32(1)
+	v6Count := uint32(1)
+
+	for _, address := range addresses {
+		ipAddr, _, err := net.ParseCIDR(address)
+		if err != nil {
+			log.Warnf("Failed to parse IP address %s: %s", address, err)
+			continue
+		}
+		// Check if ip is v4
+		if v4 := ipAddr.To4(); v4 != nil {
+			result[fmt.Sprintf("%s.ipv4.%d", prefix, v4Count)] = v4.String()
+			v4Count++
+			continue
+		}
+		// Check if ip is v6
+		if v6 := ipAddr.To16(); v6 != nil {
+			result[fmt.Sprintf("%s.ipv6.%d", prefix, v6Count)] = v6.String()
+			v6Count++
+			continue
+		}
+
+		log.Warnf("Could not determine if IP is v4 or v6: %s", address)
+	}
+
+	return result, nil
 }
