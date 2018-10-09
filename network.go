@@ -183,7 +183,7 @@ func (nw *netWatcher) Results() (MeasurementsMap, error) {
 	return results, errors.New("NET: " + strings.Join(errs, "; "))
 }
 
-func IPAddresses(prefix string) (MeasurementsMap, error) {
+func IPAddresses() (MeasurementsMap, error) {
 	var addresses []string
 
 	// Fetch all interfaces
@@ -220,13 +220,13 @@ INFLOOP:
 		}
 		// Check if ip is v4
 		if v4 := ipAddr.To4(); v4 != nil {
-			result[fmt.Sprintf("%s.ipv4.%d", prefix, v4Count)] = v4.String()
+			result[fmt.Sprintf("ipv4.%d", v4Count)] = v4.String()
 			v4Count++
 			continue
 		}
 		// Check if ip is v6
 		if v6 := ipAddr.To16(); v6 != nil {
-			result[fmt.Sprintf("%s.ipv6.%d", prefix, v6Count)] = v6.String()
+			result[fmt.Sprintf("ipv6.%d", v6Count)] = v6.String()
 			v6Count++
 			continue
 		}
