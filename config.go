@@ -105,6 +105,8 @@ func New() *Cagent {
 	if runtime.GOOS == "windows" {
 		ca.WindowsUpdatesWatcherInterval = 3600
 		ca.NetInterfaceExcludeRegex = []string{"Pseudo-Interface"}
+		ca.CPULoadDataGather = []string{}
+		ca.CPUUtilTypes = []string{"user", "system", "idle"}
 	}
 
 	if rootCertsPath != "" {
