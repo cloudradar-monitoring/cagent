@@ -3,7 +3,6 @@ package top
 import (
 	"bytes"
 	"container/ring"
-	"io"
 	"log"
 	"os/exec"
 	"strconv"
@@ -53,20 +52,12 @@ func (t *Top) Run() {
 
 		// Command to list processes
 		cmdPS := exec.Command("ps", "ax", "-o", "pid,%cpu,command")
-		// Command to sort processes by cpu load
-		cmdSort := exec.Command("sort", "-u", "-k2")
-
-		// List processes and sort them
-		r, w := io.Pipe()
-		cmdPS.Stdout = w
-		cmdSort.Stdin = r
-		cmdSort.Stdout = &buff
-
-		cmdPS.Start()
-		cmdSort.Start()
-		cmdPS.Wait()
-		w.Close()
-		cmdSort.Wait()
+		cmdPS.Stdout = &buff
+		err := cmdPS.Run()
+		if err != nil {
+			log.Printf("Failed to list processes: %s", err)
+			return
+		}
 
 		lines := strings.Split(buff.String(), "\n")
 
