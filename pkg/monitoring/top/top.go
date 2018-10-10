@@ -2,6 +2,7 @@ package top
 
 import (
 	"bytes"
+	"container/ring"
 	"io"
 	"log"
 	"os/exec"
@@ -14,6 +15,8 @@ import (
 type Process struct {
 	PID     uint32
 	Load    float64
+	Load5   *ring.Ring
+	Load15  *ring.Ring
 	Command string
 }
 
@@ -108,13 +111,26 @@ func (t *Top) Run() {
 				continue
 			}
 
-			p := &Process{
-				Command: parts2[1],
-				Load:    parsedLoad,
-				PID:     uint32(parsedPID),
+			var p *Process
+
+			// Check if we already track the process
+			if _, ok := t.pList[uint32(parsedPID)]; !ok {
+				p = &Process{
+					Command: parts2[1],
+					Load5:   ring.New(5 * 60),
+					Load15:  ring.New(15 * 60),
+					PID:     uint32(parsedPID),
+				}
+				t.pList[uint32(parsedPID)] = p
+			} else {
+				p = t.pList[uint32(parsedPID)]
 			}
 
-			t.pList[p.PID] = p
+			p.Load = parsedLoad
+			p.Load5.Value = parsedLoad
+			p.Load5 = p.Load5.Next()
+			p.Load15.Value = parsedLoad
+			p.Load15 = p.Load15.Next()
 		}
 		// Try to get a sample every second
 		tRun := time.Since(tStart)
@@ -133,16 +149,67 @@ func (t *Top) Stop() {
 }
 
 func (t *Top) HighestLoad() {
-	var pi Process
+	var pi *Process
 	var pid uint32
 
+	// Find process with highest load
 	t.pListMtx.RLock()
 	for k, v := range t.pList {
+		if pi == nil {
+			pi = v
+		}
 		if v.Load > pi.Load {
-			pi = *v
+			pi = v
 			pid = k
 		}
 	}
 	t.pListMtx.RUnlock()
-	log.Printf("Load %d: %f", pid, pi.Load)
+
+	var avg5, avg15 float64
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	// Func to calculate 5min average
+	avg5f := func() {
+		total := float64(0)
+		count := 0
+		pi.Load5.Do(func(p interface{}) {
+			if p == nil {
+				return
+			}
+			count++
+			total += p.(float64)
+		})
+		avg5 = total / float64(count)
+		wg.Done()
+	}
+
+	// Func to calculate 15min average
+	avg15f := func() {
+		total := float64(0)
+		count := 0
+		pi.Load15.Do(func(p interface{}) {
+			if p == nil {
+				return
+			}
+			count++
+			total += p.(float64)
+		})
+		avg15 = total / float64(count)
+		wg.Done()
+	}
+
+	// pi can be nil on first run until thigs are set up
+	if pi == nil {
+		return
+	}
+
+	// Sanity check in case the Rings aren't initialised yet
+	if pi.Load5 != nil && pi.Load15 != nil {
+		go avg5f()
+		go avg15f()
+		wg.Wait()
+	}
+
+	log.Printf("Load %d: %f - %f - %f", pid, pi.Load, avg5, avg15)
 }
