@@ -53,26 +53,14 @@ func (nw *netWatcher) Results() (MeasurementsMap, error) {
 	}
 
 	for _, netIf := range interfaces {
-		if nw.cagent.NetInterfaceExcludeDisconnected {
-			up := false
-			for _, flag := range netIf.Flags {
-				if flag == "up" {
-					up = true
-					break
-				}
-			}
-			if !up {
-				log.Debugf("[NET] down interface excluded: %s", netIf.Name)
-				continue
-			}
-		}
-
-		if ifExcluded, cacheExists := nw.ExcludedInterfaceCache[netIf.Name]; cacheExists {
-			if ifExcluded {
+		if isExcluded, cacheExists := nw.ExcludedInterfaceCache[netIf.Name]; cacheExists {
+			if isExcluded {
 				log.Debugf("[NET] interface excluded: %s", netIf.Name)
 				continue
 			}
 		} else {
+			isExcluded := false
+
 			if nw.cagent.NetInterfaceExcludeLoopback {
 				loopback := false
 				for _, flag := range netIf.Flags {
@@ -81,32 +69,46 @@ func (nw *netWatcher) Results() (MeasurementsMap, error) {
 						break
 					}
 				}
-				nw.ExcludedInterfaceCache[netIf.Name] = loopback
+
 				if loopback {
-					log.Debugf("[NET] loopback interface excluded: %s", netIf.Name)
-					continue
-				}
-			}
-			ifExcluded := false
-			for _, excludedIf := range nw.cagent.NetInterfaceExclude {
-				if strings.Contains(strings.ToLower(netIf.Name), strings.ToLower(excludedIf)) {
-					ifExcluded = true
-					break
+					isExcluded = true
 				}
 			}
 
-			if !ifExcluded {
-				for _, re := range netInterfaceExcludeRegexCompiled {
-					if re.MatchString(netIf.Name) {
-						ifExcluded = true
+			if !isExcluded && nw.cagent.NetInterfaceExcludeDisconnected {
+				up := false
+				for _, flag := range netIf.Flags {
+					if flag == "up" {
+						up = true
+						break
+					}
+				}
+				if !up {
+					isExcluded = true
+				}
+			}
+
+			if !isExcluded {
+				for _, excludedIf := range nw.cagent.NetInterfaceExclude {
+					if strings.EqualFold(netIf.Name, excludedIf) {
+						isExcluded = true
 						break
 					}
 				}
 			}
 
-			nw.ExcludedInterfaceCache[netIf.Name] = ifExcluded
+			if !isExcluded {
+				for _, re := range netInterfaceExcludeRegexCompiled {
+					if re.MatchString(netIf.Name) {
+						isExcluded = true
+						break
+					}
+				}
+			}
 
-			if ifExcluded {
+			nw.ExcludedInterfaceCache[netIf.Name] = isExcluded
+
+			if isExcluded {
 				log.Debugf("[NET] interface excluded: %s", netIf.Name)
 				continue
 			}
@@ -128,7 +130,7 @@ func (nw *netWatcher) Results() (MeasurementsMap, error) {
 		gotIOCountersAt := time.Now()
 		if nw.lastIOCounters != nil {
 			for _, counter := range counters {
-				if ifIncluded, exists := nw.ExcludedInterfaceCache[counter.Name]; exists && !ifIncluded {
+				if isExcluded, exists := nw.ExcludedInterfaceCache[counter.Name]; exists && !isExcluded {
 					var previousIOCounters *net.IOCountersStat
 					for _, lastIOCounter := range nw.lastIOCounters {
 						if lastIOCounter.Name == counter.Name {
@@ -159,6 +161,9 @@ func (nw *netWatcher) Results() (MeasurementsMap, error) {
 		} else {
 			log.Debugf("[NET] IO stat is available starting at 2nd check")
 			for _, netIf := range interfaces {
+				if isExcluded, exists := nw.ExcludedInterfaceCache[netIf.Name]; exists && isExcluded {
+					continue
+				}
 				for _, metric := range nw.cagent.NetMetrics {
 					results[metric+"."+netIf.Name] = nil
 				}

@@ -26,7 +26,7 @@ fs_path_exclude = ['/mnt/*','h:'] # default []
 fs_metrics = ['free_B','free_percent','used_B','used_percent','total_B','inodes_used_percent'] # default ['free_B','free_percent','total_B']
 
 # Network
-net_interface_exclude = ['QoS Packet','LightWeight Filter','Kernel Debug','Software Loopback','Pseudo-Interface','ISATAP','utun', 'awdl']
+net_interface_exclude = ['utun', 'awdl']
 net_interface_exclude_regex = ["en[1-9]"] # default [], default on windows: ["Pseudo-Interface"]
 net_interface_exclude_disconnected = true # default true
 net_interface_exclude_loopback = true # default true
