@@ -159,6 +159,13 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
 
 		results.Measurements = results.Measurements.AddWithPrefix("system.", info)
 
+		ipResults, err := IPAddresses()
+		if err != nil {
+			errs = append(errs, err.Error())
+		}
+
+		results.Measurements = results.Measurements.AddWithPrefix("system.", ipResults)
+
 		fsResults, err := fs.Results()
 		if err != nil {
 			// no need to log because already done inside fs.Results()
