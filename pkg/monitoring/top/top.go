@@ -1,12 +1,8 @@
 package top
 
 import (
-	"bytes"
 	"container/ring"
 	"log"
-	"os/exec"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -20,10 +16,9 @@ type Process struct {
 }
 
 type ProcessInfo struct {
+	PID     uint32
 	Command string
-	Load1   float64
-	Load5   float64
-	Load15  float64
+	Load    float64
 }
 
 type Top struct {
@@ -48,81 +43,36 @@ func (t *Top) Run() {
 		if t.stop == true {
 			return
 		}
-		var buff bytes.Buffer
 
-		// Command to list processes
-		cmdPS := exec.Command("ps", "ax", "-o", "pid,%cpu,command")
-		cmdPS.Stdout = &buff
-		err := cmdPS.Run()
+		// Call to OS dependent implementation to fetch procsses
+		processes, err := t.GetProcesses()
 		if err != nil {
-			log.Printf("Failed to list processes: %s", err)
-			return
+			log.Printf("Failed to get process list: %s", err)
+			continue
 		}
 
-		lines := strings.Split(buff.String(), "\n")
-
-		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			if len(line) == 0 {
-				continue
-			}
-
-			parts1 := strings.Split(line, "   ")
-
-			// If load is >= 10 there are only two spaces
-			if len(parts1) != 2 {
-				parts1 = strings.Split(line, "  ")
-			}
-
-			// Workaround if format is a bit off for some reason.
-			// Maybe could make sense to log these and investigate later
-			if len(parts1) < 2 {
-				continue
-			}
-
-			parts2 := strings.SplitN(parts1[1], " ", 2)
-
-			parsedLoad, err := strconv.ParseFloat(parts2[0], 64)
-			if err != nil {
-
-			}
-
-			parsedPID, err := strconv.ParseUint(parts1[0], 10, 32)
-			if err != nil {
-
-			}
-
-			// Workaround if format is a bit off for some reason.
-			// Maybe could make sense to log these and investigate later
-			if len(parts2) < 2 {
-				log.Printf("Splitting error2:")
-				log.Printf("%+v", line)
-				log.Printf("%+v", parts1)
-				log.Printf("%+v", parts2)
-				continue
-			}
-
-			var p *Process
-
+		var pr *Process
+		for _, p := range processes {
 			// Check if we already track the process
-			if _, ok := t.pList[uint32(parsedPID)]; !ok {
-				p = &Process{
-					Command: parts2[1],
+			if _, ok := t.pList[p.PID]; !ok {
+				pr = &Process{
+					PID:     p.PID,
+					Command: p.Command,
 					Load5:   ring.New(5 * 60),
 					Load15:  ring.New(15 * 60),
-					PID:     uint32(parsedPID),
 				}
-				t.pList[uint32(parsedPID)] = p
+				t.pList[p.PID] = pr
 			} else {
-				p = t.pList[uint32(parsedPID)]
+				pr = t.pList[p.PID]
 			}
 
-			p.Load = parsedLoad
-			p.Load5.Value = parsedLoad
-			p.Load5 = p.Load5.Next()
-			p.Load15.Value = parsedLoad
-			p.Load15 = p.Load15.Next()
+			pr.Load = p.Load
+			pr.Load5.Value = p.Load
+			pr.Load5 = pr.Load5.Next()
+			pr.Load15.Value = p.Load
+			pr.Load15 = pr.Load15.Next()
 		}
+
 		// Try to get a sample every second
 		tRun := time.Since(tStart)
 		tWait := 1000000000 - tRun.Nanoseconds()
