@@ -50,7 +50,7 @@ jobs:
   goreleasse-test:
     docker:
       - image: cloudradario/go-build:0.0.5
-    working_directory: /go/src/github.com/cloudradar-monitoring/frontman
+    working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       - checkout
       - run: goreleaser --snapshot
