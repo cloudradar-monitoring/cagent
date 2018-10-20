@@ -33,7 +33,6 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 		results["buff_B"] = nil
 		results["available_B"] = nil
 	} else {
-
 		results["total_B"] = memStat.Total
 		results["used_B"] = memStat.Used
 		results["free_B"] = memStat.Free

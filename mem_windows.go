@@ -42,7 +42,6 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 	}
 
 	free, err := watcher.Query(`\Memory\Free & Zero Page List Bytes`, "*")
-
 	if err != nil {
 		log.Errorf("[MEM] Failed to get free memory: %s", err.Error())
 	} else {
