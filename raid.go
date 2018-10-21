@@ -20,9 +20,9 @@ type Raid struct {
 var failed = regexp.MustCompile("\\[([U_]+)\\]")
 
 func (r Raid) GetFailedAndMissingPhysicalDevices() (failedDevices []string, missingDevicesCount int) {
-	for _, fd := range r.Failed {
-		if fd < len(r.Devices) {
-			failedDevices = append(failedDevices, r.Devices[fd])
+	for _, deviceIndex := range r.Failed {
+		if deviceIndex < len(r.Devices) {
+			failedDevices = append(failedDevices, r.Devices[deviceIndex])
 		} else {
 			missingDevicesCount++
 		}
@@ -32,9 +32,9 @@ func (r Raid) GetFailedAndMissingPhysicalDevices() (failedDevices []string, miss
 
 func (r Raid) GetActivePhysicalDevices() []string {
 	var activeDevices []string
-	for _, fd := range r.Active {
-		if fd < len(r.Devices) {
-			activeDevices = append(activeDevices, r.Devices[fd])
+	for _, deviceIndex := range r.Active {
+		if deviceIndex < len(r.Devices) {
+			activeDevices = append(activeDevices, r.Devices[deviceIndex])
 		}
 	}
 	return activeDevices
@@ -73,6 +73,9 @@ func parseMdstat(data string) (RaidArrays, error) {
 		matches := failed.FindStringSubmatch(lines[n+1])
 
 		if len(matches) > 0 {
+			/// Parse raid array status from mdstat output e.g. "[UUU_]"
+			// if device is up("U") or down/missing ("_")
+
 			for i := 0; i < len(matches[1]); i++ {
 				if matches[1][i:i+1] == "_" {
 					raid.Failed = append(raid.Failed, i)
@@ -96,6 +99,7 @@ func (ar RaidArrays) Measurements() MeasurementsMap {
 
 		failedDevices, missingCount := raid.GetFailedAndMissingPhysicalDevices()
 
+		// if array has failed or missing physical devices than it means it is degraded
 		if len(failedDevices) > 0 || missingCount > 0 {
 			results[raid.Name+".degraded"] = 1
 
