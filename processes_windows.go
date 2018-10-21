@@ -11,10 +11,11 @@ import (
 )
 
 type Win32_Process struct {
-	Name           string
-	CommandLine    *string
-	ProcessID      uint32
-	ExecutionState *uint16
+	Name            string
+	CommandLine     *string
+	ProcessID       uint32
+	ParentProcessId uint32
+	ExecutionState  *uint16
 }
 
 func WMIQueryWithContext(ctx context.Context, query string, dst interface{}, connectServerArgs ...interface{}) error {
@@ -52,10 +53,11 @@ func processes() ([]ProcStat, error) {
 	for _, proc := range wmiProcs {
 		procs = append(procs,
 			ProcStat{
-				PID:     int(proc.ProcessID),
-				Name:    proc.Name,
-				Cmdline: *proc.CommandLine,
-				State:   "running"},
+				PID:       int(proc.ProcessID),
+				ParentPID: int(proc.ParentProcessId),
+				Name:      proc.Name,
+				Cmdline:   *proc.CommandLine,
+				State:     "running"},
 		)
 	}
 

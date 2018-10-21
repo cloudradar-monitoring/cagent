@@ -76,7 +76,13 @@ func processesFromProc() ([]ProcStat, error) {
 			log.Errorf("Failed to read cmdline(%s): %s", stats[0], err.Error())
 		}
 
-		stat := ProcStat{PID: pid, Name: string(bytes.TrimRight(comm, "\n")), Cmdline: strings.Replace(string(bytes.TrimRight(cmdline, "\x00")), "\x00", " ", -1)}
+		ppid, err := strconv.Atoi(string(stats[4]))
+
+		if err != nil {
+			log.Errorf("Failed to convert PPID(%s) to int: %s", stats[4], err.Error())
+		}
+
+		stat := ProcStat{PID: pid, ParentPID: ppid, Name: string(bytes.TrimRight(comm, "\n")), Cmdline: strings.Replace(string(bytes.TrimRight(cmdline, "\x00")), "\x00", " ", -1)}
 
 		switch stats[2][0] {
 		case 'R':
@@ -128,7 +134,7 @@ func execPS() ([]byte, error) {
 		return nil, err
 	}
 
-	out, err := exec.Command(bin, "axwwo", "pid,state,command").Output()
+	out, err := exec.Command(bin, "axwwo", "pid,ppid,state,command").Output()
 	if err != nil {
 		return nil, err
 	}
@@ -161,12 +167,18 @@ func processesFromPS() ([]ProcStat, error) {
 			log.Errorf("Failed to convert PID(%s) to int: %s", parts[0], err.Error())
 		}
 
-		last := strings.Join(parts[2:], " ")
+		last := strings.Join(parts[3:], " ")
 		fileBaseWithArgs := filepath.Base(last)
 		fileBaseParts := strings.Fields(fileBaseWithArgs)
 
-		stat := ProcStat{PID: pid, Name: fileBaseParts[0], Cmdline: last}
-		switch parts[1][0] {
+		ppid, err := strconv.Atoi(string(parts[1]))
+
+		if err != nil {
+			log.Errorf("Failed to convert PPID(%s) to int: %s", parts[4], err.Error())
+		}
+
+		stat := ProcStat{PID: pid, ParentPID: ppid, Name: fileBaseParts[0], Cmdline: last}
+		switch parts[2][0] {
 		case 'W':
 			stat.State = "wait"
 		case 'U', 'D', 'L':
