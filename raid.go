@@ -1,15 +1,9 @@
 package cagent
 
 import (
-	"fmt"
 	"io/ioutil"
 	"regexp"
 	"strings"
-)
-
-const (
-	RaidStatusActive   = "active"
-	RaidStatusDegraded = "degraded"
 )
 
 type RaidArrays []Raid
@@ -20,20 +14,30 @@ type Raid struct {
 	State   string
 	Devices []string
 	Failed  []int
+	Active  []int
 }
 
 var failed = regexp.MustCompile("\\[([U_]+)\\]")
 
-func (r Raid) GetFailedPhysicalDevices() []string {
-	devices := []string{}
+func (r Raid) GetFailedAndMissingPhysicalDevices() (failedDevices []string, missingDevicesCount int) {
 	for _, fd := range r.Failed {
 		if fd < len(r.Devices) {
-			devices = append(devices, r.Devices[fd])
+			failedDevices = append(failedDevices, r.Devices[fd])
 		} else {
-			devices = append(devices, fmt.Sprintf("missing_device[%d]", fd))
+			missingDevicesCount++
 		}
 	}
-	return devices
+	return failedDevices, missingDevicesCount
+}
+
+func (r Raid) GetActivePhysicalDevices() []string {
+	var activeDevices []string
+	for _, fd := range r.Active {
+		if fd < len(r.Devices) {
+			activeDevices = append(activeDevices, r.Devices[fd])
+		}
+	}
+	return activeDevices
 }
 
 func parseMdstat(data string) (RaidArrays, error) {
@@ -72,11 +76,10 @@ func parseMdstat(data string) (RaidArrays, error) {
 			for i := 0; i < len(matches[1]); i++ {
 				if matches[1][i:i+1] == "_" {
 					raid.Failed = append(raid.Failed, i)
+				} else if matches[1][i:i+1] == "U" {
+					raid.Active = append(raid.Active, i)
 				}
 			}
-		}
-		if raid.State == RaidStatusActive && len(raid.Failed) > 0 {
-			raid.State = RaidStatusDegraded
 		}
 
 		raids = append(raids, raid)
@@ -91,8 +94,24 @@ func (ar RaidArrays) Measurements() MeasurementsMap {
 		results[raid.Name+".state"] = raid.State
 		results[raid.Name+".type"] = raid.Type
 
-		if raid.State == RaidStatusDegraded {
-			results[raid.Name+".failed"] = strings.Join(raid.GetFailedPhysicalDevices(), "; ")
+		failedDevices, missingCount := raid.GetFailedAndMissingPhysicalDevices()
+
+		if len(failedDevices) > 0 || missingCount > 0 {
+			results[raid.Name+".degraded"] = 1
+
+			results[raid.Name+".physicaldevice.missing"] = missingCount
+
+			for _, failedDevice := range failedDevices {
+				results[raid.Name+".physicaldevice.state."+failedDevice] = "failed"
+			}
+
+		} else {
+			results[raid.Name+".degraded"] = 0
+		}
+
+		activeDevices := raid.GetActivePhysicalDevices()
+		for _, activeDevice := range activeDevices {
+			results[raid.Name+".physicaldevice.state."+activeDevice] = "active"
 		}
 	}
 	return results
