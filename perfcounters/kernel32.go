@@ -30,7 +30,7 @@
 
 // +build windows
 
-package win_perf_counters
+package perfcounters
 
 import (
 	"syscall"

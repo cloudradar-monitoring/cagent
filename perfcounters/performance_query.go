@@ -1,7 +1,7 @@
 // Go API over pdh syscalls
 // +build windows
 
-package win_perf_counters
+package perfcounters
 
 import (
 	"errors"

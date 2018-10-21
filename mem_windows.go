@@ -10,11 +10,11 @@ import (
 
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
-	"github.com/cloudradar-monitoring/cagent/win_perf_counters"
+	"github.com/cloudradar-monitoring/cagent/perfcounters"
 )
 
 const memGetTimeout = time.Second * 10
-var watcher = win_perf_counters.Watcher()
+var watcher = perfcounters.Watcher()
 
 func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 	results := MeasurementsMap{}
