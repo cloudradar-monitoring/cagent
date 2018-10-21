@@ -41,13 +41,11 @@ func (r Raid) GetActivePhysicalDevices() []string {
 }
 
 func parseMdstat(data string) (RaidArrays, error) {
-
 	raids := []Raid{}
 	lines := strings.Split(data, "\n")
 
 	for n, line := range lines {
 		line = strings.TrimSpace(line)
-
 		if line == "" {
 			continue
 		}
@@ -57,7 +55,6 @@ func parseMdstat(data string) (RaidArrays, error) {
 		}
 
 		parts := strings.Split(line, " ")
-
 		if len(parts) < 5 || parts[1] != ":" {
 			continue
 		}
@@ -73,9 +70,8 @@ func parseMdstat(data string) (RaidArrays, error) {
 		matches := failed.FindStringSubmatch(lines[n+1])
 
 		if len(matches) > 0 {
-			/// Parse raid array status from mdstat output e.g. "[UUU_]"
+			// Parse raid array status from mdstat output e.g. "[UUU_]"
 			// if device is up("U") or down/missing ("_")
-
 			for i := 0; i < len(matches[1]); i++ {
 				if matches[1][i:i+1] == "_" {
 					raid.Failed = append(raid.Failed, i)
@@ -99,10 +95,9 @@ func (ar RaidArrays) Measurements() MeasurementsMap {
 
 		failedDevices, missingCount := raid.GetFailedAndMissingPhysicalDevices()
 
-		// if array has failed or missing physical devices than it means it is degraded
+		// If array has failed or missing physical devices than it means it is degraded
 		if len(failedDevices) > 0 || missingCount > 0 {
 			results[raid.Name+".degraded"] = 1
-
 			results[raid.Name+".physicaldevice.missing"] = missingCount
 
 			for _, failedDevice := range failedDevices {
