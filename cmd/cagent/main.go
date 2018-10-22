@@ -74,6 +74,7 @@ func main() {
 	}
 
 	serviceUninstallPtr := flag.Bool("u", false, fmt.Sprintf("stop and uninstall the system service(%s)", systemManager.String()))
+	printConfigPtr := flag.Bool("p", false, "print the active config")
 	versionPtr := flag.Bool("version", false, "show the cagent version")
 
 	flag.Parse()
@@ -98,6 +99,11 @@ func main() {
 				log.Fatalf("Config load error: %s", err.Error())
 			}
 		}
+	}
+
+	if *printConfigPtr {
+		fmt.Println(ca.DumpConfigToml())
+		return
 	}
 
 	var osNotice string

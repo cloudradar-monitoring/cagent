@@ -15,6 +15,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	log "github.com/sirupsen/logrus"
+	"bytes"
 )
 
 var DefaultCfgPath string
@@ -156,6 +157,18 @@ func (ca *Cagent) userAgent() string {
 	parts := strings.Split(ca.version, "-")
 
 	return fmt.Sprintf("Cagent v%s %s %s", parts[0], runtime.GOOS, runtime.GOARCH)
+}
+
+func (ca *Cagent) DumpConfigToml() string {
+	buff := &bytes.Buffer{}
+	enc := toml.NewEncoder(buff)
+	err := enc.Encode(ca)
+
+	if err != nil {
+		log.Errorf("DumpConfigToml error: %s", err.Error())
+	}
+
+	return buff.String()
 }
 
 func (ca *Cagent) ReadConfigFromFile(configFilePath string, createIfNotExists bool) error {
