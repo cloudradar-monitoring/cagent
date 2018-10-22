@@ -1,4 +1,4 @@
-// +build !windows
+// +build windows
 
 package cagent
 
@@ -10,9 +10,11 @@ import (
 
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
+	"github.com/cloudradar-monitoring/cagent/perfcounters"
 )
 
 const memGetTimeout = time.Second * 10
+var watcher = perfcounters.Watcher()
 
 func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 	results := MeasurementsMap{}
@@ -23,22 +25,27 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 
 	memStat, err := mem.VirtualMemoryWithContext(ctx)
 
+	results["free_B"] = nil
+	results["shared_B"] = nil
+	results["buff_B"] = nil
+
 	if err != nil {
 		log.Errorf("[MEM] Failed to get virtual memory stat: %s", err.Error())
 		errs = append(errs, err.Error())
 		results["total_B"] = nil
 		results["used_B"] = nil
-		results["free_B"] = nil
-		results["shared_B"] = nil
-		results["buff_B"] = nil
 		results["available_B"] = nil
 	} else {
 		results["total_B"] = memStat.Total
 		results["used_B"] = memStat.Used
-		results["free_B"] = memStat.Free
-		results["shared_B"] = memStat.Shared
-		results["buff_B"] = memStat.Buffers
 		results["available_B"] = memStat.Available
+	}
+
+	free, err := watcher.Query(`\Memory\Free & Zero Page List Bytes`, "*")
+	if err != nil {
+		log.Errorf("[MEM] Failed to get free memory: %s", err.Error())
+	} else {
+		results["free_B"] = free
 	}
 
 	if len(errs) == 0 {
