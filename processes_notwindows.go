@@ -17,6 +17,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var errorProcessTerminated = fmt.Errorf("Process was terminated")
+
 func processes() ([]ProcStat, error) {
 	if runtime.GOOS == "linux" {
 		return processesFromProc()
@@ -46,10 +48,9 @@ func processesFromProc() ([]ProcStat, error) {
 	for _, filename := range filenames {
 		data, err := readProcFile(filename)
 		if err != nil {
-			return nil, err
-		}
-
-		if data == nil {
+			if err != errorProcessTerminated {
+				log.Error("readProcFile error ", err.Error())
+			}
 			continue
 		}
 
@@ -62,16 +63,7 @@ func processesFromProc() ([]ProcStat, error) {
 		pid, err := strconv.Atoi(string(stats[0]))
 		if err != nil {
 			log.Errorf("Failed to convert PID(%s) to int: %s", stats[0], err.Error())
-		}
-
-		comm, err := readProcFile(getHostProc() + "/" + string(stats[0]) + "/comm")
-		if err != nil {
-			log.Errorf("Failed to read comm(%s): %s", stats[0], err.Error())
-		}
-
-		cmdline, err := readProcFile(getHostProc() + "/" + string(stats[0]) + "/cmdline")
-		if err != nil {
-			log.Errorf("Failed to read cmdline(%s): %s", stats[0], err.Error())
+			continue
 		}
 
 		ppid, err := strconv.Atoi(string(stats[4]))
@@ -79,11 +71,20 @@ func processesFromProc() ([]ProcStat, error) {
 			log.Errorf("Failed to convert PPID(%s) to int: %s", stats[4], err.Error())
 		}
 
-		stat := ProcStat{
-			PID:       pid,
-			ParentPID: ppid,
-			Name:      string(bytes.TrimRight(comm, "\n")),
-			Cmdline:   strings.Replace(string(bytes.TrimRight(cmdline, "\x00")), "\x00", " ", -1),
+		stat := ProcStat{PID: pid, ParentPID: ppid}
+
+		comm, err := readProcFile(getHostProc() + "/" + string(stats[0]) + "/comm")
+		if err != nil && err != errorProcessTerminated {
+			log.Errorf("Failed to read comm(%s): %s", stats[0], err.Error())
+		} else if err == nil {
+			stat.Name = string(bytes.TrimRight(comm, "\n"))
+		}
+
+		cmdline, err := readProcFile(getHostProc() + "/" + string(stats[0]) + "/cmdline")
+		if err != nil && err != errorProcessTerminated {
+			log.Errorf("Failed to read cmdline(%s): %s", stats[0], err.Error())
+		} else if err == nil {
+			stat.Cmdline = strings.Replace(string(bytes.TrimRight(cmdline, "\x00")), "\x00", " ", -1)
 		}
 
 		switch stats[2][0] {
@@ -115,15 +116,15 @@ func processesFromProc() ([]ProcStat, error) {
 func readProcFile(filename string) ([]byte, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
+		// if file doesn't exists it means that process was closed after we got the directory listing
 		if os.IsNotExist(err) {
-			// if file doesn't exists
-			return nil, nil
+			return nil, errorProcessTerminated
 		}
 
 		// Reading from /proc/<PID> fails with ESRCH if the process has
 		// been terminated between open() and read().
 		if perr, ok := err.(*os.PathError); ok && perr.Err == syscall.ESRCH {
-			return nil, nil
+			return nil, errorProcessTerminated
 		}
 
 		return nil, err
