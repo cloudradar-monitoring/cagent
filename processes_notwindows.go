@@ -36,7 +36,6 @@ func getHostProc() string {
 // get process states from /proc/(pid)/stat
 func processesFromProc() ([]ProcStat, error) {
 	filenames, err := filepath.Glob(getHostProc() + "/[0-9]*/stat")
-
 	if err != nil {
 		return nil, err
 	}
@@ -44,11 +43,12 @@ func processesFromProc() ([]ProcStat, error) {
 	var procs []ProcStat
 
 	for _, filename := range filenames {
-		_, err := os.Stat(filename)
 		data, err := readProcFile(filename)
+		_, err := os.Stat(filename)
 		if err != nil {
 			return nil, err
 		}
+
 		if data == nil {
 			continue
 		}
@@ -59,30 +59,31 @@ func processesFromProc() ([]ProcStat, error) {
 		}
 
 		pid, err := strconv.Atoi(string(stats[0]))
-
 		if err != nil {
 			log.Errorf("Failed to convert PID(%s) to int: %s", stats[0], err.Error())
 		}
 
 		comm, err := readProcFile(getHostProc() + "/" + string(stats[0]) + "/comm")
-
 		if err != nil {
 			log.Errorf("Failed to read comm(%s): %s", stats[0], err.Error())
 		}
 
 		cmdline, err := readProcFile(getHostProc() + "/" + string(stats[0]) + "/cmdline")
-
 		if err != nil {
 			log.Errorf("Failed to read cmdline(%s): %s", stats[0], err.Error())
 		}
 
 		ppid, err := strconv.Atoi(string(stats[4]))
-
 		if err != nil {
 			log.Errorf("Failed to convert PPID(%s) to int: %s", stats[4], err.Error())
 		}
 
-		stat := ProcStat{PID: pid, ParentPID: ppid, Name: string(bytes.TrimRight(comm, "\n")), Cmdline: strings.Replace(string(bytes.TrimRight(cmdline, "\x00")), "\x00", " ", -1)}
+		stat := ProcStat{
+			PID: pid,
+			ParentPID: ppid,
+			Name: string(bytes.TrimRight(comm, "\n")),
+			Cmdline: strings.Replace(string(bytes.TrimRight(cmdline, "\x00")), "\x00", " ", -1),
+		}
 
 		switch stats[2][0] {
 		case 'R':
@@ -161,8 +162,8 @@ func processesFromPS() ([]ProcStat, error) {
 		if len(parts) < 3 {
 			continue
 		}
-		pid, err := strconv.Atoi(string(parts[0]))
 
+		pid, err := strconv.Atoi(string(parts[0]))
 		if err != nil {
 			log.Errorf("Failed to convert PID(%s) to int: %s", parts[0], err.Error())
 		}
@@ -170,9 +171,7 @@ func processesFromPS() ([]ProcStat, error) {
 		last := strings.Join(parts[3:], " ")
 		fileBaseWithArgs := filepath.Base(last)
 		fileBaseParts := strings.Fields(fileBaseWithArgs)
-
 		ppid, err := strconv.Atoi(string(parts[1]))
-
 		if err != nil {
 			log.Errorf("Failed to convert PPID(%s) to int: %s", parts[4], err.Error())
 		}
