@@ -70,8 +70,6 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 		if memStat != nil && hasAvailableMememory {
 			results["available_B"] = int(memStat.Available)
 			results["available_percent"] = floatToIntPercent(float64(results["available_B"].(int)) / float64(memStat.Total))
-		} else {
-			results["available_B"] = nil
 		}
 	}
 
