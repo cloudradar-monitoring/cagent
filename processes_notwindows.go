@@ -44,7 +44,6 @@ func processesFromProc() ([]ProcStat, error) {
 
 	for _, filename := range filenames {
 		data, err := readProcFile(filename)
-		_, err := os.Stat(filename)
 		if err != nil {
 			return nil, err
 		}
@@ -114,6 +113,7 @@ func readProcFile(filename string) ([]byte, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
+			// if file doesn't exists
 			return nil, nil
 		}
 
