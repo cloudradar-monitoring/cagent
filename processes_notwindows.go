@@ -18,6 +18,7 @@ import (
 )
 
 func processes() ([]ProcStat, error) {
+
 	if runtime.GOOS == "linux" {
 		return processesFromProc()
 	} else {
@@ -27,6 +28,7 @@ func processes() ([]ProcStat, error) {
 
 func getHostProc() string {
 	procPath := "/proc"
+
 	if os.Getenv("HOST_PROC") != "" {
 		procPath = os.Getenv("HOST_PROC")
 	}
@@ -36,6 +38,7 @@ func getHostProc() string {
 // get process states from /proc/(pid)/stat
 func processesFromProc() ([]ProcStat, error) {
 	filenames, err := filepath.Glob(getHostProc() + "/[0-9]*/stat")
+
 	if err != nil {
 		return nil, err
 	}
@@ -44,6 +47,7 @@ func processesFromProc() ([]ProcStat, error) {
 
 	for _, filename := range filenames {
 		data, err := readProcFile(filename)
+
 		if err != nil {
 			return nil, err
 		}
@@ -53,26 +57,31 @@ func processesFromProc() ([]ProcStat, error) {
 		}
 
 		stats := bytes.Fields(data)
+
 		if len(stats) < 3 {
 			return nil, fmt.Errorf("Something is terribly wrong with %s", filename)
 		}
 
 		pid, err := strconv.Atoi(string(stats[0]))
+
 		if err != nil {
 			log.Errorf("Failed to convert PID(%s) to int: %s", stats[0], err.Error())
 		}
 
 		comm, err := readProcFile(getHostProc() + "/" + string(stats[0]) + "/comm")
+
 		if err != nil {
 			log.Errorf("Failed to read comm(%s): %s", stats[0], err.Error())
 		}
 
 		cmdline, err := readProcFile(getHostProc() + "/" + string(stats[0]) + "/cmdline")
+
 		if err != nil {
 			log.Errorf("Failed to read cmdline(%s): %s", stats[0], err.Error())
 		}
 
 		ppid, err := strconv.Atoi(string(stats[4]))
+
 		if err != nil {
 			log.Errorf("Failed to convert PPID(%s) to int: %s", stats[4], err.Error())
 		}
@@ -111,6 +120,7 @@ func processesFromProc() ([]ProcStat, error) {
 
 func readProcFile(filename string) ([]byte, error) {
 	data, err := ioutil.ReadFile(filename)
+
 	if err != nil {
 		if os.IsNotExist(err) {
 			// if file doesn't exists
@@ -131,11 +141,13 @@ func readProcFile(filename string) ([]byte, error) {
 
 func execPS() ([]byte, error) {
 	bin, err := exec.LookPath("ps")
+
 	if err != nil {
 		return nil, err
 	}
 
 	out, err := exec.Command(bin, "axwwo", "pid,ppid,state,command").Output()
+
 	if err != nil {
 		return nil, err
 	}
@@ -145,6 +157,7 @@ func execPS() ([]byte, error) {
 
 func processesFromPS() ([]ProcStat, error) {
 	out, err := execPS()
+
 	if err != nil {
 		return nil, err
 	}
@@ -159,11 +172,13 @@ func processesFromPS() ([]ProcStat, error) {
 			continue
 		}
 		parts := strings.Fields(line)
+
 		if len(parts) < 3 {
 			continue
 		}
 
 		pid, err := strconv.Atoi(string(parts[0]))
+
 		if err != nil {
 			log.Errorf("Failed to convert PID(%s) to int: %s", parts[0], err.Error())
 		}
@@ -172,6 +187,7 @@ func processesFromPS() ([]ProcStat, error) {
 		fileBaseWithArgs := filepath.Base(last)
 		fileBaseParts := strings.Fields(fileBaseWithArgs)
 		ppid, err := strconv.Atoi(string(parts[1]))
+
 		if err != nil {
 			log.Errorf("Failed to convert PPID(%s) to int: %s", parts[4], err.Error())
 		}
