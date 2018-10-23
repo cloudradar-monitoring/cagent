@@ -64,8 +64,7 @@ func New() *Cagent {
 	var defaultLogPath string
 	var rootCertsPath string
 
-	hOST, _ := ioutil.ReadFile("/etc/hosts")
-	log.Printf("muhar", hOST)
+	ioutil.ReadFile("/etc/hosts")
 
 	ex, err := os.Executable()
 	if err != nil {
