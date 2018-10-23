@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
+	"bytes"
 
 	"crypto/x509"
 	"io/ioutil"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	log "github.com/sirupsen/logrus"
-	"bytes"
 )
 
 var DefaultCfgPath string
