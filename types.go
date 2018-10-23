@@ -14,3 +14,7 @@ type Result struct {
 	Measurements MeasurementsMap `json:"measurements"`
 	Message      interface{}     `json:"message"`
 }
+
+func floatToIntPercent(f float64) int{
+	return int(f*100+0.5)
+}

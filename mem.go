@@ -7,6 +7,7 @@ import (
 	"errors"
 	"strings"
 	"time"
+	"runtime"
 
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
@@ -23,22 +24,48 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 
 	memStat, err := mem.VirtualMemoryWithContext(ctx)
 
+	results = map[string]interface{}{
+		"total_B":           nil,
+		"free_B":            nil,
+		"free_percent":      nil,
+		"cached_B":          nil,
+		"cached_percent":    nil,
+		"shared_B":          nil,
+		"shared_percent":    nil,
+		"buff_B":            nil,
+		"buff_percent":      nil,
+		"used_B":            nil,
+		"used_percent":      nil,
+		"available_B":       nil,
+		"available_percent": nil,
+	}
+
 	if err != nil {
 		log.Errorf("[MEM] Failed to get virtual memory stat: %s", err.Error())
 		errs = append(errs, err.Error())
-		results["total_B"] = nil
-		results["used_B"] = nil
-		results["free_B"] = nil
-		results["shared_B"] = nil
-		results["buff_B"] = nil
-		results["available_B"] = nil
 	} else {
 		results["total_B"] = memStat.Total
 		results["used_B"] = memStat.Used
+		results["used_percent"] = floatToIntPercent(float64(memStat.Used) / float64(memStat.Total))
 		results["free_B"] = memStat.Free
+		results["free_percent"] = floatToIntPercent(float64(memStat.Free) / float64(memStat.Total))
 		results["shared_B"] = memStat.Shared
+		results["shared_percent"] = floatToIntPercent(float64(memStat.Shared) / float64(memStat.Total))
+		results["cached_B"] = memStat.Cached
+		results["cached_percent"] = floatToIntPercent(float64(memStat.Cached) / float64(memStat.Total))
+		results["shared_percent"] = floatToIntPercent(float64(memStat.Shared) / float64(memStat.Total))
 		results["buff_B"] = memStat.Buffers
-		results["available_B"] = memStat.Available
+		results["buff_percent"] = floatToIntPercent(float64(memStat.Buffers) / float64(memStat.Total))
+
+		// linux has available memory metric – just use it
+		if memStat != nil && runtime.GOOS == "linux" {
+			results["available_B"] = int(memStat.Available)
+		} else {
+			// otherwise calculate as (free + cached + buffered)
+			// assuming that OS will give up buffered and cached memory to other apps that need it if necessary
+			results["available_B"] = int(memStat.Free + memStat.Cached + memStat.Buffers)
+		}
+		results["available_percent"] = floatToIntPercent(float64(results["available_B"].(int)) / float64(memStat.Total))
 	}
 
 	if len(errs) == 0 {
