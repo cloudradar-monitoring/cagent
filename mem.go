@@ -57,17 +57,17 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 		results["buff_B"] = memStat.Buffers
 		results["buff_percent"] = floatToIntPercent(float64(memStat.Buffers) / float64(memStat.Total))
 
-		var hasAvailableMememory bool
+		var hasAvailableMemory bool
 		// linux has native MemAvailable metric since 3.14 kernel
 		// others calculated within github.com/shirou/gopsutil
 		switch runtime.GOOS {
 		case "linux", "freebsd", "openbsd", "darwin":
-			hasAvailableMetric = true
+			hasAvailableMemory = true
 		default:
-			hasAvailableMememory = false
+			hasAvailableMemory = false
 		}
 
-		if memStat != nil && hasAvailableMememory {
+		if memStat != nil && hasAvailableMemory {
 			results["available_B"] = int(memStat.Available)
 			results["available_percent"] = floatToIntPercent(float64(results["available_B"].(int)) / float64(memStat.Total))
 		}
