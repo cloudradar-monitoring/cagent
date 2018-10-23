@@ -7,10 +7,11 @@ import (
 )
 
 type ProcStat struct {
-	PID     int
-	Name    string
-	Cmdline string
-	State   string
+	PID       int
+	ParentPID int `json:"parent_PID"`
+	Name      string
+	Cmdline   string
+	State     string
 }
 
 // Gets possible process states based on the OS
