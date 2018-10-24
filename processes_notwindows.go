@@ -27,13 +27,11 @@ func processes() ([]ProcStat, error) {
 }
 
 func getHostProc() string {
-	procPath := "/proc"
-
-	if os.Getenv("HOST_PROC") != "" {
-		procPath = os.Getenv("HOST_PROC")
+	if hostProc := os.Getenv("HOST_PROC");  hostProc != "" {
+		return hostProc
 	}
 
-	return procPath
+	return "/proc"
 }
 
 // get process states from /proc/(pid)/stat
