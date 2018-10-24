@@ -19,8 +19,6 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), memGetTimeout)
 	defer cancel()
 
-	memStat, err := mem.VirtualMemoryWithContext(ctx)
-
 	results = map[string]interface{}{
 		"total_B":           nil,
 		"free_B":            nil,
@@ -37,6 +35,7 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 		"available_percent": nil,
 	}
 
+	memStat, err := mem.VirtualMemoryWithContext(ctx)
 	if err != nil {
 		log.Errorf("[MEM] Failed to get virtual memory stat: %s", err.Error())
 		return results, errors.New("MEM: " + err.Error())
