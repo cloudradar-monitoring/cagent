@@ -15,6 +15,6 @@ type Result struct {
 	Message      interface{}     `json:"message"`
 }
 
-func floatToIntPercent(f float64) int{
+func floatToIntPercentRoundUP(f float64) int{
 	return int(f*100+0.5)
 }

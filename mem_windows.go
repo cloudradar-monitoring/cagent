@@ -23,8 +23,6 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), memGetTimeout)
 	defer cancel()
 
-	memStat, err := mem.VirtualMemoryWithContext(ctx)
-
 	results = map[string]interface{}{
 		"total_B":           nil,
 		"free_B":            nil,
@@ -37,31 +35,34 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 		"available_percent": nil,
 	}
 
+	memStat, err := mem.VirtualMemoryWithContext(ctx)
 	if err != nil {
-		log.Errorf("[MEM] Failed to get virtual memory stat: %s", err.Error())
 		errs = append(errs, err.Error())
+		log.Errorf("[MEM] Failed to get virtual memory stat: %s", err.Error())
 	} else {
 		results["total_B"] = memStat.Total
 		results["available_B"] = memStat.Available
-		results["available_percent"] = floatToIntPercent((float64(memStat.Available)) / float64(memStat.Total))
+		results["available_percent"] = floatToIntPercentRoundUP((float64(memStat.Available)) / float64(memStat.Total))
 	}
 
 	free, err := watcher.Query(`\Memory\Free & Zero Page List Bytes`, "*")
 	if err != nil {
+		errs = append(errs, err.Error())
 		log.Errorf("[MEM] Failed to get free memory: %s", err.Error())
 	} else {
 		results["used_B"] = int(memStat.Total) - int(free)
-		results["used_percent"] = floatToIntPercent((float64(memStat.Total) - free) / float64(memStat.Total))
+		results["used_percent"] = floatToIntPercentRoundUP((float64(memStat.Total) - free) / float64(memStat.Total))
 		results["free_B"] = int(free)
-		results["free_percent"] = floatToIntPercent(free / float64(memStat.Total))
+		results["free_percent"] = floatToIntPercentRoundUP(free / float64(memStat.Total))
 	}
 
 	cached, err := watcher.Query(`\Memory\Cache Bytes`, "*")
 	if err != nil {
+		errs = append(errs, err.Error())
 		log.Errorf("[MEM] Failed to get cached memory: %s", err.Error())
 	} else {
 		results["cached_B"] = int(cached)
-		results["cached_percent"] = floatToIntPercent(float64(cached) / float64(memStat.Total))
+		results["cached_percent"] = floatToIntPercentRoundUP(float64(cached) / float64(memStat.Total))
 	}
 
 	if len(errs) == 0 {
