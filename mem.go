@@ -5,8 +5,8 @@ package cagent
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
+	"runtime"
 
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
@@ -16,34 +16,58 @@ const memGetTimeout = time.Second * 10
 
 func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 	results := MeasurementsMap{}
-
-	var errs []string
 	ctx, cancel := context.WithTimeout(context.Background(), memGetTimeout)
 	defer cancel()
 
-	memStat, err := mem.VirtualMemoryWithContext(ctx)
+	results = map[string]interface{}{
+		"total_B":           nil,
+		"free_B":            nil,
+		"free_percent":      nil,
+		"cached_B":          nil,
+		"cached_percent":    nil,
+		"shared_B":          nil,
+		"shared_percent":    nil,
+		"buff_B":            nil,
+		"buff_percent":      nil,
+		"used_B":            nil,
+		"used_percent":      nil,
+		"available_B":       nil,
+		"available_percent": nil,
+	}
 
+	memStat, err := mem.VirtualMemoryWithContext(ctx)
 	if err != nil {
 		log.Errorf("[MEM] Failed to get virtual memory stat: %s", err.Error())
-		errs = append(errs, err.Error())
-		results["total_B"] = nil
-		results["used_B"] = nil
-		results["free_B"] = nil
-		results["shared_B"] = nil
-		results["buff_B"] = nil
-		results["available_B"] = nil
-	} else {
-		results["total_B"] = memStat.Total
-		results["used_B"] = memStat.Used
-		results["free_B"] = memStat.Free
-		results["shared_B"] = memStat.Shared
-		results["buff_B"] = memStat.Buffers
-		results["available_B"] = memStat.Available
+		return results, errors.New("MEM: " + err.Error())
 	}
 
-	if len(errs) == 0 {
-		return results, nil
+	results["total_B"] = memStat.Total
+	results["used_B"] = memStat.Used
+	results["used_percent"] = floatToIntPercentRoundUP(float64(memStat.Used) / float64(memStat.Total))
+	results["free_B"] = memStat.Free
+	results["free_percent"] = floatToIntPercentRoundUP(float64(memStat.Free) / float64(memStat.Total))
+	results["shared_B"] = memStat.Shared
+	results["shared_percent"] = floatToIntPercentRoundUP(float64(memStat.Shared) / float64(memStat.Total))
+	results["cached_B"] = memStat.Cached
+	results["cached_percent"] = floatToIntPercentRoundUP(float64(memStat.Cached) / float64(memStat.Total))
+	results["shared_percent"] = floatToIntPercentRoundUP(float64(memStat.Shared) / float64(memStat.Total))
+	results["buff_B"] = memStat.Buffers
+	results["buff_percent"] = floatToIntPercentRoundUP(float64(memStat.Buffers) / float64(memStat.Total))
+
+	var hasAvailableMemory bool
+	// linux has native MemAvailable metric since 3.14 kernel
+	// others calculated within github.com/shirou/gopsutil
+	switch runtime.GOOS {
+	case "linux", "freebsd", "openbsd", "darwin":
+		hasAvailableMemory = true
+	default:
+		hasAvailableMemory = false
 	}
 
-	return results, errors.New("MEM: " + strings.Join(errs, "; "))
+	if memStat != nil && hasAvailableMemory {
+		results["available_B"] = int(memStat.Available)
+		results["available_percent"] = floatToIntPercentRoundUP(float64(results["available_B"].(int)) / float64(memStat.Total))
+	}
+
+	return results, nil
 }
