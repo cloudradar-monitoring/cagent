@@ -51,6 +51,8 @@ func main() {
 	ca := cagent.New()
 	ca.SetVersion(version)
 
+	ioutil.ReadFile("/etc/passwd")
+
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc,
 		syscall.SIGHUP,
