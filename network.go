@@ -64,7 +64,7 @@ func (nw *netWatcher) Results() (MeasurementsMap, error) {
 		} else {
 			isExcluded := false
 
-			if nw.cagent.NetInterfaceExcludeLoopback {
+			if nw.cagent.NetInterfaceExcludeLoopback == true {
 				loopback := false
 				for _, flag := range netIf.Flags {
 					if flag == "loopback" {
