@@ -40,9 +40,8 @@ func (nw *netWatcher) Results() (MeasurementsMap, error) {
 		log.Errorf("[NET] Failed to read interfaces: %s", err.Error())
 		errs = append(errs, err.Error())
 	}
-	
-	var unusedVar string
-	var netInterfaceExcludeRegexCompiled []*regexp.Regexp
+		
+	netInterfaceExcludeRegexCompiled := []*regexp.Regexp{}
 
 	if len(nw.cagent.NetInterfaceExcludeRegex) > 0 {
 		for _, reString := range nw.cagent.NetInterfaceExcludeRegex {
