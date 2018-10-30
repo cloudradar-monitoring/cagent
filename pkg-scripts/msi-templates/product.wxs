@@ -16,7 +16,7 @@
             Manufacturer="{{.Company}}"
             Language="1033">
 
-      <Package InstallerVersion="200" Compressed="yes" Comments="Windows Installer Package" InstallScope="perMachine"/>
+      <Package InstallerVersion="200" Compressed="yes" Comments="Windows Installer Package"/>
 
       <Media Id="1" Cabinet="product.cab" EmbedCab="yes"/>
 
@@ -34,18 +34,21 @@
                {{if gt (.Files.Items | len) 0}}
                <Component Id="ApplicationFiles" Guid="{{.Files.GUID}}">
                   {{range $i, $e := .Files.Items}}
-                    <File Id="ApplicationFile{{$i}}" Source="{{$e}}"/>
                      {{if eq $i 0}}
-                         <ServiceInstall Id="ServiceInstaller" Name="Cagent" Type="ownProcess" Vital="yes" DisplayName="Cagent" Description="Cagent" Start="auto" Account="LocalSystem" ErrorControl="normal" Arguments=" /start cagent" Interactive="no" />
-                         <ServiceControl Id="StartService" Name="Cagent" Stop="both" Start="install" Remove="uninstall" Wait="yes" />
-                    {{end}}
-                  {{end}}
+                         <ServiceInstall Id="ServiceInstaller" Name="Cagent" Type="ownProcess" Vital="yes" DisplayName="Cagent" Description="Cagent" Start="auto" Account="LocalSystem" ErrorControl="normal" Interactive="no">
+                         </ServiceInstall>
+                         <ServiceControl Id="StartService" Name="Cagent" Stop="both" Start="install" Remove="uninstall" Wait="yes">
+                               <ServiceArgument />
+                         </ServiceControl>
+                     {{end}}
+               	     <File Id="ApplicationFile{{$i}}" Source="{{$e}}"/>
+		         {{end}}
                </Component>
                {{end}}
                {{if gt (.Directories | len) 0}}
-               {{range $i, $e := .Directories}}
-               <Directory Id="APPDIR{{$i}}" Name="{{$e}}" />
-               {{end}}
+                  {{range $i, $e := .Directories}}
+                     <Directory Id="APPDIR{{$i}}" Name="{{$e}}" />
+                 {{end}}
                {{end}}
             </Directory>
          </Directory>
@@ -137,6 +140,9 @@
          {{range $i, $e := .Directories}}
          <ComponentGroupRef Id="AppFiles{{$i}}" />
          {{end}}
+         <Feature Id="Uninstall">
+             <ComponentRef Id="UninstallFolder" Primary="yes"/>
+         </Feature>
       </Feature>
 
       <UI>
