@@ -4,11 +4,69 @@ package perfcounters
 
 import (
 	"fmt"
+	"log"
 	"strings"
+	"time"
+
+	"github.com/pkg/errors"
 )
 
 type WinPerfCountersWatcher struct {
-	query PerformanceQuery
+	query        PerformanceQuery
+	ongoingQuery PerformanceQuery
+	handles      map[string]PDH_HCOUNTER
+}
+
+func (m *WinPerfCountersWatcher) StartQuery(counterPath string, interval time.Duration) error {
+	var counterHandle PDH_HCOUNTER
+
+	err := m.ongoingQuery.Open()
+	if err != nil {
+		return errors.Wrap(err, "Failed to open PerformanceQuery")
+	}
+
+	// Add counter to query depending on OS we're running
+	if !m.query.IsVistaOrNewer() {
+		counterHandle, err = m.ongoingQuery.AddCounterToQuery(counterPath)
+		if err != nil {
+			return errors.Wrap(err, "Failed to AddCounterToQuery")
+		}
+	} else {
+		counterHandle, err = m.ongoingQuery.AddEnglishCounterToQuery(counterPath)
+		if err != nil {
+			return errors.Wrap(err, "Failed to AddEnglishCounterToQuery")
+		}
+	}
+
+	m.handles[counterPath] = counterHandle
+
+	// Start collecting data in the background so we can query them later
+	go func() {
+		for {
+			if ret := PdhCollectQueryData(m.ongoingQuery.Query()); ret != ERROR_SUCCESS {
+				err := NewPdhError(ret)
+				log.Printf("Error collecting PerformanceQuery data: %s", err)
+			}
+			// Collection interval
+			time.Sleep(interval)
+		}
+	}()
+
+	return nil
+}
+
+func (m *WinPerfCountersWatcher) GetFormattedQueryData(counterPath string) ([]CounterValue, error) {
+	handle, ok := m.handles[counterPath]
+	if !ok {
+		return nil, fmt.Errorf("No query going on for counterPath: %s", counterPath)
+	}
+
+	counterValues, err := m.ongoingQuery.GetFormattedCounterArrayDouble(handle)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to call GetFormattedCounterArrayDouble")
+	}
+
+	return counterValues, nil
 }
 
 func (m *WinPerfCountersWatcher) Query(counterPath string, instance string) (float64, error) {
@@ -86,5 +144,9 @@ func isKnownCounterDataError(err error) bool {
 }
 
 func Watcher() *WinPerfCountersWatcher {
-	return &WinPerfCountersWatcher{query: &PerformanceQueryImpl{}}
+	return &WinPerfCountersWatcher{
+		handles:      make(map[string]PDH_HCOUNTER),
+		ongoingQuery: &PerformanceQueryImpl{},
+		query:        &PerformanceQueryImpl{},
+	}
 }
