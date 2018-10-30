@@ -85,6 +85,7 @@ func (t *Top) Run() {
 			pr.Load15 = pr.Load15.Next()
 		}
 		t.pListMtx.Unlock()
+		time.Sleep(interval)
 	}
 }
 
