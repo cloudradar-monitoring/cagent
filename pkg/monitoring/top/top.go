@@ -48,7 +48,7 @@ func (t *Top) Run() {
 
 	for {
 		// Check if stop was requested
-		if t.stop == true {
+		if t.stop {
 			return
 		}
 
