@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// Process is used to store aggregated load data about an OS process
 type Process struct {
 	PID     uint32
 	Load    float64
@@ -15,83 +16,87 @@ type Process struct {
 	Command string
 }
 
+// ProcessInfo is used to store a snapshot of laod data about an OS process
 type ProcessInfo struct {
-	PID     uint32
-	Command string
-	Load    float64
+	Identifier string
+	PID        uint32
+	Command    string
+	Load       float64
 }
 
+// Top holds a map with information about process loads
 type Top struct {
-	pList    map[uint32]*Process
+	pList    map[string]*Process
 	pListMtx sync.RWMutex
 	stop     bool
 }
 
+// New returns a new instance of Top struct
 func New() *Top {
 	t := &Top{
-		pList: make(map[uint32]*Process),
+		pList: make(map[string]*Process),
 	}
 
 	return t
 }
 
+// Run starts measuring process load on the system
 func (t *Top) Run() {
-	var tStart time.Time
+	interval := time.Second * 1
+	// Call to os agnostic implementation
+	t.startCollect(interval)
+
 	for {
-		tStart = time.Now()
 		// Check if stop was requested
 		if t.stop == true {
 			return
 		}
 
-		// Call to OS dependent implementation to fetch procsses
+		// Call to os agnostic implementation to fetch procsses
 		processes, err := t.GetProcesses()
 		if err != nil {
 			log.Printf("Failed to get process list: %s", err)
+			time.Sleep(interval)
 			continue
 		}
 
+		// Lock because the map can be accesses from other goroutines as well
+		t.pListMtx.Lock()
 		var pr *Process
 		for _, p := range processes {
-			// Check if we already track the process
-			if _, ok := t.pList[p.PID]; !ok {
+			// Check if we already track the process ad if not start tracking it
+			if _, ok := t.pList[p.Identifier]; !ok {
 				pr = &Process{
 					PID:     p.PID,
 					Command: p.Command,
 					Load5:   ring.New(5 * 60),
 					Load15:  ring.New(15 * 60),
 				}
-				t.pList[p.PID] = pr
+				t.pList[p.Identifier] = pr
 			} else {
-				pr = t.pList[p.PID]
+				pr = t.pList[p.Identifier]
 			}
 
+			// Add load value to rings for later calculation of load load5 and load15
 			pr.Load = p.Load
 			pr.Load5.Value = p.Load
 			pr.Load5 = pr.Load5.Next()
 			pr.Load15.Value = p.Load
 			pr.Load15 = pr.Load15.Next()
 		}
-
-		// Try to get a sample every second
-		tRun := time.Since(tStart)
-		tWait := 1000000000 - tRun.Nanoseconds()
-		if tWait > 0 {
-			// log.Printf("Waiting: %fms", float64(tWait)/1000000)
-			time.Sleep(time.Nanosecond * time.Duration(tWait))
-		} else {
-			log.Printf("WARN: Took more than 1s to get cpu load of processes")
-		}
+		t.pListMtx.Unlock()
 	}
 }
 
+// Stop signals that load measuring should be stopped
 func (t *Top) Stop() {
 	t.stop = true
 }
 
-func (t *Top) HighestLoad() {
+// HighestLoad returns information about the process causing highest CPU load
+func (t *Top) HighestLoad() (string, float64, float64, float64) {
 	var pi *Process
-	var pid uint32
+	var identifier string
 
 	// Find process with highest load
 	t.pListMtx.RLock()
@@ -101,7 +106,7 @@ func (t *Top) HighestLoad() {
 		}
 		if v.Load > pi.Load {
 			pi = v
-			pid = k
+			identifier = k
 		}
 	}
 	t.pListMtx.RUnlock()
@@ -142,7 +147,7 @@ func (t *Top) HighestLoad() {
 
 	// pi can be nil on first run until thigs are set up
 	if pi == nil {
-		return
+		return "", 0, 0, 0
 	}
 
 	// Sanity check in case the Rings aren't initialised yet
@@ -152,5 +157,5 @@ func (t *Top) HighestLoad() {
 		wg.Wait()
 	}
 
-	log.Printf("Load %d: %f - %f - %f", pid, pi.Load, avg5, avg15)
+	return identifier, pi.Load, avg5, avg15
 }
