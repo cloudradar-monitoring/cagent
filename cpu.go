@@ -180,6 +180,7 @@ func (tsa *TimeSeriesAverage) Percentage() (map[int]ValuesMap, error) {
 					// looks like some problem happen and we don't have enough(more than 1) measurements
 					// This could happen if all CPU queries for the last d minutes were timeouted
 					sum[d][key] = -1
+					continue
 				}
 
 				secondsSpentOnThisTypeOfLoad := lastVal - tsa.TimeSeries[keyInt].Values[key]
