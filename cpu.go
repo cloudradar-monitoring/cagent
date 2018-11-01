@@ -163,7 +163,6 @@ func (tsa *TimeSeriesAverage) Percentage() (map[int]ValuesMap, error) {
 
 				// found the average for all collected measurements for the last d minutes
 				sum[d][key] = roundUpWithPrecision(valSum/float64(count), 2)
-
 			} else {
 
 				var hasMetrics bool
@@ -178,7 +177,7 @@ func (tsa *TimeSeriesAverage) Percentage() (map[int]ValuesMap, error) {
 				}
 				if !hasMetrics || keyInt == len(tsa.TimeSeries)-1 {
 					// looks like some problem happen and we don't have enough(more than 1) measurements
-					// This could happen if all CPU queries for the last d minutes were timeouted
+					// this could happen if all CPU queries for the last d minutes were timeouted
 					sum[d][key] = -1
 					continue
 				}
