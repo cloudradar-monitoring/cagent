@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"math"
 
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/load"
@@ -74,6 +75,7 @@ func minutes(mins int) time.Duration {
 
 func (tsa *TimeSeriesAverage) Add(t time.Time, valuesMap ValuesMap) {
 	for {
+		// remove outdated measurements from the time series
 		if len(tsa.TimeSeries) > 0 && time.Since(tsa.TimeSeries[0].Time) > minutes(tsa._DurationInMinutes[len(tsa._DurationInMinutes)-1]+1) {
 			tsa.TimeSeries = tsa.TimeSeries[1:]
 		} else {
@@ -113,6 +115,11 @@ func (tsa *TimeSeriesAverage) Average() map[int]ValuesMap {
 	return sum
 }
 
+func roundUpWithPrecision(p float64, precision int) float64 {
+	k := math.Pow10(precision)
+	return float64(int64(p*k+0.5)) / k
+}
+
 func (tsa *TimeSeriesAverage) Percentage() (map[int]ValuesMap, error) {
 	sum := make(map[int]ValuesMap)
 
@@ -126,6 +133,7 @@ func (tsa *TimeSeriesAverage) Percentage() (map[int]ValuesMap, error) {
 	last := tsa.TimeSeries[len(tsa.TimeSeries)-1]
 	for _, d := range tsa._DurationInMinutes {
 		sum[d] = make(ValuesMap)
+		// found minimal index of the first measurement in this period
 		keyInt := len(tsa.TimeSeries) - int(int64(d)*int64(time.Minute)/int64(measureInterval)) - 1
 
 		if keyInt < 0 {
@@ -137,7 +145,49 @@ func (tsa *TimeSeriesAverage) Percentage() (map[int]ValuesMap, error) {
 				sum[d][key] = -1
 				continue
 			}
-			sum[d][key] = float64(int64(((lastVal-tsa.TimeSeries[keyInt].Values[key])/last.Time.Sub(tsa.TimeSeries[keyInt].Time).Seconds())*10000+0.5)) / 100
+			// On windows perCPU measurements returned as Percentage, not CPU time
+			// see https://github.com/shirou/gopsutil/issues/600
+			if runtime.GOOS == "windows" {
+				var valSum float64
+				var count int
+				for i := keyInt; i < len(tsa.TimeSeries); i++ {
+					t := tsa.TimeSeries[i]
+					// skip measurements collected more than d minutes ago (e.g. 5 minutes for avg5)
+					if time.Since(t.Time).Minutes() > float64(d) {
+						continue
+					}
+
+					valSum += t.Values[key]
+					count++
+				}
+
+				// found the average for all collected measurements for the last d minutes
+				sum[d][key] = roundUpWithPrecision(valSum/float64(count), 2)
+
+			} else {
+
+				var hasMetrics bool
+				// filter out measurements collected more than d minutes ago (e.g. in case some of them were timeouted)
+				for i := keyInt; i < len(tsa.TimeSeries); i++ {
+					// allow 3 seconds(0.05min) outage to include metrics query time
+					if time.Since(tsa.TimeSeries[i].Time).Minutes() <= float64(d)+0.05 {
+						keyInt = i
+						hasMetrics = true
+						break
+					}
+				}
+				if !hasMetrics || keyInt == len(tsa.TimeSeries)-1 {
+					// looks like some problem happen and we don't have enough(more than 1) measurements
+					// This could happen if all CPU queries for the last d minutes were timeouted
+					sum[d][key] = -1
+				}
+
+				secondsSpentOnThisTypeOfLoad := lastVal - tsa.TimeSeries[keyInt].Values[key]
+				secondsBetweenFirstAndLastMeasurementInTheRange := last.Time.Sub(tsa.TimeSeries[keyInt].Time).Seconds()
+
+				// divide CPU times with seconds to found the percentage
+				sum[d][key] = roundUpWithPrecision((secondsSpentOnThisTypeOfLoad/secondsBetweenFirstAndLastMeasurementInTheRange)*100, 2)
+			}
 		}
 	}
 
