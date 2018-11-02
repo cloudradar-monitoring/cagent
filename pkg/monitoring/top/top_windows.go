@@ -16,7 +16,7 @@ var counterPath = "\\Process(*)\\% Processor Time"
 func (t *Top) startCollect(interval time.Duration) {
 	watcher = perfcounters.Watcher()
 
-	err := watcher.StartQuery(counterPath, interval)
+	err := watcher.StartContinousQuery(counterPath, interval)
 	if err != nil {
 		log.Printf("Failed to StartQuery: %s", err)
 		return
