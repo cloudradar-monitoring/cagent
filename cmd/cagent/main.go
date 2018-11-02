@@ -26,6 +26,8 @@ var (
 	version string
 )
 
+const defaultLogLevel = "error"
+
 func askForConfirmation(s string) bool {
 	reader := bufio.NewReader(os.Stdin)
 
@@ -62,7 +64,7 @@ func main() {
 	outputFilePtr := flag.String("o", "", "file to write the results")
 
 	cfgPathPtr := flag.String("c", cagent.DefaultCfgPath, "config file path")
-	logLevelPtr := flag.String("v", "", "log level – overrides the level in config file (values \"error\",\"info\",\"debug\")")
+	logLevelPtr := flag.String("v", defaultLogLevel, "log level – overrides the level in config file (values \"error\",\"info\",\"debug\")")
 	systemManager := service.ChosenSystem()
 	daemonizeModePtr := flag.Bool("d", false, "daemonize – run the proccess in background")
 	oneRunOnlyModePtr := flag.Bool("r", false, "one run only – perform checks once and exit. Overwrites output file")
@@ -127,9 +129,13 @@ func main() {
 		log.SetOutput(os.Stderr)
 	}
 
+	// Check loglevel and if needed warn user and set to default
 	if *logLevelPtr == string(cagent.LogLevelError) || *logLevelPtr == string(cagent.LogLevelInfo) || *logLevelPtr == string(cagent.LogLevelDebug) {
 		ca.SetLogLevel(cagent.LogLevel(*logLevelPtr))
+	} else {
+		log.Warnf("LogLevel was set to an invalid value: \"%s\". Set to default: \"%s\"", *logLevelPtr, defaultLogLevel)
 	}
+
 	if ca.HubURL == "" && !*serviceUninstallPtr && *outputFilePtr == "" {
 		if serviceInstallPtr != nil && *serviceInstallPtr || serviceInstallUserPtr != nil && *serviceInstallUserPtr != "" {
 			fmt.Println(" ****** Before start you need to set 'hub_url' config param at ", *cfgPathPtr)
