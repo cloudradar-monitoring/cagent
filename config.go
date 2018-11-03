@@ -1,18 +1,17 @@
 package cagent
 
 import (
+	"bytes"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
-	"time"
-	"bytes"
-
-	"crypto/x509"
-	"io/ioutil"
-	"net/url"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	log "github.com/sirupsen/logrus"
@@ -52,7 +51,7 @@ type Cagent struct {
 
 	SystemFields []string `toml:"system_fields"`
 
-	WindowsUpdatesWatcherInterval     int     `toml:"windows_updates_watcher_interval"`
+	WindowsUpdatesWatcherInterval int `toml:"windows_updates_watcher_interval"`
 
 	// internal use
 	hubHttpClient *http.Client
@@ -138,7 +137,6 @@ func New() *Cagent {
 		ca.HubPassword = os.Getenv("CAGENT_HUB_PASSWORD")
 	}
 
-	ca.SetLogLevel(LogLevelInfo)
 	return ca
 }
 
