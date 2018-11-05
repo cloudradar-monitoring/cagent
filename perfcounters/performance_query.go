@@ -28,6 +28,7 @@ type PerformanceQuery interface {
 	GetFormattedCounterArrayDouble(hCounter PDH_HCOUNTER) ([]CounterValue, error)
 	CollectData() error
 	IsVistaOrNewer() bool
+	Query() PDH_HQUERY
 }
 
 //PdhError represents error returned from Performance Counters API
@@ -69,6 +70,10 @@ func (m *PerformanceQueryImpl) Open() error {
 
 	m.query = handle
 	return nil
+}
+
+func (m *PerformanceQueryImpl) Query() PDH_HQUERY {
+	return m.query
 }
 
 // Close closes the counterPath, releases associated counter handles and frees resources

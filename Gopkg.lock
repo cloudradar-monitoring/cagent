@@ -45,6 +45,22 @@
   revision = "8f267d80f2eb68998661a325c0e53fca4485e626"
 
 [[projects]]
+  branch = "master"
+  digest = "1:a65caa49a129fb2fc74981bfcd815cba09ea1e67cabe8130fe14be2751b93c81"
+  name = "github.com/lxn/win"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "a7f87360b10eafe73bd3ff01db16976fe7560fbf"
+
+[[projects]]
+  digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
+
+[[projects]]
   digest = "1:7b6faf64fc7c7110d86922c2826554735b69af45dbdb652334957ca53ab8f7f6"
   name = "github.com/shirou/gopsutil"
   packages = [
@@ -105,7 +121,12 @@
   analyzer-version = 1
   input-imports = [
     "github.com/BurntSushi/toml",
+    "github.com/StackExchange/wmi",
+    "github.com/go-ole/go-ole",
+    "github.com/go-ole/go-ole/oleutil",
     "github.com/kardianos/service",
+    "github.com/lxn/win",
+    "github.com/pkg/errors",
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/disk",
     "github.com/shirou/gopsutil/host",
