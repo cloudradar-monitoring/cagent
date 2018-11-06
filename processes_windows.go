@@ -40,7 +40,7 @@ func processes() ([]ProcStat, error) {
 
 	wmiProcs := []Win32_Process{}
 
-	err := WMIQueryWithContext(ctx, `SELECT Name, CommandLine, ProcessID, ExecutionState FROM Win32_Process`, &wmiProcs)
+	err := WMIQueryWithContext(ctx, `SELECT Name, CommandLine, ProcessID, ParentProcessId FROM Win32_Process`, &wmiProcs)
 	if err != nil {
 		return nil, errors.New("WMI query error: " + err.Error())
 	}
