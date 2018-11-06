@@ -45,14 +45,6 @@
   revision = "8f267d80f2eb68998661a325c0e53fca4485e626"
 
 [[projects]]
-  branch = "master"
-  digest = "1:a65caa49a129fb2fc74981bfcd815cba09ea1e67cabe8130fe14be2751b93c81"
-  name = "github.com/lxn/win"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "a7f87360b10eafe73bd3ff01db16976fe7560fbf"
-
-[[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
   name = "github.com/pkg/errors"
   packages = ["."]
@@ -61,7 +53,8 @@
   version = "v0.8.0"
 
 [[projects]]
-  digest = "1:7b6faf64fc7c7110d86922c2826554735b69af45dbdb652334957ca53ab8f7f6"
+  branch = "master"
+  digest = "1:c141af7568952e76dc527aa64f5337417015f1feb9497f867d52093b085d7f5b"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
@@ -74,8 +67,7 @@
     "process",
   ]
   pruneopts = "UT"
-  revision = "8048a2e9c5773235122027dd585cf821b2af1249"
-  version = "v2.18.07"
+  revision = "4254ce2081c0d7994dae589a4550a4ca659ebf94"
 
 [[projects]]
   branch = "master"
@@ -125,7 +117,6 @@
     "github.com/go-ole/go-ole",
     "github.com/go-ole/go-ole/oleutil",
     "github.com/kardianos/service",
-    "github.com/lxn/win",
     "github.com/pkg/errors",
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/disk",
@@ -133,7 +124,9 @@
     "github.com/shirou/gopsutil/load",
     "github.com/shirou/gopsutil/mem",
     "github.com/shirou/gopsutil/net",
+    "github.com/shirou/gopsutil/process",
     "github.com/sirupsen/logrus",
+    "golang.org/x/sys/windows",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
