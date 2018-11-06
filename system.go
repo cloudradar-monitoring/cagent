@@ -18,7 +18,9 @@ import (
 )
 
 var (
-	Timeout = 5 * time.Second
+	unameTimeout    = 5 * time.Second
+	cpuInfoTimeout  = 10 * time.Second
+	hostInfoTimeout = 10 * time.Second
 )
 
 type Invoker interface {
@@ -29,7 +31,7 @@ type Invoker interface {
 type Invoke struct{}
 
 func (i Invoke) Command(name string, arg ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), unameTimeout)
 	defer cancel()
 	return i.CommandWithContext(ctx, name, arg...)
 }
@@ -78,7 +80,7 @@ func (ca *Cagent) HostInfoResults() (MeasurementsMap, error) {
 		return nil, nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), hostInfoTimeout)
 	defer cancel()
 
 	info, err := host.InfoWithContext(ctx)
@@ -115,7 +117,9 @@ func (ca *Cagent) HostInfoResults() (MeasurementsMap, error) {
 		case "fqdn":
 			res[field] = getFQDN()
 		case "cpu_model":
-			cpuInfo, err := cpu.Info()
+			ctx, cancel := context.WithTimeout(context.Background(), cpuInfoTimeout)
+			defer cancel()
+			cpuInfo, err := cpu.InfoWithContext(ctx)
 			if err != nil {
 				log.Errorf("[SYSTEM] Failed to read cpu info: %s", err.Error())
 				errs = append(errs, err.Error())
