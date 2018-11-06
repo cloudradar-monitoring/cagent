@@ -273,7 +273,9 @@ func (stat *CPUWatcher) Once() error {
 
 	values := ValuesMap{}
 
-	for i, cputime := range times {
+	cpuStatPerCpuPerCorePerType := make(map[int]map[int]map[string]float64)
+
+	for _, cputime := range times {
 		for _, utype := range stat.UtilTypes {
 			utype = strings.ToLower(utype)
 			var value float64
@@ -297,14 +299,43 @@ func (stat *CPUWatcher) Once() error {
 			default:
 				continue
 			}
-			values[fmt.Sprintf("%s.%%d.cpu%d", utype, i)] = value
-			values[fmt.Sprintf("%s.%%d.total", utype)] += value
+
+			if runtime.GOOS == "windows" {
+				// calculate the logical CPU index from "cpuIndex,coreIndex" format
+				cpuIndexParts := strings.Split(cputime.CPU, ",")
+
+				cpuIndex, _ := strconv.Atoi(cpuIndexParts[0])
+				coreIndex, _ := strconv.Atoi(cpuIndexParts[1])
+
+				if _, exists := cpuStatPerCpuPerCorePerType[cpuIndex]; !exists {
+					cpuStatPerCpuPerCorePerType[cpuIndex] = make(map[int]map[string]float64)
+				}
+
+				if _, exists := cpuStatPerCpuPerCorePerType[cpuIndex][coreIndex]; !exists {
+					cpuStatPerCpuPerCorePerType[cpuIndex][coreIndex] = make(map[string]float64)
+				}
+
+				// store by indexes to iterate in the right order later
+				cpuStatPerCpuPerCorePerType[cpuIndex][coreIndex][utype] = value
+				values[fmt.Sprintf("%s.%%d.total", utype)] += value / float64(len(times))
+
+			} else {
+				values[fmt.Sprintf("%s.%%d.%s", utype, cputime.CPU)] = value
+				values[fmt.Sprintf("%s.%%d.total", utype)] += value / float64(len(times))
+			}
 		}
 	}
 
-	for k, v := range values {
-		if strings.HasSuffix(k, ".total") {
-			values[k] = v / float64(len(times))
+	if runtime.GOOS == "windows" {
+		// calculate CPU logical index on Windows
+		logicalCPUIndex := 0
+		for cpuIndex := 0; cpuIndex < len(cpuStatPerCpuPerCorePerType); cpuIndex++ {
+			for coreIndex := 0; coreIndex < len(cpuStatPerCpuPerCorePerType[cpuIndex]); coreIndex++ {
+				for utype, value := range cpuStatPerCpuPerCorePerType[cpuIndex][coreIndex] {
+					values[fmt.Sprintf("%s.%%d.cpu%d", utype, logicalCPUIndex)] = value
+				}
+				logicalCPUIndex++
+			}
 		}
 	}
 
@@ -314,10 +345,17 @@ func (stat *CPUWatcher) Once() error {
 
 func (stat *CPUWatcher) Run() {
 	for {
-		time.Sleep(measureInterval)
+		start := time.Now()
 		err := stat.Once()
 		if err != nil {
 			log.Errorf("[CPU] Failed to read utilisation metrics: " + err.Error())
+		}
+
+		spent := time.Since(start)
+
+		// Sleep if we spent less than measureInterval on measurement
+		if spent < measureInterval {
+			time.Sleep(measureInterval - spent)
 		}
 	}
 }
@@ -326,7 +364,7 @@ func (cs *CPUWatcher) Results() (MeasurementsMap, error) {
 	var errs []string
 	util, err := cs.UtilAvg.Percentage()
 	if err != nil {
-		log.Errorf("[CPU] Failed to read utilisation metrics: " + err.Error())
+		log.Errorf("[CPU] Failed to calculate utilisation metrics: " + err.Error())
 		errs = append(errs, err.Error())
 	}
 	results := MeasurementsMap{}
