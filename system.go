@@ -120,7 +120,6 @@ func (ca *Cagent) HostInfoResults() (MeasurementsMap, error) {
 			ctx, cancel := context.WithTimeout(context.Background(), cpuInfoTimeout)
 			defer cancel()
 			cpuInfo, err := cpu.InfoWithContext(ctx)
-
 			if err != nil {
 				log.Errorf("[SYSTEM] Failed to read cpu info: %s", err.Error())
 				errs = append(errs, err.Error())

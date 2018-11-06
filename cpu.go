@@ -273,7 +273,7 @@ func (stat *CPUWatcher) Once() error {
 
 	values := ValuesMap{}
 
-	cpuStatPerCpuPerCorePerType := make(map[int]map[int]map[string]float64)
+	cpuStatPerCPUPerCorePerType := make(map[int]map[int]map[string]float64)
 
 	for _, cputime := range times {
 		for _, utype := range stat.UtilTypes {
@@ -307,16 +307,16 @@ func (stat *CPUWatcher) Once() error {
 				cpuIndex, _ := strconv.Atoi(cpuIndexParts[0])
 				coreIndex, _ := strconv.Atoi(cpuIndexParts[1])
 
-				if _, exists := cpuStatPerCpuPerCorePerType[cpuIndex]; !exists {
-					cpuStatPerCpuPerCorePerType[cpuIndex] = make(map[int]map[string]float64)
+				if _, exists := cpuStatPerCPUPerCorePerType[cpuIndex]; !exists {
+					cpuStatPerCPUPerCorePerType[cpuIndex] = make(map[int]map[string]float64)
 				}
 
-				if _, exists := cpuStatPerCpuPerCorePerType[cpuIndex][coreIndex]; !exists {
-					cpuStatPerCpuPerCorePerType[cpuIndex][coreIndex] = make(map[string]float64)
+				if _, exists := cpuStatPerCPUPerCorePerType[cpuIndex][coreIndex]; !exists {
+					cpuStatPerCPUPerCorePerType[cpuIndex][coreIndex] = make(map[string]float64)
 				}
 
 				// store by indexes to iterate in the right order later
-				cpuStatPerCpuPerCorePerType[cpuIndex][coreIndex][utype] = value
+				cpuStatPerCPUPerCorePerType[cpuIndex][coreIndex][utype] = value
 				values[fmt.Sprintf("%s.%%d.total", utype)] += value / float64(len(times))
 
 			} else {
@@ -327,11 +327,13 @@ func (stat *CPUWatcher) Once() error {
 	}
 
 	if runtime.GOOS == "windows" {
-		// calculate CPU logical index on Windows
+		// calculate persistent CPU logical indexes from the "cpuIndex,coreIndex" on Windows
+		// iterate on CPUs then on their cores
+		// Result will be like this: 0,0 -> 0; 1,1 -> 3
 		logicalCPUIndex := 0
-		for cpuIndex := 0; cpuIndex < len(cpuStatPerCpuPerCorePerType); cpuIndex++ {
-			for coreIndex := 0; coreIndex < len(cpuStatPerCpuPerCorePerType[cpuIndex]); coreIndex++ {
-				for utype, value := range cpuStatPerCpuPerCorePerType[cpuIndex][coreIndex] {
+		for cpuIndex := 0; cpuIndex < len(cpuStatPerCPUPerCorePerType); cpuIndex++ {
+			for coreIndex := 0; coreIndex < len(cpuStatPerCPUPerCorePerType[cpuIndex]); coreIndex++ {
+				for utype, value := range cpuStatPerCPUPerCorePerType[cpuIndex][coreIndex] {
 					values[fmt.Sprintf("%s.%%d.cpu%d", utype, logicalCPUIndex)] = value
 				}
 				logicalCPUIndex++
