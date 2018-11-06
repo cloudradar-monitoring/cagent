@@ -35,7 +35,8 @@
 
 [[constraint]]
   name = "github.com/shirou/gopsutil"
-  version = "2.18.7"
+  branch = "master"
+  revision = "4254ce2081c0d7994dae589a4550a4ca659ebf94"
 
 [[constraint]]
   name = "github.com/sirupsen/logrus"
@@ -48,7 +49,3 @@
 [[constraint]]
   name = "github.com/pkg/errors"
   version = "0.8.0"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/lxn/win"
