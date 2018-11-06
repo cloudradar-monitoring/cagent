@@ -10,6 +10,8 @@ import (
 	"github.com/StackExchange/wmi"
 )
 
+const processListTimeout = time.Second * 10
+
 type Win32_Process struct {
 	Name            string
 	CommandLine     *string
@@ -19,12 +21,6 @@ type Win32_Process struct {
 }
 
 func WMIQueryWithContext(ctx context.Context, query string, dst interface{}, connectServerArgs ...interface{}) error {
-	if _, ok := ctx.Deadline(); !ok {
-		ctxTimeout, cancel := context.WithTimeout(ctx, Timeout)
-		defer cancel()
-		ctx = ctxTimeout
-	}
-
 	errChan := make(chan error, 1)
 	go func() {
 		errChan <- wmi.Query(query, dst, connectServerArgs...)
@@ -39,7 +35,7 @@ func WMIQueryWithContext(ctx context.Context, query string, dst interface{}, con
 }
 
 func processes() ([]ProcStat, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), processListTimeout)
 	defer cancel()
 
 	wmiProcs := []Win32_Process{}
