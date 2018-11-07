@@ -276,19 +276,21 @@ func main() {
 
 			if err != nil {
 				fmt.Printf("Already running\n")
+			} else {
+				fmt.Printf("Cagent is running!\n")
 			}
 
 			switch systemManager.String() {
 			case "unix-systemv":
-				fmt.Printf("Run this command to stop/start it:\nsudo service %s stop\nsudo service %s start\n\n", svcConfig.Name, svcConfig.Name)
+				fmt.Printf("Use this command to stop it:\nsudo service %s stop\n\n", svcConfig.Name, svcConfig.Name)
 			case "linux-upstart":
-				fmt.Printf("Run this command to stop/start it:\nsudo initctl stop %s\nsudo initctl start %s\n\n", svcConfig.Name, svcConfig.Name)
+				fmt.Printf("Use this command to stop it:\nsudo initctl stop %s\n\n", svcConfig.Name, svcConfig.Name)
 			case "linux-systemd":
-				fmt.Printf("Run this command to stop/start it:\nsudo systemctl stop %s.service\nsudo systemctl start %s.service\n\n", svcConfig.Name, svcConfig.Name)
+				fmt.Printf("Use this command to stop it:\nsudo systemctl stop %s.service\n\n", svcConfig.Name, svcConfig.Name)
 			case "darwin-launchd":
-				fmt.Printf("Run this command to stop/start it:\nsudo launchctl unload %s\nsudo launchctl load /Library/LaunchDaemons/%s.plist\n\n", svcConfig.Name, svcConfig.Name)
+				fmt.Printf("Use this command to stop it:\nsudo launchctl unload %s\n\n", svcConfig.Name, svcConfig.Name)
 			case "windows-service":
-				fmt.Printf("Use the Windows Service Manager to stop/start it\n\n")
+				fmt.Printf("Use the Windows Service Manager to stop it\n\n")
 			}
 
 			fmt.Printf("Logs file located at: %s\n", ca.LogFile)
