@@ -282,13 +282,13 @@ func main() {
 
 			switch systemManager.String() {
 			case "unix-systemv":
-				fmt.Printf("Use this command to stop it:\nsudo service %s stop\n\n", svcConfig.Name, svcConfig.Name)
+				fmt.Printf("Use this command to stop it:\nsudo service %s stop\n\n", svcConfig.Name)
 			case "linux-upstart":
-				fmt.Printf("Use this command to stop it:\nsudo initctl stop %s\n\n", svcConfig.Name, svcConfig.Name)
+				fmt.Printf("Use this command to stop it:\nsudo initctl stop %s\n\n", svcConfig.Name)
 			case "linux-systemd":
-				fmt.Printf("Use this command to stop it:\nsudo systemctl stop %s.service\n\n", svcConfig.Name, svcConfig.Name)
+				fmt.Printf("Use this command to stop it:\nsudo systemctl stop %s.service\n\n", svcConfig.Name)
 			case "darwin-launchd":
-				fmt.Printf("Use this command to stop it:\nsudo launchctl unload %s\n\n", svcConfig.Name, svcConfig.Name)
+				fmt.Printf("Use this command to stop it:\nsudo launchctl unload %s\n\n", svcConfig.Name)
 			case "windows-service":
 				fmt.Printf("Use the Windows Service Manager to stop it\n\n")
 			}
