@@ -134,6 +134,7 @@ func main() {
 		ca.SetLogLevel(cagent.LogLevel(*logLevelPtr))
 	} else {
 		log.Warnf("LogLevel was set to an invalid value: \"%s\". Set to default: \"%s\"", *logLevelPtr, defaultLogLevel)
+		ca.SetLogLevel(cagent.LogLevel(defaultLogLevel))
 	}
 
 	if ca.HubURL == "" && !*serviceUninstallPtr && *outputFilePtr == "" {
