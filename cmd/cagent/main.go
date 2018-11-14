@@ -113,6 +113,8 @@ func main() {
 		err := ca.TestHub()
 		if err != nil {
 			fmt.Printf("Cagent HUB test failed: %s\n", err.Error())
+			os.Exit(1)
+			return
 		}
 
 		fmt.Printf("HUB connection test succeed and credentials are correct!\n")
