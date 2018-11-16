@@ -66,7 +66,7 @@ func (ca *Cagent) TestHub() error {
 	if ca.HubUser != "" {
 		req.SetBasicAuth(ca.HubUser, ca.HubPassword)
 	}
-	
+
 	resp, err := ca.hubHttpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("unable to connect. %s. If you have a proxy or firewall, it may be blocking the connection", err.Error())
