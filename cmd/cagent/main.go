@@ -77,6 +77,7 @@ func main() {
 
 	serviceUninstallPtr := flag.Bool("u", false, fmt.Sprintf("stop and uninstall the system service(%s)", systemManager.String()))
 	printConfigPtr := flag.Bool("p", false, "print the active config")
+	testConfigPtr := flag.Bool("t", false, "test the HUB config")
 	versionPtr := flag.Bool("version", false, "show the cagent version")
 
 	flag.Parse()
@@ -105,6 +106,18 @@ func main() {
 
 	if *printConfigPtr {
 		fmt.Println(ca.DumpConfigToml())
+		return
+	}
+
+	if *testConfigPtr {
+		err := ca.TestHub()
+		if err != nil {
+			fmt.Printf("Cagent HUB test failed: %s\n", err.Error())
+			os.Exit(1)
+			return
+		}
+
+		fmt.Printf("HUB connection test succeed and credentials are correct!\n")
 		return
 	}
 
@@ -141,7 +154,7 @@ func main() {
 		if serviceInstallPtr != nil && *serviceInstallPtr || serviceInstallUserPtr != nil && *serviceInstallUserPtr != "" {
 			fmt.Println(" ****** Before start you need to set 'hub_url' config param at ", *cfgPathPtr)
 		} else {
-			fmt.Println("Missing output file flag(-o) hub_url in config")
+			fmt.Println("Missing output file flag(-o) or hub_url in the config")
 			flag.PrintDefaults()
 			return
 		}
