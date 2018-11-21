@@ -113,7 +113,7 @@ func (nw *netWatcher) ExcludedInterfacesByNameMap(allInterfaces []utilnet.Interf
 				nw.constantlyExcludedInterfaceCache[netIf.Name] = false
 				continue
 			}
-			
+
 			excludedInterfaces[netIf.Name] = struct{}{}
 			log.Debugf("[NET] interface excluded: %s", netIf.Name)
 		}
@@ -202,7 +202,7 @@ func (nw *netWatcher) Results() (MeasurementsMap, error) {
 
 	interfaces, err := utilnet.Interfaces()
 	if err != nil {
-		log.Errorf("[NET] Failed to read interfaces: ", err.Error())
+		log.Errorf("[NET] Failed to read interfaces: %s", err.Error())
 		return nil, err
 	}
 
