@@ -18,3 +18,7 @@ type Result struct {
 func floatToIntPercentRoundUP(f float64) int{
 	return int(f*100+0.5)
 }
+
+func floatToIntRoundUP(f float64) int{
+	return int(f+0.5)
+}
