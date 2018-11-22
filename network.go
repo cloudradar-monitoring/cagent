@@ -27,6 +27,8 @@ func (ca *Cagent) NetWatcher() *netWatcher {
 	return &netWatcher{cagent: ca, constantlyExcludedInterfaceCache: map[string]bool{}}
 }
 
+// InterfaceExcludeRegexCompiled compiles and cache all the interfaces-filtering regexp's user has specified in the config
+// So we don't need to compile them on each iteration of measurements
 func (nw *netWatcher) InterfaceExcludeRegexCompiled() []*regexp.Regexp {
 	if len(nw.netInterfaceExcludeRegexCompiled) > 0 {
 		return nw.netInterfaceExcludeRegexCompiled
@@ -85,7 +87,7 @@ func (nw *netWatcher) isInterfaceExcludedByRegexp(netIf *utilnet.InterfaceStat) 
 	return false
 }
 
-func (nw *netWatcher) ExcludedInterfacesByNameMap(allInterfaces []utilnet.InterfaceStat) map[string]struct{} {
+func (nw *netWatcher) ExcludedInterfacesByName(allInterfaces []utilnet.InterfaceStat) map[string]struct{} {
 	excludedInterfaces := map[string]struct{}{}
 
 	for _, netIf := range allInterfaces {
@@ -121,6 +123,8 @@ func (nw *netWatcher) ExcludedInterfacesByNameMap(allInterfaces []utilnet.Interf
 	return excludedInterfaces
 }
 
+// fillEmptyMeasurements used to fill measurements with nil's for all non-excluded interfaces
+// It is called in case measurements are not yet ready or some error happens while retrieving counters
 func (nw *netWatcher) fillEmptyMeasurements(results MeasurementsMap, interfaces []utilnet.InterfaceStat, excludedInterfacesByName map[string]struct{}) {
 	for _, netIf := range interfaces {
 		if _, isExcluded := excludedInterfacesByName[netIf.Name]; isExcluded {
@@ -133,6 +137,7 @@ func (nw *netWatcher) fillEmptyMeasurements(results MeasurementsMap, interfaces 
 	}
 }
 
+// fillCountersMeasurements used to fill measurements with nil's for all non-excluded interfaces
 func (nw *netWatcher) fillCountersMeasurements(results MeasurementsMap, interfaces []utilnet.InterfaceStat, excludedInterfacesByName map[string]struct{}) error {
 	ctx, _ := context.WithTimeout(context.Background(), netGetCountersTimeout)
 	counters, err := utilnet.IOCountersWithContext(ctx, true)
@@ -206,7 +211,7 @@ func (nw *netWatcher) Results() (MeasurementsMap, error) {
 		return nil, err
 	}
 
-	excludedInterfacesByNameMap := nw.ExcludedInterfacesByNameMap(interfaces)
+	excludedInterfacesByNameMap := nw.ExcludedInterfacesByName(interfaces)
 	// fill counters measurements into results
 	err = nw.fillCountersMeasurements(results, interfaces, excludedInterfacesByNameMap)
 	if err != nil {
