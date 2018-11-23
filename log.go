@@ -16,6 +16,19 @@ const (
 	LogLevelError LogLevel = "error"
 )
 
+func (lvl LogLevel) IsValid() bool {
+	switch lvl {
+	case LogLevelDebug:
+		fallthrough
+	case LogLevelInfo:
+		fallthrough
+	case LogLevelError:
+		return true
+	default:
+		return false
+	}
+}
+
 func (lvl LogLevel) LogrusLevel() log.Level {
 	switch lvl {
 	case LogLevelDebug:
