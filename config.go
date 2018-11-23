@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	toml1 "github.com/BurntSushi/toml"
 	"github.com/pelletier/go-toml"
 	log "github.com/sirupsen/logrus"
 )
@@ -36,7 +37,7 @@ type Cagent struct {
 	Interval float64 `toml:"interval" comment:"# interval to push metrics to the HUB"`
 
 	PidFile  string   `toml:"pid" comment:"pid file"`
-	LogFile  string   `toml:"log" comment:"log file"`
+	LogFile  string   `toml:"log,omitempty" comment:"log file"`
 	LogLevel LogLevel `toml:"log_level" comment:"# log verbosity: allowed values\n\terror\n\tdebug\n\tinfo'"`
 
 	// not nesting MinValuableConfig here as it will created entry with name MinValuableConfig when marshaling
@@ -207,16 +208,21 @@ func (ca *Cagent) ReadConfigFromFile(configFilePath string, createIfNotExists bo
 			log.Infof("generated minimum valuable config: %s", configFilePath)
 		}
 	} else if configExists == nil {
-		var buf []byte
-
-		if buf, err = ioutil.ReadAll(f); err != nil {
+		_, err = toml1.DecodeFile(configFilePath, &ca)
+		if err != nil {
 			return err
 		}
 
-		if err = toml.Unmarshal(buf, ca); err != nil {
-			return err
-		}
-
+		// todo(troian) github.com/pelletier/go-toml completely overrides default values even if they omitted in the file
+		// var buf []byte
+		//
+		// if buf, err = ioutil.ReadAll(f); err != nil {
+		// 	return err
+		// }
+		//
+		// if err = toml.Unmarshal(buf, ca); err != nil {
+		// 	return err
+		// }
 		ca.lookupEnv()
 	} else {
 		return err
