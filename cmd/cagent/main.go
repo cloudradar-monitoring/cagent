@@ -94,14 +94,24 @@ func main() {
 	log.SetFormatter(&tfmt)
 
 	if cfgPathPtr != nil {
-		err := ca.ReadConfigFromFile(*cfgPathPtr, true)
-		if err != nil {
+		err := ca.ReadConfigFromFile(*cfgPathPtr)
+		if os.IsNotExist(err) {
+			// this is ok
+			err = ca.CreateDefaultConfigFile(*cfgPathPtr)
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else if err != nil {
 			if strings.Contains(err.Error(), "cannot load TOML value of type int64 into a Go float") {
 				log.Fatalf("Config load error: please use numbers with a decimal point for numerical values")
 			} else {
 				log.Fatalf("Config load error: %s", err.Error())
 			}
 		}
+	}
+
+	if err := ca.Initialize(); err != nil {
+		log.Fatal(err)
 	}
 
 	if *printConfigPtr {
@@ -126,7 +136,6 @@ func main() {
 	/*if runtime.GOOS == "windows" && !cagent.CheckIfRawICMPAvailable() {
 			osNotice = "!!! You need to run cagent as administrator in order to use ICMP ping on Windows !!!"
 		}
-
 		if runtime.GOOS == "linux" && !cagent.CheckIfRootlessICMPAvailable() && !cagent.CheckIfRawICMPAvailable() {
 			osNotice = `⚠️ In order to perform rootless ICMP Ping on Linux you need to run this command first:
 	sudo sysctl -w net.ipv4.ping_group_range="0   2147483647"`
