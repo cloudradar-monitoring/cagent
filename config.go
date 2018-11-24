@@ -60,9 +60,9 @@ type Cagent struct {
 	fsWatcher            *fsWatcher
 	netWatcher           *netWatcher
 	windowsUpdateWatcher *windowsUpdateWatcher
-	
-	rootCAs              *x509.CertPool
-	version              string
+
+	rootCAs *x509.CertPool
+	version string
 }
 
 func New() *Cagent {
