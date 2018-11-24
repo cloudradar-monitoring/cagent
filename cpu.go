@@ -44,7 +44,7 @@ type TimeSeriesAverage struct {
 	_DurationInMinutes []int // do not set directly, use SetDurationsMinutes
 }
 
-type CPUWatcher struct {
+type cpuWatcher struct {
 	LoadAvg1  bool
 	LoadAvg5  bool
 	LoadAvg15 bool
@@ -194,8 +194,12 @@ func (tsa *TimeSeriesAverage) Percentage() (map[int]ValuesMap, error) {
 	return sum, nil
 }
 
-func (ca *Cagent) CPUWatcher() *CPUWatcher {
-	stat := CPUWatcher{}
+func (ca *Cagent) CPUWatcher() *cpuWatcher {
+	if ca.cpuWatcher != nil {
+		return ca.cpuWatcher
+	}
+
+	stat := cpuWatcher{}
 	stat.UtilAvg.mu.Lock()
 
 	if len(ca.CPULoadDataGather) > 0 {
@@ -254,11 +258,22 @@ func (ca *Cagent) CPUWatcher() *CPUWatcher {
 
 	stat.UtilAvg.SetDurationsMinutes(durations...)
 	stat.UtilAvg.mu.Unlock()
+	ca.cpuWatcher = &stat
 
-	return &stat
+	if len(ca.CPUUtilTypes) > 0 && len(ca.CPUUtilDataGather) > 0 || len(ca.CPULoadDataGather) > 0 {
+		// optimization to prevent CPU watcher to run in case CPU util metrics not are not needed
+		err := stat.Once()
+		if err != nil {
+			log.Error("[CPU] Failed to read utilisation metrics: " + err.Error())
+		} else {
+			go stat.Run()
+		}
+	}
+
+	return ca.cpuWatcher
 }
 
-func (stat *CPUWatcher) Once() error {
+func (stat *cpuWatcher) Once() error {
 
 	stat.UtilAvg.mu.Lock()
 	defer stat.UtilAvg.mu.Unlock()
@@ -345,7 +360,7 @@ func (stat *CPUWatcher) Once() error {
 	return nil
 }
 
-func (stat *CPUWatcher) Run() {
+func (stat *cpuWatcher) Run() {
 	for {
 		start := time.Now()
 		err := stat.Once()
@@ -362,7 +377,7 @@ func (stat *CPUWatcher) Run() {
 	}
 }
 
-func (cs *CPUWatcher) Results() (MeasurementsMap, error) {
+func (cs *cpuWatcher) Results() (MeasurementsMap, error) {
 	var errs []string
 	util, err := cs.UtilAvg.Percentage()
 	if err != nil {

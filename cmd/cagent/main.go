@@ -330,12 +330,22 @@ func main() {
 	interruptChan := make(chan struct{})
 	doneChan := make(chan struct{})
 
+	if ca.PidFile != "" && *oneRunOnlyModePtr && runtime.GOOS != "windows" {
+		err := ioutil.WriteFile(ca.PidFile, []byte(strconv.Itoa(os.Getpid())), 0664)
+		if err != nil {
+			log.Errorf("Failed to write pid file at: %s", ca.PidFile)
+		}
+	}
+
 	if *oneRunOnlyModePtr == true {
-		ca.Run(output, interruptChan, true)
+		err := ca.RunOnce(output)
+		if err != nil {
+			log.Fatal(err)
+		}
 		return
 	} else {
 		go func() {
-			ca.Run(output, interruptChan, false)
+			ca.Run(output, interruptChan)
 			doneChan <- struct{}{}
 		}()
 	}
@@ -382,7 +392,7 @@ func (sw *serviceWrapper) Start(s service.Service) error {
 	sw.InterruptChan = make(chan struct{})
 	sw.DoneChan = make(chan struct{})
 	go func() {
-		sw.Cagent.Run(nil, sw.InterruptChan, false)
+		sw.Cagent.Run(nil, sw.InterruptChan)
 		sw.DoneChan <- struct{}{}
 	}()
 

@@ -24,7 +24,12 @@ type netWatcher struct {
 }
 
 func (ca *Cagent) NetWatcher() *netWatcher {
-	return &netWatcher{cagent: ca, constantlyExcludedInterfaceCache: map[string]bool{}}
+	if ca.netWatcher != nil {
+		return ca.netWatcher
+	}
+
+	ca.netWatcher = &netWatcher{cagent: ca, constantlyExcludedInterfaceCache: map[string]bool{}}
+	return ca.netWatcher
 }
 
 // InterfaceExcludeRegexCompiled compiles and cache all the interfaces-filtering regexp's user has specified in the config

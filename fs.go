@@ -21,12 +21,16 @@ type fsWatcher struct {
 }
 
 func (ca *Cagent) FSWatcher() *fsWatcher {
-	fsWatcher := fsWatcher{AllowedTypes: map[string]struct{}{}, ExcludedPathCache: map[string]bool{}, cagent: ca}
-	for _, t := range ca.FSTypeInclude {
-		fsWatcher.AllowedTypes[strings.ToLower(t)] = struct{}{}
+	if ca.fsWatcher != nil {
+		return ca.fsWatcher
 	}
 
-	return &fsWatcher
+	ca.fsWatcher = &fsWatcher{AllowedTypes: map[string]struct{}{}, ExcludedPathCache: map[string]bool{}, cagent: ca}
+	for _, t := range ca.FSTypeInclude {
+		ca.fsWatcher.AllowedTypes[strings.ToLower(t)] = struct{}{}
+	}
+
+	return ca.fsWatcher
 }
 
 func (fw *fsWatcher) Results() (MeasurementsMap, error) {

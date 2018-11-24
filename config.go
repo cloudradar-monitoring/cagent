@@ -56,8 +56,13 @@ type Cagent struct {
 	// internal use
 	hubHttpClient *http.Client
 
-	rootCAs *x509.CertPool
-	version string
+	cpuWatcher           *cpuWatcher
+	fsWatcher            *fsWatcher
+	netWatcher           *netWatcher
+	windowsUpdateWatcher *windowsUpdateWatcher
+	
+	rootCAs              *x509.CertPool
+	version              string
 }
 
 func New() *Cagent {
