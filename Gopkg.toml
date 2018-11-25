@@ -49,6 +49,8 @@
   name = "github.com/pkg/errors"
   version = "0.8.0"
 
+# use 27c6b39a135b7dc87a14afb068809132fb7a9a8f until upgrade to v1.2.0 released
+# v1.2.0 requires struct by value
 [[constraint]]
   name = "github.com/pelletier/go-toml"
-  version = "v1.2.0"
+  revision = "27c6b39a135b7dc87a14afb068809132fb7a9a8f"

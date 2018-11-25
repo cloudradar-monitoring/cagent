@@ -45,12 +45,11 @@
   revision = "8f267d80f2eb68998661a325c0e53fca4485e626"
 
 [[projects]]
-  digest = "1:95741de3af260a92cc5c7f3f3061e85273f5a81b5db20d4bd68da74bd521675e"
+  digest = "1:a0ebc0f58421c8ce32c24c09e2ccb62ea3d30ced69a6c440568f0d2dcd9f2b38"
   name = "github.com/pelletier/go-toml"
   packages = ["."]
   pruneopts = "UT"
-  revision = "c01d1270ff3e442a8a57cddc1c92dc1138598194"
-  version = "v1.2.0"
+  revision = "27c6b39a135b7dc87a14afb068809132fb7a9a8f"
 
 [[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
@@ -61,7 +60,7 @@
   version = "v0.8.0"
 
 [[projects]]
-  digest = "1:bd008bf3838a9cb9731405d9c55d97bc61c7847a5cf37b81ca5e7a909879c624"
+  digest = "1:c141af7568952e76dc527aa64f5337417015f1feb9497f867d52093b085d7f5b"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
@@ -74,7 +73,7 @@
     "process",
   ]
   pruneopts = "UT"
-  revision = "v2.18.10"
+  revision = "4254ce2081c0d7994dae589a4550a4ca659ebf94"
 
 [[projects]]
   branch = "master"
