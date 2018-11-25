@@ -35,8 +35,7 @@
 
 [[constraint]]
   name = "github.com/shirou/gopsutil"
-  branch = "master"
-  revision = "4254ce2081c0d7994dae589a4550a4ca659ebf94"
+  revision = "v2.18.10"
 
 [[constraint]]
   name = "github.com/sirupsen/logrus"
@@ -49,3 +48,7 @@
 [[constraint]]
   name = "github.com/pkg/errors"
   version = "0.8.0"
+
+[[constraint]]
+  name = "github.com/pelletier/go-toml"
+  version = "v1.2.0"

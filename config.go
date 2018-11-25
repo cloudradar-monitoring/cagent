@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	toml1 "github.com/BurntSushi/toml"
+	btoml "github.com/BurntSushi/toml"
 	"github.com/pelletier/go-toml"
 	log "github.com/sirupsen/logrus"
 )
@@ -36,12 +36,12 @@ type MinValuableConfig struct {
 type Cagent struct {
 	Interval float64 `toml:"interval" comment:"# interval to push metrics to the HUB"`
 
-	PidFile  string   `toml:"pid" comment:"pid file"`
-	LogFile  string   `toml:"log,omitempty" comment:"log file"`
+	PidFile  string   `toml:"pid" comment:"# pid file location"`
+	LogFile  string   `toml:"log,omitempty" required:"false" comment:"log file location"`
 	LogLevel LogLevel `toml:"log_level" comment:"# log verbosity: allowed values\n\terror\n\tdebug\n\tinfo'"`
 
 	// not nesting MinValuableConfig here as it will created entry with name MinValuableConfig when marshaling
-	HubURL           string `toml:"hub_url" comment:"# "`
+	HubURL           string `toml:"hub_url" comment:"# HTTP proxy to use with HUB"`
 	HubUser          string `toml:"hub_user" comment:"# "`
 	HubPassword      string `toml:"hub_password" comment:"# "`
 	HubGzip          bool   `toml:"hub_gzip" comment:"# enable gzip when sending results to the HUB"`
@@ -49,24 +49,24 @@ type Cagent struct {
 	HubProxyUser     string `toml:"hub_proxy_user" comment:"# "`
 	HubProxyPassword string `toml:"hub_proxy_password" comment:"# "`
 
-	CPULoadDataGather []string `toml:"cpu_load_data_gathering_mode" comment:"# "`
-	CPUUtilDataGather []string `toml:"cpu_utilisation_gathering_mode" comment:"# "`
-	CPUUtilTypes      []string `toml:"cpu_utilisation_types" comment:"# "`
+	CPULoadDataGather []string `toml:"cpu_load_data_gathering_mode" comment:"# default ['avg1']"`
+	CPUUtilDataGather []string `toml:"cpu_utilisation_gathering_mode" comment:"# default ['avg1']"`
+	CPUUtilTypes      []string `toml:"cpu_utilisation_types" comment:"# default ['user','system','idle','iowait']"`
 
-	FSTypeInclude []string `toml:"fs_type_include" comment:"# "`
-	FSPathExclude []string `toml:"fs_path_exclude" comment:"# "`
-	FSMetrics     []string `toml:"fs_metrics" comment:"# "`
+	FSTypeInclude []string `toml:"fs_type_include" comment:"# default ['ext3','ext4','xfs','jfs','ntfs','btrfs','hfs','apfs','fat32']"`
+	FSPathExclude []string `toml:"fs_path_exclude" comment:"# default []"`
+	FSMetrics     []string `toml:"fs_metrics" comment:"# default ['free_B','free_percent','total_B']"`
 
 	NetInterfaceExclude             []string `toml:"net_interface_exclude" comment:"# "`
-	NetInterfaceExcludeRegex        []string `toml:"net_interface_exclude_regex" comment:"# "`
-	NetInterfaceExcludeDisconnected bool     `toml:"net_interface_exclude_disconnected" comment:"# "`
-	NetInterfaceExcludeLoopback     bool     `toml:"net_interface_exclude_loopback" comment:"# "`
+	NetInterfaceExcludeRegex        []string `toml:"net_interface_exclude_regex" comment:"# default [], default on windows: [\"Pseudo-Interface\"]"`
+	NetInterfaceExcludeDisconnected bool     `toml:"net_interface_exclude_disconnected" comment:"# default true"`
+	NetInterfaceExcludeLoopback     bool     `toml:"net_interface_exclude_loopback" comment:"# default true"`
 
-	NetMetrics []string `toml:"net_metrics" comment:"# "`
+	NetMetrics []string `toml:"net_metrics" comment:"# default['in_B_per_s', 'out_B_per_s']"`
 
-	SystemFields []string `toml:"system_fields" comment:"# "`
+	SystemFields []string `toml:"system_fields" comment:"# default ['uname','os_kernel','os_family','os_arch','cpu_model','fqdn','memory_total_B']"`
 
-	WindowsUpdatesWatcherInterval int `toml:"windows_updates_watcher_interval" comment:"# "`
+	WindowsUpdatesWatcherInterval int `toml:"windows_updates_watcher_interval" comment:"# default 3600"`
 
 	// internal use
 	hubHttpClient *http.Client
@@ -152,7 +152,7 @@ func (ca *Cagent) userAgent() string {
 }
 
 func (ca *Cagent) DumpConfigToml() string {
-	buf, err := toml.Marshal(ca)
+	buf, err := toml.Marshal(*ca)
 	if err != nil {
 		log.Errorf("DumpConfigToml error: %s", err.Error())
 	}
@@ -208,12 +208,13 @@ func (ca *Cagent) ReadConfigFromFile(configFilePath string, createIfNotExists bo
 			log.Infof("generated minimum valuable config: %s", configFilePath)
 		}
 	} else if configExists == nil {
-		_, err = toml1.DecodeFile(configFilePath, &ca)
+		_, err = btoml.DecodeFile(configFilePath, &ca)
 		if err != nil {
 			return err
 		}
 
 		// todo(troian) github.com/pelletier/go-toml completely overrides default values even if they omitted in the file
+		// https://github.com/pelletier/go-toml/issues/252
 		// var buf []byte
 		//
 		// if buf, err = ioutil.ReadAll(f); err != nil {
@@ -223,6 +224,7 @@ func (ca *Cagent) ReadConfigFromFile(configFilePath string, createIfNotExists bo
 		// if err = toml.Unmarshal(buf, ca); err != nil {
 		// 	return err
 		// }
+
 		ca.lookupEnv()
 	} else {
 		return err
