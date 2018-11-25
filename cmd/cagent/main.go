@@ -254,9 +254,10 @@ func main() {
 				if err != nil {
 					log.Errorf("Failed to find the user '%s'", *opts.ServiceInstallUser)
 					return
-				} else {
-					svcConfig.UserName = *opts.ServiceInstallUser
 				}
+
+				svcConfig.UserName = *opts.ServiceInstallUser
+
 				defer func() {
 					uid, err := strconv.Atoi(u.Uid)
 					if err != nil {
@@ -349,12 +350,12 @@ func main() {
 	if opts.RunOnly {
 		ca.Run(output, interruptChan, true)
 		return
-	} else {
-		go func() {
-			ca.Run(output, interruptChan, false)
-			doneChan <- struct{}{}
-		}()
 	}
+
+	go func() {
+		ca.Run(output, interruptChan, false)
+		doneChan <- struct{}{}
+	}()
 
 	select {
 	case sig := <-sigc:
