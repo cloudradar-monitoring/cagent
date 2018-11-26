@@ -28,111 +28,6 @@ var (
 
 const defaultLogLevel = "error"
 
-var ca *cagent.Cagent
-var systemManager service.System
-
-func init() {
-	systemManager = service.ChosenSystem()
-
-	flag.StringVar(&opts.OutputFile, "o", "", "file to write the results")
-	flag.StringVar(&opts.ConfigPath, "c", cagent.DefaultCfgPath, "config file path")
-	flag.StringVar(&opts.Verbose, "v", defaultLogLevel, "log level – overrides the level in config file (values \"error\",\"info\",\"debug\")")
-	flag.BoolVar(&opts.Daemonize, "d", false, "daemonize – run the process in background")
-	flag.BoolVar(&opts.RunOnly, "r", false, "one run only – perform checks once and exit. Overwrites output file")
-	flag.BoolVar(&opts.Version, "version", false, "show the cagent version")
-	flag.BoolVar(&opts.TestConfig, "t", false, "test the HUB config")
-	flag.BoolVar(&opts.DumpConfig, "p", false, "print the active config")
-	flag.BoolVar(&opts.ServiceUninstall, "u", false, fmt.Sprintf("stop and uninstall the system service(%s)", systemManager.String()))
-
-	if runtime.GOOS == "windows" {
-		opts.ServiceInstall = flag.Bool("s", false, fmt.Sprintf("install and start the system service(%s)", systemManager.String()))
-	} else {
-		opts.ServiceInstallUser = flag.String("s", "", fmt.Sprintf("username to install and start the system service(%s)", systemManager.String()))
-	}
-
-	flag.Parse()
-
-	if opts.Version {
-		fmt.Printf("cagent v%s released under MIT license. https://github.com/cloudradar-monitoring/cagent/\n", version)
-		os.Exit(0)
-	}
-
-	if opts.ConfigPath == "" {
-		if !opts.DumpConfig {
-			fmt.Printf("cagent config path is not set. defaulting to %s\n", cagent.DefaultCfgPath)
-		}
-
-		opts.ConfigPath = cagent.DefaultCfgPath
-	}
-
-	ca = cagent.New()
-	ca.SetVersion(version)
-
-	err := ca.ReadConfigFromFile(opts.ConfigPath, true)
-	if err != nil {
-		if strings.Contains(err.Error(), "cannot load TOML value of type int64 into a Go float") {
-			log.Fatalf("Config load error: please use numbers with a decimal point for numerical values")
-		} else {
-			log.Fatalf("Config load error: %s", err.Error())
-		}
-
-		os.Exit(1)
-	}
-
-	if opts.DumpConfig {
-		fmt.Println(ca.DumpConfigToml())
-		os.Exit(0)
-	}
-
-	if opts.TestConfig {
-		err := ca.TestHub()
-		if err != nil {
-			fmt.Printf("Cagent HUB test failed: %s\n", err.Error())
-			os.Exit(1)
-		}
-
-		fmt.Printf("HUB connection test succeed and credentials are correct!\n")
-		os.Exit(0)
-	}
-
-	tfmt := log.TextFormatter{FullTimestamp: true}
-
-	if runtime.GOOS == "windows" {
-		tfmt.DisableColors = true
-	}
-
-	log.SetFormatter(&tfmt)
-
-	var osNotice string
-
-	/*if runtime.GOOS == "windows" && !cagent.CheckIfRawICMPAvailable() {
-			osNotice = "!!! You need to run cagent as administrator in order to use ICMP ping on Windows !!!"
-		}
-
-		if runtime.GOOS == "linux" && !cagent.CheckIfRootlessICMPAvailable() && !cagent.CheckIfRawICMPAvailable() {
-			osNotice = `⚠️ In order to perform rootless ICMP Ping on Linux you need to run this command first:
-	sudo sysctl -w net.ipv4.ping_group_range="0   2147483647"`
-		}*/
-
-	if osNotice != "" {
-		// print to console without log formatting
-		fmt.Println(osNotice)
-
-		// disable logging to stderr temporarily
-		log.SetOutput(ioutil.Discard)
-		log.Error(osNotice)
-		log.SetOutput(os.Stderr)
-	}
-
-	// Check log level and if needed warn user and set to default
-	if cagent.LogLevel(opts.Verbose).IsValid() {
-		ca.SetLogLevel(cagent.LogLevel(opts.Verbose))
-	} else {
-		log.Warnf("LogLevel was set to an invalid value: \"%s\". Set to default: \"%s\"", opts.Verbose, defaultLogLevel)
-		ca.SetLogLevel(cagent.LogLevel(defaultLogLevel))
-	}
-}
-
 func askForConfirmation(s string) bool {
 	reader := bufio.NewReader(os.Stdin)
 
@@ -155,16 +50,108 @@ func askForConfirmation(s string) bool {
 }
 
 func main() {
-	sigc := make(chan os.Signal, 1)
+	ca := cagent.New()
+	ca.SetVersion(version)
 
+	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc,
 		syscall.SIGHUP,
 		syscall.SIGINT,
 		syscall.SIGTERM)
 
-	if ca.HubURL == "" && !opts.ServiceUninstall && opts.OutputFile == "" {
-		if (opts.ServiceInstall != nil && *opts.ServiceInstall) || (opts.ServiceInstallUser != nil && *opts.ServiceInstallUser != "") {
-			fmt.Println(" ****** Before start you need to set 'hub_url' config param at ", opts.ConfigPath)
+	var serviceInstallUserPtr *string
+	var serviceInstallPtr *bool
+	outputFilePtr := flag.String("o", "", "file to write the results")
+
+	cfgPathPtr := flag.String("c", cagent.DefaultCfgPath, "config file path")
+	logLevelPtr := flag.String("v", defaultLogLevel, "log level – overrides the level in config file (values \"error\",\"info\",\"debug\")")
+	systemManager := service.ChosenSystem()
+	daemonizeModePtr := flag.Bool("d", false, "daemonize – run the proccess in background")
+	oneRunOnlyModePtr := flag.Bool("r", false, "one run only – perform checks once and exit. Overwrites output file")
+
+	if runtime.GOOS == "windows" {
+		serviceInstallPtr = flag.Bool("s", false, fmt.Sprintf("install and start the system service(%s)", systemManager.String()))
+	} else {
+		serviceInstallUserPtr = flag.String("s", "", fmt.Sprintf("username to install and start the system service(%s)", systemManager.String()))
+	}
+
+	serviceUninstallPtr := flag.Bool("u", false, fmt.Sprintf("stop and uninstall the system service(%s)", systemManager.String()))
+	printConfigPtr := flag.Bool("p", false, "print the active config")
+	testConfigPtr := flag.Bool("t", false, "test the HUB config")
+	versionPtr := flag.Bool("version", false, "show the cagent version")
+
+	flag.Parse()
+
+	if *versionPtr {
+		fmt.Printf("cagent v%s released under MIT license. https://github.com/cloudradar-monitoring/cagent/\n", version)
+		return
+	}
+	tfmt := log.TextFormatter{FullTimestamp: true}
+	if runtime.GOOS == "windows" {
+		tfmt.DisableColors = true
+	}
+
+	log.SetFormatter(&tfmt)
+
+	if cfgPathPtr != nil {
+		err := ca.ReadConfigFromFile(*cfgPathPtr, true)
+		if err != nil {
+			if strings.Contains(err.Error(), "cannot load TOML value of type int64 into a Go float") {
+				log.Fatalf("Config load error: please use numbers with a decimal point for numerical values")
+			} else {
+				log.Fatalf("Config load error: %s", err.Error())
+			}
+		}
+	}
+
+	if *printConfigPtr {
+		fmt.Println(ca.DumpConfigToml())
+		return
+	}
+
+	if *testConfigPtr {
+		err := ca.TestHub()
+		if err != nil {
+			fmt.Printf("Cagent HUB test failed: %s\n", err.Error())
+			os.Exit(1)
+			return
+		}
+
+		fmt.Printf("HUB connection test succeed and credentials are correct!\n")
+		return
+	}
+
+	var osNotice string
+
+	/*if runtime.GOOS == "windows" && !cagent.CheckIfRawICMPAvailable() {
+			osNotice = "!!! You need to run cagent as administrator in order to use ICMP ping on Windows !!!"
+		}
+		if runtime.GOOS == "linux" && !cagent.CheckIfRootlessICMPAvailable() && !cagent.CheckIfRawICMPAvailable() {
+			osNotice = `⚠️ In order to perform rootless ICMP Ping on Linux you need to run this command first:
+	sudo sysctl -w net.ipv4.ping_group_range="0   2147483647"`
+		}*/
+
+	if osNotice != "" {
+		// print to console without log formatting
+		fmt.Println(osNotice)
+
+		// disable logging to stderr temporarily
+		log.SetOutput(ioutil.Discard)
+		log.Error(osNotice)
+		log.SetOutput(os.Stderr)
+	}
+
+	// Check loglevel and if needed warn user and set to default
+	if *logLevelPtr == string(cagent.LogLevelError) || *logLevelPtr == string(cagent.LogLevelInfo) || *logLevelPtr == string(cagent.LogLevelDebug) {
+		ca.SetLogLevel(cagent.LogLevel(*logLevelPtr))
+	} else {
+		log.Warnf("LogLevel was set to an invalid value: \"%s\". Set to default: \"%s\"", *logLevelPtr, defaultLogLevel)
+		ca.SetLogLevel(cagent.LogLevel(defaultLogLevel))
+	}
+
+	if ca.HubURL == "" && !*serviceUninstallPtr && *outputFilePtr == "" {
+		if serviceInstallPtr != nil && *serviceInstallPtr || serviceInstallUserPtr != nil && *serviceInstallUserPtr != "" {
+			fmt.Println(" ****** Before start you need to set 'hub_url' config param at ", *cfgPathPtr)
 		} else {
 			fmt.Println("Missing output file flag(-o) or hub_url in the config")
 			flag.PrintDefaults()
@@ -175,12 +162,13 @@ func main() {
 	var err error
 	var output *os.File
 
-	if opts.OutputFile == "-" {
+	if *outputFilePtr == "-" {
 		log.SetOutput(ioutil.Discard)
 		output = os.Stdout
-	} else if opts.OutputFile != "" {
-		if _, err := os.Stat(opts.OutputFile); os.IsNotExist(err) {
-			dir := filepath.Dir(opts.OutputFile)
+	} else if *outputFilePtr != "" {
+
+		if _, err := os.Stat(*outputFilePtr); os.IsNotExist(err) {
+			dir := filepath.Dir(*outputFilePtr)
 			if _, err := os.Stat(dir); os.IsNotExist(err) {
 				err = os.MkdirAll(dir, 0644)
 				if err != nil {
@@ -191,25 +179,24 @@ func main() {
 
 		mode := os.O_WRONLY | os.O_CREATE
 
-		if opts.RunOnly {
+		if *oneRunOnlyModePtr {
 			mode = mode | os.O_TRUNC
 		} else {
 			mode = mode | os.O_APPEND
 		}
 
-		output, err = os.OpenFile(opts.OutputFile, mode, 0644)
+		output, err = os.OpenFile(*outputFilePtr, mode, 0644)
 		defer output.Close()
 
 		if err != nil {
-			log.WithError(err).Fatalf("Failed to open the output file: '%s'", opts.OutputFile)
+			log.WithError(err).Fatalf("Failed to open the output file: '%s'", *outputFilePtr)
 		}
 	}
 
-	if (opts.ServiceInstall != nil && *opts.ServiceInstall) ||
-		(opts.ServiceInstallUser != nil && *opts.ServiceInstallUser != "") || opts.ServiceUninstall || !service.Interactive() {
+	if serviceInstallPtr != nil && *serviceInstallPtr || serviceInstallUserPtr != nil && *serviceInstallUserPtr != "" || *serviceUninstallPtr || !service.Interactive() {
 		prg := &serviceWrapper{Cagent: ca}
-		if opts.ConfigPath != "" && opts.ConfigPath != cagent.DefaultCfgPath {
-			path := opts.ConfigPath
+		if cfgPathPtr != nil && *cfgPathPtr != cagent.DefaultCfgPath {
+			path := *cfgPathPtr
 			if !filepath.IsAbs(path) {
 				path, err = filepath.Abs(path)
 				if err != nil {
@@ -225,7 +212,8 @@ func main() {
 		}
 
 		if service.Interactive() {
-			if opts.ServiceUninstall {
+
+			if *serviceUninstallPtr {
 				err = s.Stop()
 				if err != nil {
 					fmt.Println("Failed to stop the service: ", err.Error())
@@ -239,25 +227,19 @@ func main() {
 				return
 			}
 
-			if (opts.OutputFile != "") && (opts.OutputFile != "-") {
+			if outputFilePtr != nil && *outputFilePtr != "" {
 				fmt.Println("Output file(-o) flag can't be used together with service install(-s) flag")
 				return
 			}
-
-			// if outputFilePtr != nil && *outputFilePtr != "" {
-			// 	fmt.Println("Output file(-o) flag can't be used together with service install(-s) flag")
-			// 	return
-			// }
-
 			if runtime.GOOS != "windows" {
-				u, err := user.Lookup(*opts.ServiceInstallUser)
+
+				u, err := user.Lookup(*serviceInstallUserPtr)
 				if err != nil {
-					log.Errorf("Failed to find the user '%s'", *opts.ServiceInstallUser)
+					log.Errorf("Failed to find the user '%s'", *serviceInstallUserPtr)
 					return
+				} else {
+					svcConfig.UserName = *serviceInstallUserPtr
 				}
-
-				svcConfig.UserName = *opts.ServiceInstallUser
-
 				defer func() {
 					uid, err := strconv.Atoi(u.Uid)
 					if err != nil {
@@ -337,7 +319,7 @@ func main() {
 		return
 	}
 
-	if opts.Daemonize && os.Getenv("CAGENT_FORK") != "1" {
+	if *daemonizeModePtr && os.Getenv("CAGENT_FORK") != "1" {
 		rerunDetached()
 		log.SetOutput(ioutil.Discard)
 
@@ -347,15 +329,15 @@ func main() {
 	interruptChan := make(chan struct{})
 	doneChan := make(chan struct{})
 
-	if opts.RunOnly {
+	if *oneRunOnlyModePtr == true {
 		ca.Run(output, interruptChan, true)
 		return
+	} else {
+		go func() {
+			ca.Run(output, interruptChan, false)
+			doneChan <- struct{}{}
+		}()
 	}
-
-	go func() {
-		ca.Run(output, interruptChan, false)
-		doneChan <- struct{}{}
-	}()
 
 	select {
 	case sig := <-sigc:
