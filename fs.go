@@ -25,7 +25,11 @@ func (ca *Cagent) FSWatcher() *FSWatcher {
 		return ca.fsWatcher
 	}
 
-	ca.fsWatcher = &FSWatcher{AllowedTypes: map[string]struct{}{}, ExcludedPathCache: map[string]bool{}, cagent: ca}
+	ca.fsWatcher = &FSWatcher{
+		AllowedTypes: map[string]struct{}{},
+		ExcludedPathCache: map[string]bool{},
+		cagent: ca,
+	}
 	for _, t := range ca.FSTypeInclude {
 		ca.fsWatcher.AllowedTypes[strings.ToLower(t)] = struct{}{}
 	}
