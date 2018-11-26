@@ -21,7 +21,7 @@ const (
 	WUStatusAborted
 )
 
-type windowsUpdateWatcher struct {
+type WindowsUpdateWatcher struct {
 	LastFetchedAt time.Time
 	Available     int
 	Pending       int
@@ -137,12 +137,12 @@ func windowsUpdates() (available int, pending int, err error) {
 	return
 }
 
-func (ca *Cagent) WindowsUpdatesWatcher() *windowsUpdateWatcher {
+func (ca *Cagent) WindowsUpdatesWatcher() *WindowsUpdateWatcher {
 	if ca.windowsUpdateWatcher != nil {
 		return ca.windowsUpdateWatcher
 	}
 
-	ca.windowsUpdateWatcher = &windowsUpdateWatcher{ca: ca}
+	ca.windowsUpdateWatcher = &WindowsUpdateWatcher{ca: ca}
 
 	go func() {
 		for {
@@ -159,7 +159,7 @@ func (ca *Cagent) WindowsUpdatesWatcher() *windowsUpdateWatcher {
 	return ca.windowsUpdateWatcher
 }
 
-func (wuw *windowsUpdateWatcher) WindowsUpdates() (MeasurementsMap, error) {
+func (wuw *WindowsUpdateWatcher) WindowsUpdates() (MeasurementsMap, error) {
 	results := MeasurementsMap{}
 	if wuw.LastFetchedAt.IsZero() {
 		results["updates_available"] = nil

@@ -14,7 +14,7 @@ import (
 
 const netGetCountersTimeout = time.Second * 10
 
-type netWatcher struct {
+type NetWatcher struct {
 	cagent           *Cagent
 	lastIOCounters   []utilnet.IOCountersStat
 	lastIOCountersAt *time.Time
@@ -23,12 +23,12 @@ type netWatcher struct {
 	constantlyExcludedInterfaceCache map[string]bool
 }
 
-func (ca *Cagent) NetWatcher() *netWatcher {
+func (ca *Cagent) NetWatcher() *NetWatcher {
 	if ca.netWatcher != nil {
 		return ca.netWatcher
 	}
 
-	ca.netWatcher = &netWatcher{
+	ca.netWatcher = &NetWatcher{
 		cagent:                           ca,
 		constantlyExcludedInterfaceCache: map[string]bool{},
 	}
@@ -37,7 +37,7 @@ func (ca *Cagent) NetWatcher() *netWatcher {
 
 // InterfaceExcludeRegexCompiled compiles and cache all the interfaces-filtering regexp's user has specified in the config
 // So we don't need to compile them on each iteration of measurements
-func (nw *netWatcher) InterfaceExcludeRegexCompiled() []*regexp.Regexp {
+func (nw *NetWatcher) InterfaceExcludeRegexCompiled() []*regexp.Regexp {
 	if len(nw.netInterfaceExcludeRegexCompiled) > 0 {
 		return nw.netInterfaceExcludeRegexCompiled
 	}
@@ -77,7 +77,7 @@ func isInterfaceDown(netIf *utilnet.InterfaceStat) bool {
 	return true
 }
 
-func (nw *netWatcher) isInterfaceExcludedByName(netIf *utilnet.InterfaceStat) bool {
+func (nw *NetWatcher) isInterfaceExcludedByName(netIf *utilnet.InterfaceStat) bool {
 	for _, excludedIf := range nw.cagent.NetInterfaceExclude {
 		if strings.EqualFold(netIf.Name, excludedIf) {
 			return true
@@ -86,7 +86,7 @@ func (nw *netWatcher) isInterfaceExcludedByName(netIf *utilnet.InterfaceStat) bo
 	return false
 }
 
-func (nw *netWatcher) isInterfaceExcludedByRegexp(netIf *utilnet.InterfaceStat) bool {
+func (nw *NetWatcher) isInterfaceExcludedByRegexp(netIf *utilnet.InterfaceStat) bool {
 	for _, re := range nw.InterfaceExcludeRegexCompiled() {
 		if re.MatchString(netIf.Name) {
 			return true
@@ -95,7 +95,7 @@ func (nw *netWatcher) isInterfaceExcludedByRegexp(netIf *utilnet.InterfaceStat) 
 	return false
 }
 
-func (nw *netWatcher) ExcludedInterfacesByName(allInterfaces []utilnet.InterfaceStat) map[string]struct{} {
+func (nw *NetWatcher) ExcludedInterfacesByName(allInterfaces []utilnet.InterfaceStat) map[string]struct{} {
 	excludedInterfaces := map[string]struct{}{}
 
 	for _, netIf := range allInterfaces {
@@ -133,7 +133,7 @@ func (nw *netWatcher) ExcludedInterfacesByName(allInterfaces []utilnet.Interface
 
 // fillEmptyMeasurements used to fill measurements with nil's for all non-excluded interfaces
 // It is called in case measurements are not yet ready or some error happens while retrieving counters
-func (nw *netWatcher) fillEmptyMeasurements(results MeasurementsMap, interfaces []utilnet.InterfaceStat, excludedInterfacesByName map[string]struct{}) {
+func (nw *NetWatcher) fillEmptyMeasurements(results MeasurementsMap, interfaces []utilnet.InterfaceStat, excludedInterfacesByName map[string]struct{}) {
 	for _, netIf := range interfaces {
 		if _, isExcluded := excludedInterfacesByName[netIf.Name]; isExcluded {
 			continue
@@ -146,7 +146,7 @@ func (nw *netWatcher) fillEmptyMeasurements(results MeasurementsMap, interfaces 
 }
 
 // fillCountersMeasurements used to fill measurements with nil's for all non-excluded interfaces
-func (nw *netWatcher) fillCountersMeasurements(results MeasurementsMap, interfaces []utilnet.InterfaceStat, excludedInterfacesByName map[string]struct{}) error {
+func (nw *NetWatcher) fillCountersMeasurements(results MeasurementsMap, interfaces []utilnet.InterfaceStat, excludedInterfacesByName map[string]struct{}) error {
 	ctx, _ := context.WithTimeout(context.Background(), netGetCountersTimeout)
 	counters, err := utilnet.IOCountersWithContext(ctx, true)
 	if err != nil {
@@ -210,7 +210,7 @@ func (nw *netWatcher) fillCountersMeasurements(results MeasurementsMap, interfac
 	return nil
 }
 
-func (nw *netWatcher) Results() (MeasurementsMap, error) {
+func (nw *NetWatcher) Results() (MeasurementsMap, error) {
 	results := MeasurementsMap{}
 
 	interfaces, err := utilnet.Interfaces()

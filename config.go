@@ -56,10 +56,10 @@ type Cagent struct {
 	// internal use
 	hubHttpClient *http.Client
 
-	cpuWatcher           *cpuWatcher
-	fsWatcher            *fsWatcher
-	netWatcher           *netWatcher
-	windowsUpdateWatcher *windowsUpdateWatcher
+	cpuWatcher           *CPUWatcher
+	fsWatcher            *FSWatcher
+	netWatcher           *NetWatcher
+	windowsUpdateWatcher *WindowsUpdateWatcher
 
 	rootCAs *x509.CertPool
 	version string

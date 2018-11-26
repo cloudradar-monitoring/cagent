@@ -44,7 +44,7 @@ type TimeSeriesAverage struct {
 	_DurationInMinutes []int // do not set directly, use SetDurationsMinutes
 }
 
-type cpuWatcher struct {
+type CPUWatcher struct {
 	LoadAvg1  bool
 	LoadAvg5  bool
 	LoadAvg15 bool
@@ -194,12 +194,12 @@ func (tsa *TimeSeriesAverage) Percentage() (map[int]ValuesMap, error) {
 	return sum, nil
 }
 
-func (ca *Cagent) CPUWatcher() *cpuWatcher {
+func (ca *Cagent) CPUWatcher() *CPUWatcher {
 	if ca.cpuWatcher != nil {
 		return ca.cpuWatcher
 	}
 
-	cw := cpuWatcher{}
+	cw := CPUWatcher{}
 	cw.UtilAvg.mu.Lock()
 
 	if len(ca.CPULoadDataGather) > 0 {
@@ -273,7 +273,7 @@ func (ca *Cagent) CPUWatcher() *cpuWatcher {
 	return ca.cpuWatcher
 }
 
-func (cw *cpuWatcher) Once() error {
+func (cw *CPUWatcher) Once() error {
 
 	cw.UtilAvg.mu.Lock()
 	defer cw.UtilAvg.mu.Unlock()
@@ -360,7 +360,7 @@ func (cw *cpuWatcher) Once() error {
 	return nil
 }
 
-func (cw *cpuWatcher) Run() {
+func (cw *CPUWatcher) Run() {
 	for {
 		start := time.Now()
 		err := cw.Once()
@@ -377,7 +377,7 @@ func (cw *cpuWatcher) Run() {
 	}
 }
 
-func (cw *cpuWatcher) Results() (MeasurementsMap, error) {
+func (cw *CPUWatcher) Results() (MeasurementsMap, error) {
 	var errs []string
 	util, err := cw.UtilAvg.Percentage()
 	if err != nil {

@@ -2,12 +2,12 @@
 
 package cagent
 
-type windowsUpdateWatcher struct{}
+type WindowsUpdateWatcher struct{}
 
-func (ca *Cagent) WindowsUpdatesWatcher() *windowsUpdateWatcher {
-	return &windowsUpdateWatcher{}
+func (ca *Cagent) WindowsUpdatesWatcher() *WindowsUpdateWatcher {
+	return &WindowsUpdateWatcher{}
 }
 
-func (ca *windowsUpdateWatcher) WindowsUpdates() (MeasurementsMap, error) {
+func (ca *WindowsUpdateWatcher) WindowsUpdates() (MeasurementsMap, error) {
 	return MeasurementsMap{}, nil
 }
