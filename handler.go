@@ -229,7 +229,7 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 
 func (ca *Cagent) ReportMeasurements(measurements MeasurementsMap, outputFile *os.File) error {
 	result := Result{
-		Timestamp: time.Now().Unix(),
+		Timestamp:    time.Now().Unix(),
 		Measurements: measurements,
 	}
 
