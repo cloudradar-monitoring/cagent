@@ -343,12 +343,12 @@ func main() {
 			log.Fatal(err)
 		}
 		return
-	} else {
-		go func() {
-			ca.Run(output, interruptChan)
-			doneChan <- struct{}{}
-		}()
 	}
+
+	go func() {
+		ca.Run(output, interruptChan)
+		doneChan <- struct{}{}
+	}()
 
 	select {
 	case sig := <-sigc:

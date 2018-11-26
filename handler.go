@@ -139,6 +139,7 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 		// no need to log because already done inside cpu.Results()
 		errs = append(errs, err.Error())
 	}
+
 	measurements = measurements.AddWithPrefix("cpu.", cpum)
 
 	info, err := ca.HostInfoResults()
@@ -227,11 +228,14 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 }
 
 func (ca *Cagent) ReportMeasurements(measurements MeasurementsMap, outputFile *os.File) error {
-	result := Result{Timestamp: time.Now().Unix(), Measurements: measurements}
+	result := Result{
+		Timestamp: time.Now().Unix(),
+		Measurements: measurements,
+	}
 
 	if outputFile != nil {
 		jsonEncoder := json.NewEncoder(outputFile)
-		err := jsonEncoder.Encode(result)
+		err := jsonEncoder.Encode(&result)
 		if err != nil {
 			return fmt.Errorf("Results json encode error: %s", err.Error())
 		}
