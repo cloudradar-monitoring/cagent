@@ -7,12 +7,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
@@ -132,153 +130,141 @@ func (ca *Cagent) PostResultsToHub(result Result) error {
 	return nil
 }
 
-func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, once bool) {
+func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
+	var errs []string
+	var measurements = make(MeasurementsMap)
 
-	var jsonEncoder *json.Encoder
-	if ca.PidFile != "" && !once && runtime.GOOS != "windows" {
-		err := ioutil.WriteFile(ca.PidFile, []byte(strconv.Itoa(os.Getpid())), 0664)
+	cpum, err := ca.CPUWatcher().Results()
+	if err != nil {
+		// no need to log because already done inside cpu.Results()
+		errs = append(errs, err.Error())
+	}
 
+	measurements = measurements.AddWithPrefix("cpu.", cpum)
+
+	info, err := ca.HostInfoResults()
+	if err != nil {
+		// no need to log because already done inside HostInfoResults()
+		errs = append(errs, err.Error())
+	}
+
+	measurements = measurements.AddWithPrefix("system.", info)
+
+	ipResults, err := IPAddresses()
+	if err != nil {
+		errs = append(errs, err.Error())
+	}
+
+	measurements = measurements.AddWithPrefix("system.", ipResults)
+
+	fsResults, err := ca.FSWatcher().Results()
+	if err != nil {
+		// no need to log because already done inside fs.Results()
+		errs = append(errs, err.Error())
+	}
+
+	measurements = measurements.AddWithPrefix("fs.", fsResults)
+
+	netResults, err := ca.NetWatcher().Results()
+	if err != nil {
+		// no need to log because already done inside net.Results()
+		errs = append(errs, err.Error())
+	}
+
+	measurements = measurements.AddWithPrefix("net.", netResults)
+
+	proc, err := ca.ProcessesResult()
+	if err != nil {
+		// no need to log because already done inside ProcessesResult()
+		errs = append(errs, err.Error())
+	}
+
+	measurements = measurements.AddWithPrefix("proc.", proc)
+
+	mem, err := ca.MemResults()
+	if err != nil {
+		// no need to log because already done inside MemResults()
+		errs = append(errs, err.Error())
+	}
+
+	measurements = measurements.AddWithPrefix("mem.", mem)
+
+	swap, err := ca.SwapResults()
+	if err != nil {
+		// no need to log because already done inside MemResults()
+		errs = append(errs, err.Error())
+	}
+
+	measurements = measurements.AddWithPrefix("swap.", swap)
+
+	if runtime.GOOS == "linux" {
+		raid, err := ca.RaidState()
 		if err != nil {
-			log.Errorf("Failed to write pid file at: %s", ca.PidFile)
+			// no need to log because already done inside RaidState()
+			errs = append(errs, err.Error())
 		}
+
+		measurements = measurements.AddWithPrefix("raid.", raid)
+	}
+
+	if runtime.GOOS == "windows" {
+		wu, err := ca.WindowsUpdatesWatcher().WindowsUpdates()
+		if err != nil {
+			// no need to log because already done inside MemResults()
+			errs = append(errs, err.Error())
+		}
+
+		measurements = measurements.AddWithPrefix("windows_update.", wu)
+	}
+
+	if len(errs) == 0 {
+		measurements["cagent.success"] = 1
+		return measurements, nil
+	}
+
+	measurements["cagent.success"] = 0
+
+	return measurements, errors.New(strings.Join(errs, "; "))
+}
+
+func (ca *Cagent) ReportMeasurements(measurements MeasurementsMap, outputFile *os.File) error {
+	result := Result{
+		Timestamp:    time.Now().Unix(),
+		Measurements: measurements,
 	}
 
 	if outputFile != nil {
-		jsonEncoder = json.NewEncoder(outputFile)
-	}
-
-	var cpu *CPUWatcher
-
-	if len(ca.CPUUtilTypes) > 0 && len(ca.CPUUtilDataGather) > 0 || len(ca.CPULoadDataGather) > 0 {
-		// optimization to prevent CPU watcher to run in case CPU util metrics not are not needed
-		cpu = ca.CPUWatcher()
-		err := cpu.Once()
+		jsonEncoder := json.NewEncoder(outputFile)
+		err := jsonEncoder.Encode(&result)
 		if err != nil {
-			log.Error("[CPU] Failed to read utilisation metrics: " + err.Error())
-		}
-		if !once {
-			go cpu.Run()
+			return fmt.Errorf("Results json encode error: %s", err.Error())
 		}
 	}
 
-	fs := ca.FSWatcher()
-	net := ca.NetWatcher()
-	wuw := ca.WindowsUpdatesWatcher()
+	err := ca.PostResultsToHub(result)
+	if err != nil {
+		return fmt.Errorf("POST to hub error: %s", err.Error())
+	}
 
+	return nil
+}
+
+func (ca *Cagent) RunOnce(outputFile *os.File) error {
+	measurements, err := ca.GetAllMeasurements()
+	if err != nil {
+		// don't need to log or return it here – just add the message to report
+		// it is already logged (down into the GetAllMeasurements)
+		measurements["message"] = err.Error()
+	}
+
+	return ca.ReportMeasurements(measurements, outputFile)
+}
+
+func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 	for {
-		results := Result{Timestamp: time.Now().Unix(), Measurements: make(MeasurementsMap)}
-		errs := []string{}
-
-		if cpu != nil {
-			cpum, err := cpu.Results()
-
-			log.Debugf("[CPU] got %d metrics", len(cpum))
-
-			if err != nil {
-				// no need to log because already done inside cpu.Results()
-				errs = append(errs, err.Error())
-			}
-
-			results.Measurements = results.Measurements.AddWithPrefix("cpu.", cpum)
-		}
-
-		info, err := ca.HostInfoResults()
+		err := ca.RunOnce(outputFile)
 		if err != nil {
-			// no need to log because already done inside HostInfoResults()
-			errs = append(errs, err.Error())
-		}
-
-		results.Measurements = results.Measurements.AddWithPrefix("system.", info)
-
-		ipResults, err := IPAddresses()
-		if err != nil {
-			errs = append(errs, err.Error())
-		}
-
-		results.Measurements = results.Measurements.AddWithPrefix("system.", ipResults)
-
-		fsResults, err := fs.Results()
-		if err != nil {
-			// no need to log because already done inside fs.Results()
-			errs = append(errs, err.Error())
-		}
-
-		results.Measurements = results.Measurements.AddWithPrefix("fs.", fsResults)
-
-		netResults, err := net.Results()
-		if err != nil {
-			// no need to log because already done inside net.Results()
-			errs = append(errs, err.Error())
-		}
-
-		results.Measurements = results.Measurements.AddWithPrefix("net.", netResults)
-
-		proc, err := ca.ProcessesResult()
-		if err != nil {
-			// no need to log because already done inside ProcessesResult()
-			errs = append(errs, err.Error())
-		}
-
-		results.Measurements = results.Measurements.AddWithPrefix("proc.", proc)
-
-		mem, err := ca.MemResults()
-		if err != nil {
-			// no need to log because already done inside MemResults()
-			errs = append(errs, err.Error())
-		}
-
-		results.Measurements = results.Measurements.AddWithPrefix("mem.", mem)
-
-		swap, err := ca.SwapResults()
-		if err != nil {
-			// no need to log because already done inside MemResults()
-			errs = append(errs, err.Error())
-		}
-
-		results.Measurements = results.Measurements.AddWithPrefix("swap.", swap)
-
-		if runtime.GOOS == "linux" {
-			raid, err := ca.RaidState()
-			if err != nil {
-				// no need to log because already done inside RaidState()
-				errs = append(errs, err.Error())
-			}
-
-			results.Measurements = results.Measurements.AddWithPrefix("raid.", raid)
-		}
-
-		if runtime.GOOS == "windows" {
-			wu, err := wuw.WindowsUpdates()
-
-			results.Measurements = results.Measurements.AddWithPrefix("windows_update.", wu)
-
-			if err != nil {
-				// no need to log because already done inside MemResults()
-				errs = append(errs, err.Error())
-			}
-		}
-
-		if len(errs) == 0 {
-			results.Measurements["cagent.success"] = 1
-		} else {
-			results.Message = strings.Join(errs, "; ")
-			results.Measurements["cagent.success"] = 0
-		}
-
-		if outputFile != nil {
-			err = jsonEncoder.Encode(results)
-			if err != nil {
-				log.Errorf("Results json encode error: %s", err.Error())
-			}
-		} else {
-			err = ca.PostResultsToHub(results)
-			if err != nil {
-				log.Errorf("POST to hub error: %s", err.Error())
-			}
-		}
-
-		if once {
-			break
+			log.Error(err)
 		}
 
 		select {

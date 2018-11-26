@@ -14,22 +14,30 @@ import (
 const fsGetUsageTimeout = time.Second * 10
 const fsGetPartitionsTimeout = time.Second * 10
 
-type fsWatcher struct {
+type FSWatcher struct {
 	AllowedTypes      map[string]struct{}
 	ExcludedPathCache map[string]bool
 	cagent            *Cagent
 }
 
-func (ca *Cagent) FSWatcher() *fsWatcher {
-	fsWatcher := fsWatcher{AllowedTypes: map[string]struct{}{}, ExcludedPathCache: map[string]bool{}, cagent: ca}
-	for _, t := range ca.FSTypeInclude {
-		fsWatcher.AllowedTypes[strings.ToLower(t)] = struct{}{}
+func (ca *Cagent) FSWatcher() *FSWatcher {
+	if ca.fsWatcher != nil {
+		return ca.fsWatcher
 	}
 
-	return &fsWatcher
+	ca.fsWatcher = &FSWatcher{
+		AllowedTypes:      map[string]struct{}{},
+		ExcludedPathCache: map[string]bool{},
+		cagent:            ca,
+	}
+	for _, t := range ca.FSTypeInclude {
+		ca.fsWatcher.AllowedTypes[strings.ToLower(t)] = struct{}{}
+	}
+
+	return ca.fsWatcher
 }
 
-func (fw *fsWatcher) Results() (MeasurementsMap, error) {
+func (fw *FSWatcher) Results() (MeasurementsMap, error) {
 	results := MeasurementsMap{}
 
 	var errs []string

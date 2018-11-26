@@ -195,8 +195,12 @@ func (tsa *TimeSeriesAverage) Percentage() (map[int]ValuesMap, error) {
 }
 
 func (ca *Cagent) CPUWatcher() *CPUWatcher {
-	stat := CPUWatcher{}
-	stat.UtilAvg.mu.Lock()
+	if ca.cpuWatcher != nil {
+		return ca.cpuWatcher
+	}
+
+	cw := CPUWatcher{}
+	cw.UtilAvg.mu.Lock()
 
 	if len(ca.CPULoadDataGather) > 0 {
 		_, err := load.Avg()
@@ -210,11 +214,11 @@ func (ca *Cagent) CPUWatcher() *CPUWatcher {
 
 					switch v {
 					case 1:
-						stat.LoadAvg1 = true
+						cw.LoadAvg1 = true
 					case 5:
-						stat.LoadAvg5 = true
+						cw.LoadAvg5 = true
 					case 15:
-						stat.LoadAvg15 = true
+						cw.LoadAvg15 = true
 					default:
 						log.Errorf("[CPU] wrong cpu_load_data_gathering_mode. Supported values: avg1, avg5, avg15")
 					}
@@ -248,20 +252,31 @@ func (ca *Cagent) CPUWatcher() *CPUWatcher {
 		if !found {
 			log.Errorf("[CPU] utilisation metric '%s' not implemented on %s", t, runtime.GOOS)
 		} else {
-			stat.UtilTypes = append(stat.UtilTypes, t)
+			cw.UtilTypes = append(cw.UtilTypes, t)
 		}
 	}
 
-	stat.UtilAvg.SetDurationsMinutes(durations...)
-	stat.UtilAvg.mu.Unlock()
+	cw.UtilAvg.SetDurationsMinutes(durations...)
+	cw.UtilAvg.mu.Unlock()
+	ca.cpuWatcher = &cw
 
-	return &stat
+	// optimization to prevent CPU watcher to run in case CPU util metrics not are not needed
+	if len(ca.CPUUtilTypes) > 0 && len(ca.CPUUtilDataGather) > 0 || len(ca.CPULoadDataGather) > 0 {
+		err := cw.Once()
+		if err != nil {
+			log.Error("[CPU] Failed to read utilisation metrics: " + err.Error())
+		} else {
+			go cw.Run()
+		}
+	}
+
+	return ca.cpuWatcher
 }
 
-func (stat *CPUWatcher) Once() error {
+func (cw *CPUWatcher) Once() error {
 
-	stat.UtilAvg.mu.Lock()
-	defer stat.UtilAvg.mu.Unlock()
+	cw.UtilAvg.mu.Lock()
+	defer cw.UtilAvg.mu.Unlock()
 
 	ctx, cancel := context.WithTimeout(context.Background(), cpuGetUtilisationTimeout)
 	defer cancel()
@@ -276,7 +291,7 @@ func (stat *CPUWatcher) Once() error {
 	cpuStatPerCPUPerCorePerType := make(map[int]map[int]map[string]float64)
 
 	for _, cputime := range times {
-		for _, utype := range stat.UtilTypes {
+		for _, utype := range cw.UtilTypes {
 			utype = strings.ToLower(utype)
 			var value float64
 			switch utype {
@@ -341,14 +356,14 @@ func (stat *CPUWatcher) Once() error {
 		}
 	}
 
-	stat.UtilAvg.Add(time.Now(), values)
+	cw.UtilAvg.Add(time.Now(), values)
 	return nil
 }
 
-func (stat *CPUWatcher) Run() {
+func (cw *CPUWatcher) Run() {
 	for {
 		start := time.Now()
-		err := stat.Once()
+		err := cw.Once()
 		if err != nil {
 			log.Errorf("[CPU] Failed to read utilisation metrics: " + err.Error())
 		}
@@ -362,9 +377,9 @@ func (stat *CPUWatcher) Run() {
 	}
 }
 
-func (cs *CPUWatcher) Results() (MeasurementsMap, error) {
+func (cw *CPUWatcher) Results() (MeasurementsMap, error) {
 	var errs []string
-	util, err := cs.UtilAvg.Percentage()
+	util, err := cw.UtilAvg.Percentage()
 	if err != nil {
 		log.Errorf("[CPU] Failed to calculate utilisation metrics: " + err.Error())
 		errs = append(errs, err.Error())
@@ -380,21 +395,21 @@ func (cs *CPUWatcher) Results() (MeasurementsMap, error) {
 		}
 	}
 	var loadAvg *load.AvgStat
-	if cs.LoadAvg1 || cs.LoadAvg5 || cs.LoadAvg15 {
+	if cw.LoadAvg1 || cw.LoadAvg5 || cw.LoadAvg15 {
 		loadAvg, err = load.Avg()
 		if err != nil {
 			log.Error("[CPU] Failed to read load_avg: ", err.Error())
 			errs = append(errs, err.Error())
 		} else {
-			if cs.LoadAvg1 {
+			if cw.LoadAvg1 {
 				results["load.avg.1"] = loadAvg.Load1
 			}
 
-			if cs.LoadAvg5 {
+			if cw.LoadAvg5 {
 				results["load.avg.5"] = loadAvg.Load5
 			}
 
-			if cs.LoadAvg15 {
+			if cw.LoadAvg15 {
 				results["load.avg.15"] = loadAvg.Load15
 			}
 		}

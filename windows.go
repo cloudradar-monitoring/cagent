@@ -138,21 +138,25 @@ func windowsUpdates() (available int, pending int, err error) {
 }
 
 func (ca *Cagent) WindowsUpdatesWatcher() *WindowsUpdateWatcher {
-	wuw := &WindowsUpdateWatcher{ca: ca}
+	if ca.windowsUpdateWatcher != nil {
+		return ca.windowsUpdateWatcher
+	}
+
+	ca.windowsUpdateWatcher = &WindowsUpdateWatcher{ca: ca}
 
 	go func() {
 		for {
 			available, pending, err := windowsUpdates()
-			wuw.LastFetchedAt = time.Now()
-			wuw.Err = err
-			wuw.Available = available
-			wuw.Pending = pending
+			ca.windowsUpdateWatcher.LastFetchedAt = time.Now()
+			ca.windowsUpdateWatcher.Err = err
+			ca.windowsUpdateWatcher.Available = available
+			ca.windowsUpdateWatcher.Pending = pending
 
 			time.Sleep(time.Second * time.Duration(ca.WindowsUpdatesWatcherInterval))
 		}
 	}()
 
-	return wuw
+	return ca.windowsUpdateWatcher
 }
 
 func (wuw *WindowsUpdateWatcher) WindowsUpdates() (MeasurementsMap, error) {
