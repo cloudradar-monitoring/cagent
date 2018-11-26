@@ -232,6 +232,9 @@ func (ca *Cagent) ReadConfigFromFile(configFilePath string, createIfNotExists bo
 			log.Infof("generated minimum valuable config: %s", configFilePath)
 		}
 	} else if configExists == nil {
+		// todo(troian) replace with toml.Unmarshal when https://github.com/pelletier/go-toml/issues/252 fixed
+		//  for now github.com/pelletier/go-toml completely overrides default values even if they omitted in the file
+
 		_, err = btoml.DecodeFile(configFilePath, &ca)
 		if err != nil {
 			return err
