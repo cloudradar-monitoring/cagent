@@ -41,7 +41,7 @@ type Cagent struct {
 	LogLevel LogLevel `toml:"log_level" comment:"# log verbosity: allowed values\n\terror\n\tdebug\n\tinfo'"`
 
 	// not nesting MinValuableConfig here as it will created entry with name MinValuableConfig when marshaling
-	HubURL           string `toml:"hub_url" comment:"# HTTP proxy to use with HUB"`
+	HubURL           string `toml:"hub_url" comment:"# HTTP url to connect with HUB"`
 	HubUser          string `toml:"hub_user" comment:"# "`
 	HubPassword      string `toml:"hub_password" comment:"# "`
 	HubGzip          bool   `toml:"hub_gzip" comment:"# enable gzip when sending results to the HUB"`
