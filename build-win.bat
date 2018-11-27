@@ -14,5 +14,5 @@ COPY dist\cagent_64.exe cagent.exe
 go-msi make --src pkg-scripts\msi-templates --msi dist/cagent_64.msi --version %cagent_version% --arch amd64
 DEL cagent.exe
 
-signtool sign /t http://timestamp.digicert.com /f "C:\Users\hero\cagent_ci/build_msi/cloudradar.io.p12" /p %cert_pass% dist/cagent_32.msi
-signtool sign /t http://timestamp.digicert.com /f "C:\Users\hero\cagent_ci/build_msi/cloudradar.io.p12" /p %cert_pass% dist/cagent_64.msi
+signtool sign /t http://timestamp.digicert.com /f "C:\Users\hero\cagent_ci\build_msi\cloudradar.io.p12" /p %cert_pass% dist/cagent_32.msi
+signtool sign /t http://timestamp.digicert.com /f "C:\Users\hero\cagent_ci\build_msi\cloudradar.io.p12" /p %cert_pass% dist/cagent_64.msi
