@@ -215,7 +215,7 @@ func (ca *Cagent) CreateDefaultConfigFile(configFilePath string) error {
 
 	defer func() {
 		if e := f.Close(); e != nil {
-			log.WithError(e).Error("failed to close config file: %s", configFilePath)
+			log.WithError(e).Errorf("failed to close config file: %s", configFilePath)
 		}
 	}()
 
