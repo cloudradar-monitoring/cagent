@@ -266,7 +266,7 @@ func (ca *Cagent) Initialize() error {
 	return nil
 }
 
-// HandleConfig instantiates Cagent with parameters specified in file
+// HandleConfig configures Cagent with parameters specified in file
 // if config file not exists default one created in form of MinValuableConfig
 // todo: this function must be removed once config is separated from Cagent
 func HandleConfig(ca *Cagent, configFilePath string) error {
