@@ -142,17 +142,17 @@ func secToDuration(secs float64) time.Duration {
 	return time.Duration(int64(float64(time.Second) * secs))
 }
 
-func (ca *MinValuableConfig) ApplyEnv() {
+func (mvc *MinValuableConfig) ApplyEnv() {
 	if val, ok := os.LookupEnv("CAGENT_HUB_URL"); ok {
-		ca.HubURL = val
+		mvc.HubURL = val
 	}
 
 	if val, ok := os.LookupEnv("CAGENT_HUB_USER"); ok {
-		ca.HubUser = val
+		mvc.HubUser = val
 	}
 
 	if val, ok := os.LookupEnv("CAGENT_HUB_PASSWORD"); ok {
-		ca.HubPassword = val
+		mvc.HubPassword = val
 	}
 }
 
@@ -269,11 +269,11 @@ func (ca *Cagent) Initialize() error {
 // HandleConfig instantiates Cagent with parameters specified in file
 // if config file not exists default one created in form of MinValuableConfig
 // todo: this function must be removed once config is separated from Cagent
-func HandleConfig(ca *Cagent, file string) error {
-	err := ca.ReadConfigFromFile(file)
+func HandleConfig(ca *Cagent, configFilePath string) error {
+	err := ca.ReadConfigFromFile(configFilePath)
 	if os.IsNotExist(err) {
 		// this is ok
-		err = CreateDefaultConfigFile(file)
+		err = CreateDefaultConfigFile(configFilePath)
 		if err != nil {
 			log.Fatal(err)
 		}
