@@ -93,24 +93,23 @@ func main() {
 
 	log.SetFormatter(&tfmt)
 
-	if cfgPathPtr != nil {
-		err := ca.ReadConfigFromFile(*cfgPathPtr)
-		if os.IsNotExist(err) {
-			// this is ok
-			err = ca.CreateDefaultConfigFile(*cfgPathPtr)
-			if err != nil {
-				log.Fatal(err)
-			}
-		} else if err != nil {
-			if strings.Contains(err.Error(), "cannot load TOML value of type int64 into a Go float") {
-				log.Fatalf("Config load error: please use numbers with a decimal point for numerical values")
-			} else {
-				log.Fatalf("Config load error: %s", err.Error())
-			}
+	err := ca.ReadConfigFromFile(*cfgPathPtr)
+	ca.ApplyEnv()
+	if os.IsNotExist(err) {
+		// this is ok
+		err = ca.CreateDefaultConfigFile(*cfgPathPtr)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else if err != nil {
+		if strings.Contains(err.Error(), "cannot load TOML value of type int64 into a Go float") {
+			log.Fatalf("Config load error: please use numbers with a decimal point for numerical values")
+		} else {
+			log.Fatalf("Config load error: %s", err.Error())
 		}
 	}
 
-	if err := ca.Initialize(); err != nil {
+	if err = ca.Initialize(); err != nil {
 		log.Fatal(err)
 	}
 
@@ -169,7 +168,6 @@ func main() {
 		}
 	}
 
-	var err error
 	var output *os.File
 
 	if *outputFilePtr == "-" {
