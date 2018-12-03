@@ -50,8 +50,7 @@ func askForConfirmation(s string) bool {
 }
 
 func main() {
-	ca := cagent.New()
-	ca.SetVersion(version)
+	cfg := cagent.NewConfig()
 
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc,
@@ -86,27 +85,26 @@ func main() {
 		fmt.Printf("cagent v%s released under MIT license. https://github.com/cloudradar-monitoring/cagent/\n", version)
 		return
 	}
+
 	tfmt := log.TextFormatter{FullTimestamp: true}
 	if runtime.GOOS == "windows" {
 		tfmt.DisableColors = true
 	}
 
-	log.SetFormatter(&tfmt)
-
-	err := cagent.HandleConfig(ca, *cfgPathPtr)
+	err := cfg.HandleConfig(*cfgPathPtr)
 	if err != nil {
 		return
 	}
 
-	if err = ca.Initialize(); err != nil {
-		log.Fatal(err)
-		os.Exit(1)
-	}
+	log.SetFormatter(&tfmt)
 
 	if *printConfigPtr {
-		fmt.Println(ca.DumpConfigToml())
+		fmt.Println(cfg.DumpToml())
 		return
 	}
+
+	ca := cagent.New(cfg)
+	ca.SetVersion(version)
 
 	if *testConfigPtr {
 		err := ca.TestHub()
@@ -148,7 +146,7 @@ func main() {
 		ca.SetLogLevel(cagent.LogLevel(defaultLogLevel))
 	}
 
-	if ca.HubURL == "" && !*serviceUninstallPtr && *outputFilePtr == "" {
+	if cfg.HubURL == "" && !*serviceUninstallPtr && *outputFilePtr == "" {
 		if serviceInstallPtr != nil && *serviceInstallPtr || serviceInstallUserPtr != nil && *serviceInstallUserPtr != "" {
 			fmt.Println(" ****** Before start you need to set 'hub_url' config param at ", *cfgPathPtr)
 		} else {
@@ -250,7 +248,7 @@ func main() {
 						log.Errorf("Chown files: error converting GID(%s) to int", u.Gid)
 						return
 					}
-					os.Chown(ca.LogFile, uid, gid)
+					os.Chown(cfg.LogFile, uid, gid)
 				}()
 			}
 
@@ -304,7 +302,7 @@ func main() {
 				fmt.Printf("Use the Windows Service Manager to stop it\n\n")
 			}
 
-			fmt.Printf("Logs file located at: %s\n", ca.LogFile)
+			fmt.Printf("Logs file located at: %s\n", cfg.LogFile)
 			return
 		}
 
@@ -327,10 +325,10 @@ func main() {
 	interruptChan := make(chan struct{})
 	doneChan := make(chan struct{})
 
-	if ca.PidFile != "" && *oneRunOnlyModePtr && runtime.GOOS != "windows" {
-		err := ioutil.WriteFile(ca.PidFile, []byte(strconv.Itoa(os.Getpid())), 0664)
+	if cfg.PidFile != "" && *oneRunOnlyModePtr && runtime.GOOS != "windows" {
+		err := ioutil.WriteFile(cfg.PidFile, []byte(strconv.Itoa(os.Getpid())), 0664)
 		if err != nil {
-			log.Errorf("Failed to write pid file at: %s", ca.PidFile)
+			log.Errorf("Failed to write pid file at: %s", cfg.PidFile)
 		}
 	}
 

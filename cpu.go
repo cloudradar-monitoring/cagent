@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"math"
 
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/load"
@@ -202,13 +202,13 @@ func (ca *Cagent) CPUWatcher() *CPUWatcher {
 	cw := CPUWatcher{}
 	cw.UtilAvg.mu.Lock()
 
-	if len(ca.CPULoadDataGather) > 0 {
+	if len(ca.config.CPULoadDataGather) > 0 {
 		_, err := load.Avg()
 
 		if err != nil && err.Error() == "not implemented yet" {
 			log.Errorf("[CPU] load_avg metric unavailable on %s", runtime.GOOS)
 		} else {
-			for _, d := range ca.CPULoadDataGather {
+			for _, d := range ca.config.CPULoadDataGather {
 				if strings.HasPrefix(d, "avg") {
 					v, _ := strconv.Atoi(d[3:])
 
@@ -228,7 +228,7 @@ func (ca *Cagent) CPUWatcher() *CPUWatcher {
 	}
 
 	durations := []int{}
-	for _, d := range ca.CPUUtilDataGather {
+	for _, d := range ca.config.CPUUtilDataGather {
 		if strings.HasPrefix(d, "avg") {
 			v, err := strconv.Atoi(d[3:])
 			if err != nil {
@@ -239,7 +239,7 @@ func (ca *Cagent) CPUWatcher() *CPUWatcher {
 		}
 	}
 
-	for _, t := range ca.CPUUtilTypes {
+	for _, t := range ca.config.CPUUtilTypes {
 		found := false
 
 		for _, metric := range utilisationMetricsByOS[runtime.GOOS] {
@@ -261,7 +261,7 @@ func (ca *Cagent) CPUWatcher() *CPUWatcher {
 	ca.cpuWatcher = &cw
 
 	// optimization to prevent CPU watcher to run in case CPU util metrics not are not needed
-	if len(ca.CPUUtilTypes) > 0 && len(ca.CPUUtilDataGather) > 0 || len(ca.CPULoadDataGather) > 0 {
+	if len(ca.config.CPUUtilTypes) > 0 && len(ca.config.CPUUtilDataGather) > 0 || len(ca.config.CPULoadDataGather) > 0 {
 		err := cw.Once()
 		if err != nil {
 			log.Error("[CPU] Failed to read utilisation metrics: " + err.Error())
