@@ -211,7 +211,7 @@ func (cfg *Config) validate() error {
 	return nil
 }
 
-// HandleConfig configures Cagent with parameters specified in file
+// HandleConfig prepares config for Cagent with parameters specified in file
 // if config file not exists default one created in form of MinValuableConfig
 func (cfg *Config) HandleConfig(configFilePath string) error {
 	err := cfg.ReadFromFile(configFilePath)
