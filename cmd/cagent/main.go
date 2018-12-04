@@ -248,7 +248,9 @@ func main() {
 						log.Errorf("Chown files: error converting GID(%s) to int", u.Gid)
 						return
 					}
-					os.Chown(cfg.LogFile, uid, gid)
+					if err := os.Chown(cfg.LogFile, uid, gid); err != nil {
+						log.WithError(err).Errorf("chown log file %s", cfg.LogFile)
+					}
 				}()
 			}
 

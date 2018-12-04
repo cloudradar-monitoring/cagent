@@ -16,12 +16,12 @@ type Cagent struct {
 	config *Config
 
 	// internal use
-	hubHttpClient *http.Client
+	hubHTTPClient *http.Client
 
 	cpuWatcher           *CPUWatcher
 	fsWatcher            *FSWatcher
 	netWatcher           *NetWatcher
-	windowsUpdateWatcher *WindowsUpdateWatcher
+	windowsUpdateWatcher *WindowsUpdateWatcher // nolint: structcheck
 
 	rootCAs *x509.CertPool
 

@@ -17,8 +17,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (ca *Cagent) initHubHttpClient() {
-	if ca.hubHttpClient == nil {
+func (ca *Cagent) initHubHTTPClient() {
+	if ca.hubHTTPClient == nil {
 		tr := *(http.DefaultTransport.(*http.Transport))
 		if ca.rootCAs != nil {
 			tr.TLSClientConfig = &tls.Config{RootCAs: ca.rootCAs}
@@ -42,7 +42,7 @@ func (ca *Cagent) initHubHttpClient() {
 			}
 		}
 
-		ca.hubHttpClient = &http.Client{
+		ca.hubHTTPClient = &http.Client{
 			Timeout:   time.Second * 30,
 			Transport: &tr,
 		}
@@ -54,7 +54,7 @@ func (ca *Cagent) TestHub() error {
 		return fmt.Errorf("please set the hub_url config param")
 	}
 
-	ca.initHubHttpClient()
+	ca.initHubHTTPClient()
 	req, err := http.NewRequest("HEAD", ca.config.HubURL, nil)
 	if err != nil {
 		return err
@@ -65,7 +65,7 @@ func (ca *Cagent) TestHub() error {
 		req.SetBasicAuth(ca.config.HubUser, ca.config.HubPassword)
 	}
 
-	resp, err := ca.hubHttpClient.Do(req)
+	resp, err := ca.hubHTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("unable to connect. %s. If you have a proxy or firewall, it may be blocking the connection", err.Error())
 	}
@@ -82,7 +82,7 @@ func (ca *Cagent) TestHub() error {
 }
 
 func (ca *Cagent) PostResultsToHub(result Result) error {
-	ca.initHubHttpClient()
+	ca.initHubHTTPClient()
 
 	b, err := json.Marshal(result)
 	if err != nil {
@@ -113,7 +113,7 @@ func (ca *Cagent) PostResultsToHub(result Result) error {
 		req.SetBasicAuth(ca.config.HubUser, ca.config.HubPassword)
 	}
 
-	resp, err := ca.hubHttpClient.Do(req)
+	resp, err := ca.hubHTTPClient.Do(req)
 
 	if err != nil {
 		return err
