@@ -29,7 +29,7 @@ func (ca *Cagent) NetWatcher() *NetWatcher {
 	}
 
 	ca.netWatcher = &NetWatcher{
-		cagent: ca,
+		cagent:                           ca,
 		constantlyExcludedInterfaceCache: map[string]bool{},
 	}
 	return ca.netWatcher

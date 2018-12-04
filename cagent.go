@@ -21,7 +21,7 @@ type Cagent struct {
 	cpuWatcher           *CPUWatcher
 	fsWatcher            *FSWatcher
 	netWatcher           *NetWatcher
-	windowsUpdateWatcher *WindowsUpdateWatcher // nolint: structcheck
+	windowsUpdateWatcher *WindowsUpdateWatcher // nolint: structcheck,megacheck
 
 	rootCAs *x509.CertPool
 
