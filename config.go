@@ -193,8 +193,6 @@ func GenerateDefaultConfigFile(mvc *MinValuableConfig, configFilePath string) er
 		return fmt.Errorf("failed to encode config to file")
 	}
 
-	log.Infof("generated minimum valuable config to %s", configFilePath)
-
 	return err
 }
 
