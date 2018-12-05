@@ -118,7 +118,7 @@ func NewMinimumConfig() *MinValuableConfig {
 		LogLevel: "error",
 	}
 
-	cfg.ApplyEnv()
+	cfg.applyEnv(false)
 
 	return cfg
 }
@@ -127,17 +127,16 @@ func secToDuration(secs float64) time.Duration {
 	return time.Duration(int64(float64(time.Second) * secs))
 }
 
-// fixme: do we need this function exported?
-func (mvc *MinValuableConfig) ApplyEnv() {
-	if val, ok := os.LookupEnv("CAGENT_HUB_URL"); ok {
+func (mvc *MinValuableConfig) applyEnv(force bool) {
+	if val, ok := os.LookupEnv("CAGENT_HUB_URL"); ok && ((mvc.HubURL == "") || force) {
 		mvc.HubURL = val
 	}
 
-	if val, ok := os.LookupEnv("CAGENT_HUB_USER"); ok {
+	if val, ok := os.LookupEnv("CAGENT_HUB_USER"); ok && ((mvc.HubUser == "") || force) {
 		mvc.HubUser = val
 	}
 
-	if val, ok := os.LookupEnv("CAGENT_HUB_PASSWORD"); ok {
+	if val, ok := os.LookupEnv("CAGENT_HUB_PASSWORD"); ok && ((mvc.HubPassword == "") || force) {
 		mvc.HubPassword = val
 	}
 }
@@ -154,7 +153,9 @@ func (cfg *Config) DumpToml() string {
 	return buff.String()
 }
 
-func (cfg *Config) ReadFromFile(configFilePath string) error {
+// TryUpdateConfigFromFile applies values from file in configFilePath to cfg if given file exists.
+// it rewrites all cfg keys that present in the file
+func TryUpdateConfigFromFile(cfg *Config, configFilePath string) error {
 	_, err := os.Stat(configFilePath)
 	if err != nil {
 		return err
@@ -211,28 +212,26 @@ func (cfg *Config) validate() error {
 	return nil
 }
 
-// HandleConfig prepares config for Cagent with parameters specified in file
+// HandleAllConfigSetup prepares config for Cagent with parameters specified in file
 // if config file not exists default one created in form of MinValuableConfig
-func (cfg *Config) HandleConfig(configFilePath string) error {
-	err := cfg.ReadFromFile(configFilePath)
+func HandleAllConfigSetup(configFilePath string) (*Config, error) {
+	cfg := NewConfig()
+
+	err := TryUpdateConfigFromFile(cfg, configFilePath)
 	if os.IsNotExist(err) {
 		mvc := NewMinimumConfig()
 		if err = GenerateDefaultConfigFile(mvc, configFilePath); err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		cfg.MinValuableConfig = *mvc
 	} else if err != nil {
-		if strings.Contains(err.Error(), "cannot load TOML value of type int64 into a Go float") {
-			log.Fatalf("Config load error: please use numbers with a decimal point for numerical values")
-		} else {
-			log.Fatalf("Config load error: %s", err.Error())
-		}
+		return nil, err
 	}
 
 	if err = cfg.validate(); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return cfg, nil
 }

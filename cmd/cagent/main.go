@@ -50,8 +50,6 @@ func askForConfirmation(s string) bool {
 }
 
 func main() {
-	cfg := cagent.NewConfig()
-
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc,
 		syscall.SIGHUP,
@@ -86,22 +84,22 @@ func main() {
 		return
 	}
 
-	tfmt := log.TextFormatter{FullTimestamp: true}
-	if runtime.GOOS == "windows" {
-		tfmt.DisableColors = true
-	}
-
-	err := cfg.HandleConfig(*cfgPathPtr)
+	cfg, err := cagent.HandleAllConfigSetup(*cfgPathPtr)
 	if err != nil {
 		return
 	}
-
-	log.SetFormatter(&tfmt)
 
 	if *printConfigPtr {
 		fmt.Println(cfg.DumpToml())
 		return
 	}
+
+	tfmt := log.TextFormatter{FullTimestamp: true}
+	if runtime.GOOS == "windows" {
+		tfmt.DisableColors = true
+	}
+
+	log.SetFormatter(&tfmt)
 
 	ca := cagent.New(cfg)
 	ca.SetVersion(version)
