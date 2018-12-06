@@ -26,7 +26,11 @@ var (
 	version string
 )
 
-const defaultLogLevel = "error"
+var svcConfig = &service.Config{
+	Name:        "cagent",
+	DisplayName: "Cagent",
+	Description: "Monitoring agent for system metrics",
+}
 
 func askForConfirmation(s string) bool {
 	reader := bufio.NewReader(os.Stdin)
@@ -50,6 +54,8 @@ func askForConfirmation(s string) bool {
 }
 
 func main() {
+	systemManager := service.ChosenSystem()
+
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc,
 		syscall.SIGHUP,
@@ -58,30 +64,41 @@ func main() {
 
 	var serviceInstallUserPtr *string
 	var serviceInstallPtr *bool
-	outputFilePtr := flag.String("o", "", "file to write the results")
 
+	// Setup flag pointers
+	outputFilePtr := flag.String("o", "", "file to write the results (default ./results.out)")
 	cfgPathPtr := flag.String("c", cagent.DefaultCfgPath, "config file path")
-	logLevelPtr := flag.String("v", defaultLogLevel, "log level – overrides the level in config file (values \"error\",\"info\",\"debug\")")
-	systemManager := service.ChosenSystem()
+	logLevelPtr := flag.String("v", "", "log level – overrides the level in config file (values \"error\",\"info\",\"debug\")")
 	daemonizeModePtr := flag.Bool("d", false, "daemonize – run the proccess in background")
 	oneRunOnlyModePtr := flag.Bool("r", false, "one run only – perform checks once and exit. Overwrites output file")
+	serviceUninstallPtr := flag.Bool("u", false, fmt.Sprintf("stop and uninstall the system service(%s)", systemManager.String()))
+	printConfigPtr := flag.Bool("p", false, "print the active config")
+	versionPtr := flag.Bool("version", false, "show the cagent version")
 
+	// some OS specific flags
 	if runtime.GOOS == "windows" {
 		serviceInstallPtr = flag.Bool("s", false, fmt.Sprintf("install and start the system service(%s)", systemManager.String()))
 	} else {
 		serviceInstallUserPtr = flag.String("s", "", fmt.Sprintf("username to install and start the system service(%s)", systemManager.String()))
 	}
 
-	serviceUninstallPtr := flag.Bool("u", false, fmt.Sprintf("stop and uninstall the system service(%s)", systemManager.String()))
-	printConfigPtr := flag.Bool("p", false, "print the active config")
-	testConfigPtr := flag.Bool("t", false, "test the HUB config")
-	versionPtr := flag.Bool("version", false, "show the cagent version")
-
 	flag.Parse()
 
-	if *versionPtr {
-		fmt.Printf("cagent v%s released under MIT license. https://github.com/cloudradar-monitoring/cagent/\n", version)
-		return
+	// version should be handled first to ensure it will be accessible in case of fatal errors before
+	handleFlagVersion(*versionPtr)
+
+	// check some incompatible flags
+	if serviceInstallUserPtr != nil && *serviceInstallUserPtr != "" ||
+		serviceInstallPtr != nil && *serviceInstallPtr {
+		if *outputFilePtr != "" {
+			fmt.Println("Output file(-o) flag can't be used together with service install(-s) flag")
+			os.Exit(1)
+		}
+
+		if *serviceUninstallPtr {
+			fmt.Println("Service uninstall(-u) flag can't be used together with service install(-s) flag")
+			os.Exit(1)
+		}
 	}
 
 	cfg, err := cagent.HandleAllConfigSetup(*cfgPathPtr)
@@ -89,80 +106,85 @@ func main() {
 		return
 	}
 
-	if *printConfigPtr {
-		fmt.Println(cfg.DumpToml())
-		return
-	}
-
-	tfmt := log.TextFormatter{FullTimestamp: true}
-	if runtime.GOOS == "windows" {
-		tfmt.DisableColors = true
-	}
-
-	log.SetFormatter(&tfmt)
-
 	ca := cagent.New(cfg, version)
-	ca.SetVersion(version)
 
-	if *testConfigPtr {
-		err := ca.TestHub()
-		if err != nil {
-			fmt.Printf("Cagent HUB test failed: %s\n", err.Error())
-			os.Exit(1)
-			return
-		}
+	handleFlagPrintConfig(*printConfigPtr, cfg)
 
-		fmt.Printf("HUB connection test succeed and credentials are correct!\n")
+	setDefaultLogFormatter()
+
+	// log level set in flag has a precedence. If specified we need to set it ASAP
+	handleFlagLogLevel(ca, *logLevelPtr)
+
+	writePidFileIfNeeded(ca, oneRunOnlyModePtr)
+	defer removePidFileIfNeeded(ca, oneRunOnlyModePtr)
+
+	if !service.Interactive() {
+		runUnderOsServiceManager(ca)
+	}
+
+	handleFlagServiceUninstall(ca, *serviceUninstallPtr)
+	handleFlagServiceInstall(ca, systemManager, serviceInstallUserPtr, serviceInstallPtr, *cfgPathPtr)
+	handleFlagDaemonizeMode(*daemonizeModePtr)
+
+	// setup interrupt handler
+	interruptChan := make(chan struct{})
+	output := handleFlagOutput(*outputFilePtr, *oneRunOnlyModePtr)
+
+	handleFlagOneRunOnlyMode(ca, *oneRunOnlyModePtr, output)
+
+	// no any flag resulted in os.Exit
+	// so lets use the default continuous run mode
+	doneChan := make(chan struct{})
+	go func() {
+		ca.Run(output, interruptChan)
+		doneChan <- struct{}{}
+	}()
+
+	//  Handle interrupts
+	select {
+	case sig := <-sigc:
+		log.Infof("Got %s signal. Finishing the batch and exit...", sig.String())
+		interruptChan <- struct{}{}
+		os.Exit(0)
+	case <-doneChan:
 		return
 	}
 
-	var osNotice string
-
-	/*if runtime.GOOS == "windows" && !cagent.CheckIfRawICMPAvailable() {
-			osNotice = "!!! You need to run cagent as administrator in order to use ICMP ping on Windows !!!"
-		}
-		if runtime.GOOS == "linux" && !cagent.CheckIfRootlessICMPAvailable() && !cagent.CheckIfRawICMPAvailable() {
-			osNotice = `⚠️ In order to perform rootless ICMP Ping on Linux you need to run this command first:
-	sudo sysctl -w net.ipv4.ping_group_range="0   2147483647"`
-		}*/
-
-	if osNotice != "" {
-		// print to console without log formatting
-		fmt.Println(osNotice)
-
-		// disable logging to stderr temporarily
-		log.SetOutput(ioutil.Discard)
-		log.Error(osNotice)
-		log.SetOutput(os.Stderr)
+}
+func handleFlagVersion(versionFlag bool) {
+	if versionFlag {
+		fmt.Printf("cagent v%s released under MIT license. https://github.com/cloudradar-monitoring/cagent/\n", version)
+		os.Exit(0)
 	}
+}
 
+func handleFlagPrintConfig(printConfig bool, cfg *cagent.Config) {
+	if printConfig {
+		fmt.Println(cfg.DumpToml())
+		os.Exit(0)
+	}
+}
+
+func handleFlagLogLevel(ca *cagent.Cagent, logLevel string) {
 	// Check loglevel and if needed warn user and set to default
-	if *logLevelPtr == string(cagent.LogLevelError) || *logLevelPtr == string(cagent.LogLevelInfo) || *logLevelPtr == string(cagent.LogLevelDebug) {
-		ca.SetLogLevel(cagent.LogLevel(*logLevelPtr))
-	} else {
-		log.Warnf("LogLevel was set to an invalid value: \"%s\". Set to default: \"%s\"", *logLevelPtr, defaultLogLevel)
-		ca.SetLogLevel(cagent.LogLevel(defaultLogLevel))
+	if logLevel == string(cagent.LogLevelError) || logLevel == string(cagent.LogLevelInfo) || logLevel == string(cagent.LogLevelDebug) {
+		ca.SetLogLevel(cagent.LogLevel(logLevel))
+	} else if logLevel != "" {
+		log.Warnf("Invalid log level: \"%s\". Set to default: \"%s\"", logLevel, ca.Config.LogLevel)
+	}
+}
+
+func handleFlagOutput(outputFile string, oneRunOnlyMode bool) (output *os.File) {
+	if outputFile == "" {
+		return nil
 	}
 
-	if cfg.HubURL == "" && !*serviceUninstallPtr && *outputFilePtr == "" {
-		if serviceInstallPtr != nil && *serviceInstallPtr || serviceInstallUserPtr != nil && *serviceInstallUserPtr != "" {
-			fmt.Println(" ****** Before start you need to set 'hub_url' config param at ", *cfgPathPtr)
-		} else {
-			fmt.Println("Missing output file flag(-o) or hub_url in the config")
-			flag.PrintDefaults()
-			return
-		}
-	}
-
-	var output *os.File
-
-	if *outputFilePtr == "-" {
+	if outputFile == "-" {
 		log.SetOutput(ioutil.Discard)
 		output = os.Stdout
-	} else if *outputFilePtr != "" {
-
-		if _, err := os.Stat(*outputFilePtr); os.IsNotExist(err) {
-			dir := filepath.Dir(*outputFilePtr)
+	} else {
+		if _, err := os.Stat(outputFile); os.IsNotExist(err) {
+			dir := filepath.Dir(outputFile)
 			if _, err := os.Stat(dir); os.IsNotExist(err) {
 				err = os.MkdirAll(dir, 0644)
 				if err != nil {
@@ -173,187 +195,206 @@ func main() {
 
 		mode := os.O_WRONLY | os.O_CREATE
 
-		if *oneRunOnlyModePtr {
+		if oneRunOnlyMode {
 			mode = mode | os.O_TRUNC
 		} else {
 			mode = mode | os.O_APPEND
 		}
 
-		output, err = os.OpenFile(*outputFilePtr, mode, 0644)
-		defer output.Close()
-
+		var err error
+		output, err = os.OpenFile(outputFile, mode, 0644)
 		if err != nil {
-			log.WithError(err).Fatalf("Failed to open the output file: '%s'", *outputFilePtr)
+			log.WithError(err).Fatalf("Failed to open the output file: '%s'", outputFile)
 		}
+		defer output.Close()
 	}
 
-	if serviceInstallPtr != nil && *serviceInstallPtr || serviceInstallUserPtr != nil && *serviceInstallUserPtr != "" || *serviceUninstallPtr || !service.Interactive() {
-		prg := &serviceWrapper{Cagent: ca}
-		if cfgPathPtr != nil && *cfgPathPtr != cagent.DefaultCfgPath {
-			path := *cfgPathPtr
-			if !filepath.IsAbs(path) {
-				path, err = filepath.Abs(path)
-				if err != nil {
-					log.Fatalf("Failed to get absolute path to config at '%s': %s", path, err)
-				}
-			}
-			svcConfig.Arguments = []string{"-c", path}
-		}
+	return
+}
 
-		s, err := service.New(prg, svcConfig)
+func handleFlagOneRunOnlyMode(ca *cagent.Cagent, oneRunOnlyMode bool, output *os.File) {
+	if oneRunOnlyMode {
+		err := ca.RunOnce(output)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+}
+
+func handleFlagDaemonizeMode(daemonizeMode bool) {
+	if daemonizeMode && os.Getenv("cagent_FORK") != "1" {
+		err := rerunDetached()
+		if err != nil {
+			fmt.Println("Failed to fork process: ", err.Error())
+			os.Exit(1)
 		}
 
-		if service.Interactive() {
+		os.Exit(0)
+	}
+}
 
-			if *serviceUninstallPtr {
+func handleFlagServiceUninstall(ca *cagent.Cagent, serviceUninstallPtr bool) {
+	if !serviceUninstallPtr {
+		return
+	}
+
+	systemService, err := getServiceFromFlags(ca, "", "")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = systemService.Stop()
+	if err != nil {
+		// don't return error here, just write a warning and try to uninstall
+		fmt.Println("Failed to stop the service: ", err.Error())
+	}
+
+	err = systemService.Uninstall()
+	if err != nil {
+		fmt.Println("Failed to uninstall the service: ", err.Error())
+		os.Exit(1)
+	}
+
+	os.Exit(0)
+}
+
+func handleFlagServiceInstall(ca *cagent.Cagent, systemManager service.System, serviceInstallUserPtr *string, serviceInstallPtr *bool, cfgPath string) {
+	// serviceInstallPtr is currently used on windows
+	// serviceInstallUserPtr is used on other systems
+	// if both of them are empty - just return
+	if (serviceInstallUserPtr == nil || *serviceInstallUserPtr == "") &&
+		(serviceInstallPtr == nil || !*serviceInstallPtr) {
+		return
+	}
+
+	username := ""
+	if serviceInstallUserPtr != nil {
+		username = *serviceInstallUserPtr
+	}
+
+	s, err := getServiceFromFlags(ca, cfgPath, username)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	if ca.Config.HubURL == "" {
+		fmt.Printf("To install the service you first need to set 'hub_url' config param")
+		os.Exit(1)
+	}
+
+	if runtime.GOOS != "windows" {
+		userName := *serviceInstallUserPtr
+		u, err := user.Lookup(userName)
+		if err != nil {
+			fmt.Printf("Failed to find the user '%s'\n", userName)
+			os.Exit(1)
+		}
+
+		svcConfig.UserName = userName
+		// we need to chown log file with user who will run service
+		// because installer can be run under root so the log file will be also created under root
+		err = chownFile(ca.Config.LogFile, u)
+		if err != nil {
+			fmt.Printf("Failed to chown log file for '%s' user\n", userName)
+		}
+	}
+	const maxAttempts = 3
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		err = s.Install()
+		// Check error case where the service already exists
+		if err != nil && strings.Contains(err.Error(), "already exists") {
+			fmt.Printf("cagent service(%s) already installed: %s\n", systemManager.String(), err.Error())
+
+			if attempt == maxAttempts {
+				fmt.Printf("Give up after %d attempts\n", maxAttempts)
+				os.Exit(1)
+			}
+
+			osSpecificNote := ""
+			if runtime.GOOS == "windows" {
+				osSpecificNote = " Windows Services Manager app should not be opened!"
+			}
+			if askForConfirmation("Do you want to overwrite it?" + osSpecificNote) {
 				err = s.Stop()
 				if err != nil {
 					fmt.Println("Failed to stop the service: ", err.Error())
 				}
 
-				err = s.Uninstall()
-
+				// lets try to uninstall despite of this error
+				err := s.Uninstall()
 				if err != nil {
-					fmt.Println("Failed to uninstall the service: ", err.Error())
+					fmt.Println("Failed to unistall the service: ", err.Error())
+					os.Exit(1)
 				}
-				return
 			}
 
-			if outputFilePtr != nil && *outputFilePtr != "" {
-				fmt.Println("Output file(-o) flag can't be used together with service install(-s) flag")
-				return
-			}
-			if runtime.GOOS != "windows" {
-
-				u, err := user.Lookup(*serviceInstallUserPtr)
-				if err != nil {
-					log.Errorf("Failed to find the user '%s'", *serviceInstallUserPtr)
-					return
-				} else {
-					svcConfig.UserName = *serviceInstallUserPtr
-				}
-				defer func() {
-					uid, err := strconv.Atoi(u.Uid)
-					if err != nil {
-						log.Errorf("Chown files: error converting UID(%s) to int", u.Uid)
-						return
-					}
-
-					gid, err := strconv.Atoi(u.Gid)
-					if err != nil {
-						log.Errorf("Chown files: error converting GID(%s) to int", u.Gid)
-						return
-					}
-					if err := os.Chown(cfg.LogFile, uid, gid); err != nil {
-						log.WithError(err).Errorf("chown log file %s", cfg.LogFile)
-					}
-				}()
-			}
-
-		install:
-			err = s.Install()
-
-			if err != nil && strings.Contains(err.Error(), "already exists") {
-
-				fmt.Printf("Cagent service(%s) already installed: %s\n", systemManager.String(), err.Error())
-
-				note := ""
-				if runtime.GOOS == "windows" {
-					note = " Windows Services Manager app should not be opened!"
-				}
-				if askForConfirmation("Do you want to overwrite it?" + note) {
-					s.Stop()
-					err := s.Uninstall()
-					if err != nil {
-						fmt.Printf("Failed to unistall the service: %s\n", err.Error())
-						return
-					}
-					goto install
-				}
-				s.Uninstall()
-
-			} else if err != nil {
-				fmt.Printf("Cagent service(%s) installing error: %s", systemManager.String(), err.Error())
-				return
-			} else {
-				fmt.Printf("Cagent service(%s) installed. Starting...\n", systemManager.String())
-			}
-
-			err = s.Start()
-
-			if err != nil {
-				fmt.Printf("Already running\n")
-			} else {
-				fmt.Printf("Cagent is running!\n")
-			}
-
-			switch systemManager.String() {
-			case "unix-systemv":
-				fmt.Printf("Use this command to stop it:\nsudo service %s stop\n\n", svcConfig.Name)
-			case "linux-upstart":
-				fmt.Printf("Use this command to stop it:\nsudo initctl stop %s\n\n", svcConfig.Name)
-			case "linux-systemd":
-				fmt.Printf("Use this command to stop it:\nsudo systemctl stop %s.service\n\n", svcConfig.Name)
-			case "darwin-launchd":
-				fmt.Printf("Use this command to stop it:\nsudo launchctl unload %s\n\n", svcConfig.Name)
-			case "windows-service":
-				fmt.Printf("Use the Windows Service Manager to stop it\n\n")
-			}
-
-			fmt.Printf("Logs file located at: %s\n", cfg.LogFile)
-			return
+			// Check general error case
+		} else if err != nil {
+			fmt.Printf("cagent service(%s) installing error: %s\n", systemManager.String(), err.Error())
+			os.Exit(1)
+			// Service install was success so we can exit the loop
+		} else {
+			break
 		}
+	}
 
-		err = s.Run()
+	fmt.Printf("cagent service(%s) installed. Starting...\n", systemManager.String())
+	err = s.Start()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 
+	switch systemManager.String() {
+	case "unix-systemv":
+		fmt.Printf("Run this command to stop it:\nsudo service %s stop\n\n", svcConfig.Name)
+	case "linux-upstart":
+		fmt.Printf("Run this command to stop it:\nsudo initctl stop %s\n\n", svcConfig.Name)
+	case "linux-systemd":
+		fmt.Printf("Run this command to stop it:\nsudo systemctl stop %s.service\n\n", svcConfig.Name)
+	case "darwin-launchd":
+		fmt.Printf("Run this command to stop it:\nsudo launchctl unload %s\n\n", svcConfig.Name)
+	case "windows-service":
+		fmt.Printf("Use the Windows Service Manager to stop it\n\n")
+	}
+
+	fmt.Printf("Log file located at: %s\n", cfgPath)
+	os.Exit(0)
+}
+
+func runUnderOsServiceManager(ca *cagent.Cagent) {
+	systemService, err := getServiceFromFlags(ca, "", "")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// we are running under OS service manager
+	err = systemService.Run()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	os.Exit(0)
+}
+
+func writePidFileIfNeeded(ca *cagent.Cagent, oneRunOnlyModePtr *bool) {
+	if ca.Config.PidFile != "" && !*oneRunOnlyModePtr && runtime.GOOS != "windows" {
+		err := ioutil.WriteFile(ca.Config.PidFile, []byte(strconv.Itoa(os.Getpid())), 0664)
 		if err != nil {
-			log.Error(err.Error())
+			log.Errorf("Failed to write pid file at: %s", ca.Config.PidFile)
 		}
-
-		return
 	}
+}
 
-	if *daemonizeModePtr && os.Getenv("CAGENT_FORK") != "1" {
-		rerunDetached()
-		log.SetOutput(ioutil.Discard)
-
-		return
-	}
-
-	interruptChan := make(chan struct{})
-	doneChan := make(chan struct{})
-
-	if cfg.PidFile != "" && *oneRunOnlyModePtr && runtime.GOOS != "windows" {
-		err := ioutil.WriteFile(cfg.PidFile, []byte(strconv.Itoa(os.Getpid())), 0664)
+func removePidFileIfNeeded(ca *cagent.Cagent, oneRunOnlyModePtr *bool) {
+	if ca.Config.PidFile != "" && !*oneRunOnlyModePtr && runtime.GOOS != "windows" {
+		err := os.Remove(ca.Config.PidFile)
 		if err != nil {
-			log.Errorf("Failed to write pid file at: %s", cfg.PidFile)
+			log.Errorf("Failed to remove pid file at: %s", ca.Config.PidFile)
 		}
 	}
-
-	if *oneRunOnlyModePtr == true {
-		err := ca.RunOnce(output)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return
-	}
-
-	go func() {
-		ca.Run(output, interruptChan)
-		doneChan <- struct{}{}
-	}()
-
-	select {
-	case sig := <-sigc:
-		log.Infof("Got %s signal. Finishing the batch and exit...", sig.String())
-		interruptChan <- struct{}{}
-		os.Exit(0)
-	case <-doneChan:
-		return
-	}
-
 }
 
 func rerunDetached() error {
@@ -375,6 +416,20 @@ func rerunDetached() error {
 
 	cmd.Process.Release()
 	return nil
+}
+
+func chownFile(filePath string, u *user.User) error {
+	uid, err := strconv.Atoi(u.Uid)
+	if err != nil {
+		return fmt.Errorf("Chown files: error converting UID(%s) to int", u.Uid)
+	}
+
+	gid, err := strconv.Atoi(u.Gid)
+	if err != nil {
+		return fmt.Errorf("Chown files: error converting GID(%s) to int", u.Gid)
+	}
+
+	return os.Chown(filePath, uid, gid)
 }
 
 type serviceWrapper struct {
@@ -401,8 +456,32 @@ func (sw *serviceWrapper) Stop(s service.Service) error {
 	return nil
 }
 
-var svcConfig = &service.Config{
-	Name:        "cagent",
-	DisplayName: "Cagent",
-	Description: "Monitoring agent for system metrics",
+func getServiceFromFlags(ca *cagent.Cagent, configPath, userName string) (service.Service, error) {
+	prg := &serviceWrapper{Cagent: ca}
+
+	if configPath != "" {
+		if !filepath.IsAbs(configPath) {
+			var err error
+			configPath, err = filepath.Abs(configPath)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to get absolute path to config at '%s': %s", configPath, err)
+			}
+		}
+		svcConfig.Arguments = []string{"-c", configPath}
+	}
+
+	if userName != "" {
+		svcConfig.UserName = userName
+	}
+
+	return service.New(prg, svcConfig)
+}
+
+func setDefaultLogFormatter() {
+	tfmt := log.TextFormatter{FullTimestamp: true}
+	if runtime.GOOS == "windows" {
+		tfmt.DisableColors = true
+	}
+
+	log.SetFormatter(&tfmt)
 }

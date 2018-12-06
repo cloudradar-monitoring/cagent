@@ -13,7 +13,7 @@ import (
 )
 
 type Cagent struct {
-	config *Config
+	Config *Config
 
 	// internal use
 	hubHTTPClient *http.Client
@@ -30,7 +30,7 @@ type Cagent struct {
 
 func New(cfg *Config, version string) *Cagent {
 	ca := &Cagent{
-		config:  cfg,
+		Config:  cfg,
 		version: version,
 	}
 
@@ -50,10 +50,10 @@ func New(cfg *Config, version string) *Cagent {
 		}
 	}
 
-	ca.SetLogLevel(ca.config.LogLevel)
+	ca.SetLogLevel(ca.Config.LogLevel)
 
-	if ca.config.LogFile != "" {
-		err := addLogFileHook(ca.config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	if ca.Config.LogFile != "" {
+		err := addLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 		if err != nil {
 			log.Error("Can't write logs to file: ", err.Error())
 		}

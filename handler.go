@@ -23,18 +23,18 @@ func (ca *Cagent) initHubHTTPClient() {
 		if ca.rootCAs != nil {
 			tr.TLSClientConfig = &tls.Config{RootCAs: ca.rootCAs}
 		}
-		if ca.config.HubProxy != "" {
-			if !strings.HasPrefix(ca.config.HubProxy, "http://") {
-				ca.config.HubProxy = "http://" + ca.config.HubProxy
+		if ca.Config.HubProxy != "" {
+			if !strings.HasPrefix(ca.Config.HubProxy, "http://") {
+				ca.Config.HubProxy = "http://" + ca.Config.HubProxy
 			}
 
-			u, err := url.Parse(ca.config.HubProxy)
+			u, err := url.Parse(ca.Config.HubProxy)
 
 			if err != nil {
 				log.Errorf("Failed to parse 'hub_proxy' URL")
 			} else {
-				if ca.config.HubProxyUser != "" {
-					u.User = url.UserPassword(ca.config.HubProxyUser, ca.config.HubProxyPassword)
+				if ca.Config.HubProxyUser != "" {
+					u.User = url.UserPassword(ca.Config.HubProxyUser, ca.Config.HubProxyPassword)
 				}
 				tr.Proxy = func(_ *http.Request) (*url.URL, error) {
 					return u, nil
@@ -50,19 +50,19 @@ func (ca *Cagent) initHubHTTPClient() {
 }
 
 func (ca *Cagent) TestHub() error {
-	if ca.config.HubURL == "" {
-		return fmt.Errorf("please set the hub_url config param")
+	if ca.Config.HubURL == "" {
+		return fmt.Errorf("please set the hub_url Config param")
 	}
 
 	ca.initHubHTTPClient()
-	req, err := http.NewRequest("HEAD", ca.config.HubURL, nil)
+	req, err := http.NewRequest("HEAD", ca.Config.HubURL, nil)
 	if err != nil {
 		return err
 	}
 
 	req.Header.Add("User-Agent", ca.userAgent())
-	if ca.config.HubUser != "" {
-		req.SetBasicAuth(ca.config.HubUser, ca.config.HubPassword)
+	if ca.Config.HubUser != "" {
+		req.SetBasicAuth(ca.Config.HubUser, ca.Config.HubPassword)
 	}
 
 	resp, err := ca.hubHTTPClient.Do(req)
@@ -70,10 +70,10 @@ func (ca *Cagent) TestHub() error {
 		return fmt.Errorf("unable to connect. %s. If you have a proxy or firewall, it may be blocking the connection", err.Error())
 	}
 
-	if resp.StatusCode == 401 && ca.config.HubUser == "" {
-		return fmt.Errorf("unable to authorise without credentials. Please set hub_user & hub_password in the config")
-	} else if resp.StatusCode == 401 && ca.config.HubUser != "" {
-		return fmt.Errorf("unable to authorise with the provided credentials. Please correct the hub_user & hub_password in the config")
+	if resp.StatusCode == 401 && ca.Config.HubUser == "" {
+		return fmt.Errorf("unable to authorise without credentials. Please set hub_user & hub_password in the Config")
+	} else if resp.StatusCode == 401 && ca.Config.HubUser != "" {
+		return fmt.Errorf("unable to authorise with the provided credentials. Please correct the hub_user & hub_password in the Config")
 	} else if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		return fmt.Errorf("got bad response status: %d, %s. If you have a proxy or firewall it may be blocking the connection", resp.StatusCode, resp.Status)
 	}
@@ -91,15 +91,15 @@ func (ca *Cagent) PostResultsToHub(result Result) error {
 
 	var req *http.Request
 
-	if ca.config.HubGzip {
+	if ca.Config.HubGzip {
 		var buffer bytes.Buffer
 		zw := gzip.NewWriter(&buffer)
 		zw.Write(b)
 		zw.Close()
-		req, err = http.NewRequest("POST", ca.config.HubURL, &buffer)
+		req, err = http.NewRequest("POST", ca.Config.HubURL, &buffer)
 		req.Header.Set("Content-Encoding", "gzip")
 	} else {
-		req, err = http.NewRequest("POST", ca.config.HubURL, bytes.NewBuffer(b))
+		req, err = http.NewRequest("POST", ca.Config.HubURL, bytes.NewBuffer(b))
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -109,8 +109,8 @@ func (ca *Cagent) PostResultsToHub(result Result) error {
 
 	req.Header.Add("User-Agent", ca.userAgent())
 
-	if ca.config.HubUser != "" {
-		req.SetBasicAuth(ca.config.HubUser, ca.config.HubPassword)
+	if ca.Config.HubUser != "" {
+		req.SetBasicAuth(ca.Config.HubUser, ca.Config.HubPassword)
 	}
 
 	resp, err := ca.hubHTTPClient.Do(req)
@@ -270,7 +270,7 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 		select {
 		case <-interrupt:
 			return
-		case <-time.After(secToDuration(ca.config.Interval)):
+		case <-time.After(secToDuration(ca.Config.Interval)):
 			continue
 		}
 	}
