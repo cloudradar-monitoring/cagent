@@ -101,7 +101,7 @@ func main() {
 
 	log.SetFormatter(&tfmt)
 
-	ca := cagent.New(cfg)
+	ca := cagent.New(cfg, version)
 	ca.SetVersion(version)
 
 	if *testConfigPtr {

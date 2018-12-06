@@ -28,9 +28,10 @@ type Cagent struct {
 	version string
 }
 
-func New(cfg *Config) *Cagent {
+func New(cfg *Config, version string) *Cagent {
 	ca := &Cagent{
-		config: cfg,
+		config:  cfg,
+		version: version,
 	}
 
 	if rootCertsPath != "" {
