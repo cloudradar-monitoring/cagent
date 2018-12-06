@@ -162,8 +162,11 @@ func TryUpdateConfigFromFile(cfg *Config, configFilePath string) error {
 	}
 
 	_, err = toml.DecodeFile(configFilePath, cfg)
+	if err != nil {
+		return err
+	}
 
-	return err
+	return nil
 }
 
 func GenerateDefaultConfigFile(mvc *MinValuableConfig, configFilePath string) error {
@@ -210,12 +213,13 @@ func (cfg *Config) validate() error {
 	return nil
 }
 
-// HandleAllConfigSetup prepares config for Cagent with parameters specified in file
-// if config file not exists default one created in form of MinValuableConfig
+// HandleAllConfigSetup prepares Config for Cagent with parameters specified in file
+// if config file does not exist default one is created in form of MinValuableConfig
 func HandleAllConfigSetup(configFilePath string) (*Config, error) {
 	cfg := NewConfig()
 
 	err := TryUpdateConfigFromFile(cfg, configFilePath)
+	// If the config file does not exist create a default config at configFilePath
 	if os.IsNotExist(err) {
 		mvc := NewMinimumConfig()
 		if err = GenerateDefaultConfigFile(mvc, configFilePath); err != nil {
