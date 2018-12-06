@@ -228,7 +228,11 @@ func HandleAllConfigSetup(configFilePath string) (*Config, error) {
 
 		cfg.MinValuableConfig = *mvc
 	} else if err != nil {
-		return nil, err
+		if strings.Contains(err.Error(), "cannot load TOML value of type int64 into a Go float") {
+			return nil, fmt.Errorf("config load error: please use numbers with a decimal point for numerical values")
+		}
+
+		return nil, fmt.Errorf("config load error: %s", err.Error())
 	}
 
 	if err = cfg.validate(); err != nil {
