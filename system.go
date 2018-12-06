@@ -76,7 +76,7 @@ func Uname() (string, error) {
 func (ca *Cagent) HostInfoResults() (MeasurementsMap, error) {
 	res := MeasurementsMap{}
 
-	if len(ca.SystemFields) == 0 {
+	if len(ca.config.SystemFields) == 0 {
 		return nil, nil
 	}
 
@@ -91,7 +91,7 @@ func (ca *Cagent) HostInfoResults() (MeasurementsMap, error) {
 		errs = append(errs, err.Error())
 	}
 
-	for _, field := range ca.SystemFields {
+	for _, field := range ca.config.SystemFields {
 		switch strings.ToLower(field) {
 		case "os_kernel":
 			if info != nil {

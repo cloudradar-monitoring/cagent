@@ -17,24 +17,24 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (ca *Cagent) initHubHttpClient() {
-	if ca.hubHttpClient == nil {
+func (ca *Cagent) initHubHTTPClient() {
+	if ca.hubHTTPClient == nil {
 		tr := *(http.DefaultTransport.(*http.Transport))
 		if ca.rootCAs != nil {
 			tr.TLSClientConfig = &tls.Config{RootCAs: ca.rootCAs}
 		}
-		if ca.HubProxy != "" {
-			if !strings.HasPrefix(ca.HubProxy, "http://") {
-				ca.HubProxy = "http://" + ca.HubProxy
+		if ca.config.HubProxy != "" {
+			if !strings.HasPrefix(ca.config.HubProxy, "http://") {
+				ca.config.HubProxy = "http://" + ca.config.HubProxy
 			}
 
-			u, err := url.Parse(ca.HubProxy)
+			u, err := url.Parse(ca.config.HubProxy)
 
 			if err != nil {
 				log.Errorf("Failed to parse 'hub_proxy' URL")
 			} else {
-				if ca.HubProxyUser != "" {
-					u.User = url.UserPassword(ca.HubProxyUser, ca.HubProxyPassword)
+				if ca.config.HubProxyUser != "" {
+					u.User = url.UserPassword(ca.config.HubProxyUser, ca.config.HubProxyPassword)
 				}
 				tr.Proxy = func(_ *http.Request) (*url.URL, error) {
 					return u, nil
@@ -42,7 +42,7 @@ func (ca *Cagent) initHubHttpClient() {
 			}
 		}
 
-		ca.hubHttpClient = &http.Client{
+		ca.hubHTTPClient = &http.Client{
 			Timeout:   time.Second * 30,
 			Transport: &tr,
 		}
@@ -50,29 +50,29 @@ func (ca *Cagent) initHubHttpClient() {
 }
 
 func (ca *Cagent) TestHub() error {
-	if ca.HubURL == "" {
+	if ca.config.HubURL == "" {
 		return fmt.Errorf("please set the hub_url config param")
 	}
 
-	ca.initHubHttpClient()
-	req, err := http.NewRequest("HEAD", ca.HubURL, nil)
+	ca.initHubHTTPClient()
+	req, err := http.NewRequest("HEAD", ca.config.HubURL, nil)
 	if err != nil {
 		return err
 	}
 
 	req.Header.Add("User-Agent", ca.userAgent())
-	if ca.HubUser != "" {
-		req.SetBasicAuth(ca.HubUser, ca.HubPassword)
+	if ca.config.HubUser != "" {
+		req.SetBasicAuth(ca.config.HubUser, ca.config.HubPassword)
 	}
 
-	resp, err := ca.hubHttpClient.Do(req)
+	resp, err := ca.hubHTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("unable to connect. %s. If you have a proxy or firewall, it may be blocking the connection", err.Error())
 	}
 
-	if resp.StatusCode == 401 && ca.HubUser == "" {
+	if resp.StatusCode == 401 && ca.config.HubUser == "" {
 		return fmt.Errorf("unable to authorise without credentials. Please set hub_user & hub_password in the config")
-	} else if resp.StatusCode == 401 && ca.HubUser != "" {
+	} else if resp.StatusCode == 401 && ca.config.HubUser != "" {
 		return fmt.Errorf("unable to authorise with the provided credentials. Please correct the hub_user & hub_password in the config")
 	} else if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		return fmt.Errorf("got bad response status: %d, %s. If you have a proxy or firewall it may be blocking the connection", resp.StatusCode, resp.Status)
@@ -82,7 +82,7 @@ func (ca *Cagent) TestHub() error {
 }
 
 func (ca *Cagent) PostResultsToHub(result Result) error {
-	ca.initHubHttpClient()
+	ca.initHubHTTPClient()
 
 	b, err := json.Marshal(result)
 	if err != nil {
@@ -91,15 +91,15 @@ func (ca *Cagent) PostResultsToHub(result Result) error {
 
 	var req *http.Request
 
-	if ca.HubGzip {
+	if ca.config.HubGzip {
 		var buffer bytes.Buffer
 		zw := gzip.NewWriter(&buffer)
 		zw.Write(b)
 		zw.Close()
-		req, err = http.NewRequest("POST", ca.HubURL, &buffer)
+		req, err = http.NewRequest("POST", ca.config.HubURL, &buffer)
 		req.Header.Set("Content-Encoding", "gzip")
 	} else {
-		req, err = http.NewRequest("POST", ca.HubURL, bytes.NewBuffer(b))
+		req, err = http.NewRequest("POST", ca.config.HubURL, bytes.NewBuffer(b))
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -109,11 +109,11 @@ func (ca *Cagent) PostResultsToHub(result Result) error {
 
 	req.Header.Add("User-Agent", ca.userAgent())
 
-	if ca.HubUser != "" {
-		req.SetBasicAuth(ca.HubUser, ca.HubPassword)
+	if ca.config.HubUser != "" {
+		req.SetBasicAuth(ca.config.HubUser, ca.config.HubPassword)
 	}
 
-	resp, err := ca.hubHttpClient.Do(req)
+	resp, err := ca.hubHTTPClient.Do(req)
 
 	if err != nil {
 		return err
@@ -270,7 +270,7 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 		select {
 		case <-interrupt:
 			return
-		case <-time.After(secToDuration(ca.Interval)):
+		case <-time.After(secToDuration(ca.config.Interval)):
 			continue
 		}
 	}

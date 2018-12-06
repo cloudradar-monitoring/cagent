@@ -42,8 +42,8 @@ func (nw *NetWatcher) InterfaceExcludeRegexCompiled() []*regexp.Regexp {
 		return nw.netInterfaceExcludeRegexCompiled
 	}
 
-	if len(nw.cagent.NetInterfaceExcludeRegex) > 0 {
-		for _, reString := range nw.cagent.NetInterfaceExcludeRegex {
+	if len(nw.cagent.config.NetInterfaceExcludeRegex) > 0 {
+		for _, reString := range nw.cagent.config.NetInterfaceExcludeRegex {
 			re, err := regexp.Compile(reString)
 
 			if err != nil {
@@ -78,7 +78,7 @@ func isInterfaceDown(netIf *utilnet.InterfaceStat) bool {
 }
 
 func (nw *NetWatcher) isInterfaceExcludedByName(netIf *utilnet.InterfaceStat) bool {
-	for _, excludedIf := range nw.cagent.NetInterfaceExclude {
+	for _, excludedIf := range nw.cagent.config.NetInterfaceExclude {
 		if strings.EqualFold(netIf.Name, excludedIf) {
 			return true
 		}
@@ -102,19 +102,19 @@ func (nw *NetWatcher) ExcludedInterfacesByName(allInterfaces []utilnet.Interface
 		// use a cache for excluded interfaces, because all the checks(except UP/DOWN state) are constant for the same interface&config
 		if isExcluded, cacheExists := nw.constantlyExcludedInterfaceCache[netIf.Name]; cacheExists {
 			if isExcluded ||
-				nw.cagent.NetInterfaceExcludeDisconnected && isInterfaceDown(&netIf) {
+				nw.cagent.config.NetInterfaceExcludeDisconnected && isInterfaceDown(&netIf) {
 				// interface is found excluded in the cache or has a DOWN state
 				excludedInterfaces[netIf.Name] = struct{}{}
 				log.Debugf("[NET] interface excluded: %s", netIf.Name)
 				continue
 			}
 		} else {
-			if nw.cagent.NetInterfaceExcludeLoopback && isInterfaceLoobpack(&netIf) ||
+			if nw.cagent.config.NetInterfaceExcludeLoopback && isInterfaceLoobpack(&netIf) ||
 				nw.isInterfaceExcludedByName(&netIf) ||
 				nw.isInterfaceExcludedByRegexp(&netIf) {
 				// add the excluded interface to the cache because this checks are constant
 				nw.constantlyExcludedInterfaceCache[netIf.Name] = true
-			} else if nw.cagent.NetInterfaceExcludeDisconnected && isInterfaceDown(&netIf) {
+			} else if nw.cagent.config.NetInterfaceExcludeDisconnected && isInterfaceDown(&netIf) {
 				// exclude DOWN interface for now
 				// lets cache it as false and then we will only check UP/DOWN status
 				nw.constantlyExcludedInterfaceCache[netIf.Name] = false
@@ -139,7 +139,7 @@ func (nw *NetWatcher) fillEmptyMeasurements(results MeasurementsMap, interfaces 
 			continue
 		}
 
-		for _, metric := range nw.cagent.NetMetrics {
+		for _, metric := range nw.cagent.config.NetMetrics {
 			results[metric+"."+netIf.Name] = nil
 		}
 	}
@@ -189,7 +189,7 @@ func (nw *NetWatcher) fillCountersMeasurements(results MeasurementsMap, interfac
 		}
 
 		secondsSinceLastMeasurement := gotIOCountersAt.Sub(*nw.lastIOCountersAt).Seconds()
-		for _, metric := range nw.cagent.NetMetrics {
+		for _, metric := range nw.cagent.config.NetMetrics {
 			switch metric {
 			case "in_B_per_s":
 				bytesReceivedSinceLastMeasurement := ioCounter.BytesRecv - previousIOCounter.BytesRecv
