@@ -148,8 +148,8 @@ func main() {
 	case <-doneChan:
 		os.Exit(0)
 	}
-
 }
+
 func handleFlagVersion(versionFlag bool) {
 	if versionFlag {
 		fmt.Printf("cagent v%s released under MIT license. https://github.com/cloudradar-monitoring/cagent/\n", version)
