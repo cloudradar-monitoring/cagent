@@ -173,42 +173,47 @@ func handleFlagLogLevel(ca *cagent.Cagent, logLevel string) {
 	}
 }
 
-func handleFlagOutput(outputFile string, oneRunOnlyMode bool) (output *os.File) {
+func handleFlagOutput(outputFile string, oneRunOnlyMode bool) *os.File {
 	if outputFile == "" {
 		return nil
 	}
 
+	var output *os.File
+
+	// forward output to stdout
 	if outputFile == "-" {
 		log.SetOutput(ioutil.Discard)
 		output = os.Stdout
-	} else {
-		if _, err := os.Stat(outputFile); os.IsNotExist(err) {
-			dir := filepath.Dir(outputFile)
-			if _, err := os.Stat(dir); os.IsNotExist(err) {
-				err = os.MkdirAll(dir, 0644)
-				if err != nil {
-					log.WithError(err).Errorf("Failed to create the output file directory: '%s'", dir)
-				}
-			}
-		}
-
-		mode := os.O_WRONLY | os.O_CREATE
-
-		if oneRunOnlyMode {
-			mode = mode | os.O_TRUNC
-		} else {
-			mode = mode | os.O_APPEND
-		}
-
-		var err error
-		output, err = os.OpenFile(outputFile, mode, 0644)
-		if err != nil {
-			log.WithError(err).Fatalf("Failed to open the output file: '%s'", outputFile)
-		}
-		defer output.Close()
+		return output
 	}
 
-	return
+	// if the output file does not exist, try to create it
+	if _, err := os.Stat(outputFile); os.IsNotExist(err) {
+		dir := filepath.Dir(outputFile)
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			err = os.MkdirAll(dir, 0644)
+			if err != nil {
+				log.WithError(err).Fatalf("Failed to create the output file directory: '%s'", dir)
+			}
+		}
+	}
+
+	mode := os.O_WRONLY | os.O_CREATE
+
+	if oneRunOnlyMode {
+		mode = mode | os.O_TRUNC
+	} else {
+		mode = mode | os.O_APPEND
+	}
+
+	// Ensure that we can open the output file
+	output, err := os.OpenFile(outputFile, mode, 0644)
+	if err != nil {
+		log.WithError(err).Fatalf("Failed to open the output file: '%s'", outputFile)
+	}
+	defer output.Close()
+
+	return output
 }
 
 func handleFlagOneRunOnlyMode(ca *cagent.Cagent, oneRunOnlyMode bool, output *os.File) {
