@@ -56,12 +56,6 @@ func askForConfirmation(s string) bool {
 func main() {
 	systemManager := service.ChosenSystem()
 
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM)
-
 	var serviceInstallUserPtr *string
 	var serviceInstallPtr *bool
 
@@ -126,14 +120,19 @@ func main() {
 	handleFlagServiceInstall(ca, systemManager, serviceInstallUserPtr, serviceInstallPtr, *cfgPathPtr)
 	handleFlagDaemonizeMode(*daemonizeModePtr)
 
-	// setup interrupt handler
-	interruptChan := make(chan struct{})
 	output := handleFlagOutput(*outputFilePtr, *oneRunOnlyModePtr)
 
 	handleFlagOneRunOnlyMode(ca, *oneRunOnlyModePtr, output)
 
-	// no any flag resulted in os.Exit
-	// so lets use the default continuous run mode
+	// nothing resulted in os.Exit
+	// so lets use the default continuous run mode and wait for interrupt
+	// setup interrupt handler
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM)
+	interruptChan := make(chan struct{})
 	doneChan := make(chan struct{})
 	go func() {
 		ca.Run(output, interruptChan)
