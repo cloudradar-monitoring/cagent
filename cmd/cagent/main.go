@@ -103,7 +103,7 @@ func main() {
 
 	cfg, err := cagent.HandleAllConfigSetup(*cfgPathPtr)
 	if err != nil {
-		return
+		log.Fatalf("Failed to handle cagent configuration: %s", err)
 	}
 
 	ca := cagent.New(cfg, version)
