@@ -93,6 +93,6 @@ func (hook *logrusFileHook) Levels() []log.Level {
 
 // Sets Log level and corresponding logrus level
 func (ca *Cagent) SetLogLevel(lvl LogLevel) {
-	ca.config.LogLevel = lvl
+	ca.Config.LogLevel = lvl
 	log.SetLevel(lvl.LogrusLevel())
 }

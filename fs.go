@@ -30,7 +30,7 @@ func (ca *Cagent) FSWatcher() *FSWatcher {
 		ExcludedPathCache: map[string]bool{},
 		cagent:            ca,
 	}
-	for _, t := range ca.config.FSTypeInclude {
+	for _, t := range ca.Config.FSTypeInclude {
 		ca.fsWatcher.AllowedTypes[strings.ToLower(t)] = struct{}{}
 	}
 
@@ -66,7 +66,7 @@ func (fw *FSWatcher) Results() (MeasurementsMap, error) {
 			}
 		} else {
 			pathExcluded := false
-			for _, glob := range fw.cagent.config.FSPathExclude {
+			for _, glob := range fw.cagent.Config.FSPathExclude {
 				pathExcluded, _ = filepath.Match(glob, partition.Mountpoint)
 				if pathExcluded {
 					break
@@ -88,13 +88,13 @@ func (fw *FSWatcher) Results() (MeasurementsMap, error) {
 		if err != nil {
 			log.Errorf("[FS] Failed to read '%s'(%s): %s", partition.Mountpoint, partition.Device, err.Error())
 			errs = append(errs, err.Error())
-			for _, metric := range fw.cagent.config.FSMetrics {
+			for _, metric := range fw.cagent.Config.FSMetrics {
 				results[metric+"."+partition.Mountpoint] = nil
 			}
 			continue
 		}
 
-		for _, metric := range fw.cagent.config.FSMetrics {
+		for _, metric := range fw.cagent.Config.FSMetrics {
 			switch strings.ToLower(metric) {
 			case "free_b":
 				results[metric+"."+partition.Mountpoint] = float64(usage.Free)

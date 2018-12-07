@@ -152,7 +152,7 @@ func (ca *Cagent) WindowsUpdatesWatcher() *WindowsUpdateWatcher {
 			ca.windowsUpdateWatcher.Available = available
 			ca.windowsUpdateWatcher.Pending = pending
 
-			time.Sleep(time.Second * time.Duration(ca.config.WindowsUpdatesWatcherInterval))
+			time.Sleep(time.Second * time.Duration(ca.Config.WindowsUpdatesWatcherInterval))
 		}
 	}()
 
