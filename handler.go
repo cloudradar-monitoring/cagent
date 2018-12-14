@@ -197,6 +197,14 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 
 	measurements = measurements.AddWithPrefix("swap.", swap)
 
+	for name, p := range ca.vmWatchers {
+		if res, err := p.GetMeasurements(); err == nil {
+			measurements = measurements.AddWithPrefix("virt."+name+".", res)
+		} else {
+			errs = append(errs, err.Error())
+		}
+	}
+
 	if runtime.GOOS == "linux" {
 		raid, err := ca.RaidState()
 		if err != nil {

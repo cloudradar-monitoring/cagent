@@ -63,6 +63,8 @@ type Config struct {
 	SystemFields []string `toml:"system_fields" comment:"default ['uname','os_kernel','os_family','os_arch','cpu_model','fqdn','memory_total_B']"`
 
 	WindowsUpdatesWatcherInterval int `toml:"windows_updates_watcher_interval" comment:"default 3600"`
+
+	VirtualMachinesStat []string `toml:"virtual_machines_stat" comment:"default ['hyper-v'], available options 'hyper-v'"`
 }
 
 func init() {
@@ -108,6 +110,7 @@ func NewConfig() *Config {
 		cfg.NetInterfaceExcludeRegex = []string{"Pseudo-Interface"}
 		cfg.CPULoadDataGather = []string{}
 		cfg.CPUUtilTypes = []string{"user", "system", "idle"}
+		cfg.VirtualMachinesStat = []string{"hyper-v"}
 	}
 
 	return cfg

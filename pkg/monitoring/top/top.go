@@ -16,7 +16,7 @@ type Process struct {
 	Command string
 }
 
-// ProcessInfo is used to store a snapshot of laod data about an OS process
+// ProcessInfo is used to store a snapshot of load data about an OS process
 type ProcessInfo struct {
 	Identifier string
 	PID        uint32
@@ -52,7 +52,7 @@ func (t *Top) Run() {
 			return
 		}
 
-		// Call to os agnostic implementation to fetch procsses
+		// Call to os agnostic implementation to fetch processes
 		processes, err := t.GetProcesses()
 		if err != nil {
 			log.Printf("Failed to get process list: %s", err)

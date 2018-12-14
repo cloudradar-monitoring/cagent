@@ -20,7 +20,7 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 	// Get all currently active processes
 	ps, err := process.Processes()
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to get processess")
+		return nil, errors.Wrap(err, "Failed to get processes")
 	}
 	// Fetch load percentage for every process
 	for _, p := range ps {

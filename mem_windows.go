@@ -10,11 +10,11 @@ import (
 
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
-	"github.com/cloudradar-monitoring/cagent/perfcounters"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring"
 )
 
 const memGetTimeout = time.Second * 10
-var watcher = perfcounters.Watcher()
 
 func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 	results := MeasurementsMap{}
@@ -45,7 +45,7 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 		results["available_percent"] = floatToIntPercentRoundUP((float64(memStat.Available)) / float64(memStat.Total))
 	}
 
-	free, err := watcher.Query(`\Memory\Free & Zero Page List Bytes`, "*")
+	free, err := monitoring.GetWatcher().Query(`\Memory\Free & Zero Page List Bytes`, "*")
 	if err != nil {
 		errs = append(errs, err.Error())
 		log.Errorf("[MEM] Failed to get free memory: %s", err.Error())
@@ -56,7 +56,7 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 		results["free_percent"] = floatToIntPercentRoundUP(free / float64(memStat.Total))
 	}
 
-	cached, err := watcher.Query(`\Memory\Cache Bytes`, "*")
+	cached, err := monitoring.GetWatcher().Query(`\Memory\Cache Bytes`, "*")
 	if err != nil {
 		errs = append(errs, err.Error())
 		log.Errorf("[MEM] Failed to get cached memory: %s", err.Error())
