@@ -30,6 +30,10 @@
   version = "0.3.2"
 
 [[constraint]]
+  name = "github.com/go-ole/go-ole"
+  version = "v1.2.2"
+
+[[constraint]]
   branch = "master"
   name = "github.com/kardianos/service"
 
