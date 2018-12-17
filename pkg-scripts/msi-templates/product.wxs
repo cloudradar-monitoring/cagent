@@ -29,8 +29,21 @@
       <Condition Message="A newer version of this software is already installed.">NOT NEWERVERSIONDETECTED</Condition>
 
       <Directory Id="TARGETDIR" Name="SourceDir">
+        <Component Id="RegistryEntries" Guid="e4e0d475-ca19-4a32-bd22-d0ed7ce303f0">
+            <RegistryKey Root="HKCR"
+                         Key="cagent\shell\open\command"
+                  ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
+                <RegistryValue Type="string" Value='"[INSTALLDIR]\cagent.exe" "%1%"'/>
+            </RegistryKey>
+            <RegistryKey Root="HKCR"
+                                      Key="cagent"
+                                      ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
+                  <RegistryValue Type="string" Name="URL Protocol" Value="" KeyPath="yes"/>
+                  <RegistryValue Type="string" Value="URL:cagent"/>
 
-         <Directory Id="$(var.Program_Files)">
+            </RegistryKey>
+        </Component>
+        <Directory Id="$(var.Program_Files)">
             <Directory Id="INSTALLDIR" Name="{{.Product}}">
                {{if gt (.Files.Items | len) 0}}
                <Component Id="ApplicationFiles" Guid="{{.Files.GUID}}">
@@ -85,7 +98,7 @@
             <Directory Id="ProgramMenuSubfolder" Name="{{.Product}}">
                <Component Id="ApplicationShortcuts" Guid="{{.Shortcuts.GUID}}">
                {{range $i, $e := .Shortcuts.Items}}
-                  <Shortcut Id="ApplicationShortcut{{$i}}"
+                     <Shortcut Id="ApplicationShortcut{{$i}}"
                         Name="{{$e.Name}}"
                         Description="{{$e.Description}}"
                         Target="{{$e.Target}}"
@@ -94,15 +107,18 @@
                         Arguments="{{$e.Arguments}}"
                         {{end}}
                         >
+                        {{if eq $i 0}}
+                            <ShortcutProperty Key="System.AppUserModel.ID" Value="{{$.Company}}.{{$.Product}}" />
+                        {{end}}
                         {{if gt ($e.Icon | len) 0}}
                         <Icon Id="Icon{{$i}}" SourceFile="{{$e.Icon}}" />
                         {{end}}
-                  </Shortcut>
-                  <RegistryValue Root="HKCU"
-                    Key="Software\{{$.Company}}\{{$.Product}}"
-                    Name="installed{{$i}}"
-                    Type="integer" Value="1" KeyPath="yes"/>
+                         </Shortcut>
                 {{end}}
+                  <RegistryValue Root="HKCU"
+                                                      Key="Software\{{$.Company}}\{{$.Product}}"
+                                                      Name="installed0"
+                                                      Type="integer" Value="1" KeyPath="yes"/>
                 <RemoveFolder Id="ProgramMenuSubfolder" On="uninstall"/>
                </Component>
             </Directory>
@@ -113,7 +129,7 @@
 
       {{range $i, $e := .InstallHooks}}
       <SetProperty Id="CustomInstallExec{{$i}}" Value="{{$e.CookedCommand}}" Before="CustomInstallExec{{$i}}" Sequence="execute"/>
-      <CustomAction Id="CustomInstallExec{{$i}}" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="check" Impersonate="no"/>
+      <CustomAction Id="CustomInstallExec{{$i}}" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="ignore" Impersonate="no"/>
       {{end}}
       {{range $i, $e := .UninstallHooks}}
       <SetProperty Id="CustomUninstallExec{{$i}}" Value="{{$e.CookedCommand}}" Before="CustomUninstallExec{{$i}}" Sequence="execute"/>
@@ -141,6 +157,7 @@
          {{range $i, $e := .Directories}}
          <ComponentGroupRef Id="AppFiles{{$i}}" />
          {{end}}
+         <ComponentRef Id="RegistryEntries"/>
          <Feature Id="Uninstall">
              <ComponentRef Id="UninstallFolder" Primary="yes"/>
          </Feature>
@@ -150,10 +167,10 @@
          <!-- Define the installer UI -->
          <UIRef Id="WixUI_HK" />
       </UI>
+      <Property Id="INSTALLDIR" Secure="yes"/>
       <Property Id="HUB_URL" Secure="yes"/>
       <Property Id="HUB_USER" Secure="yes"/>
       <Property Id="HUB_PASSWORD" Secure="yes"/>
-
       <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
       <Property Id="MSIUSEREALADMINDETECTION" Value="1" />
       <!-- this should help to propagate env var changes -->

@@ -37,6 +37,14 @@
   revision = "8f267d80f2eb68998661a325c0e53fca4485e626"
 
 [[projects]]
+  branch = "master"
+  digest = "1:0e1e5f960c58fdc677212fcc70e55042a0084d367623e51afbdb568963832f5d"
+  name = "github.com/nu7hatch/gouuid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "179d4d0c4d8d407a32af483c2354df1d2c91e6c3"
+
+[[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
   name = "github.com/pkg/errors"
   packages = ["."]
@@ -107,6 +115,14 @@
   pruneopts = "UT"
   revision = "4910a1d54f876d7b22162a85f4d066d3ee649450"
 
+[[projects]]
+  branch = "v1"
+  digest = "1:b71ccd8615521db4ea2f9381f55780a1312654f5d8431d2e58eca51c74110de2"
+  name = "gopkg.in/toast.v1"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "0a84660828b24d25b35525c9a1f1f51267f8da91"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -126,6 +142,7 @@
     "github.com/sirupsen/logrus",
     "github.com/troian/toml",
     "golang.org/x/sys/windows",
+    "gopkg.in/toast.v1",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
