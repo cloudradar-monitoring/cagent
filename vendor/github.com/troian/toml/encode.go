@@ -72,7 +72,7 @@ func NewEncoder(w io.Writer, opts ...Option) *Encoder {
 	enc := &Encoder{
 		w: bufio.NewWriter(w),
 		Opts: Opts{
-			lineEnding: defaultLineEnding,
+			lineEnding: defaultNewLine,
 			indent:     OptionIndentDefault,
 		},
 	}
