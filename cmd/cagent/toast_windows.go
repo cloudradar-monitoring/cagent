@@ -34,6 +34,7 @@ func sendErrorNotification(title, message string) error {
 		Title:   title,
 		Message: message,
 		Actions: []toast.Action{
+			{"protocol", "Test again", "cagent:test"},
 			{"protocol", "How to fix?", "https://kb.cloudradar.io/books/configuring-hosts/page/installing-agents#bkmrk-potential-problems-a"},
 		},
 	}
