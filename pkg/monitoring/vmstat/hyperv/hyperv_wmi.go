@@ -3,7 +3,6 @@
 package hyperv
 
 import (
-	"fmt"
 	"net"
 	"regexp"
 	"strconv"
@@ -49,6 +48,9 @@ type msvm_ComputerSystem struct {
 	ProcessID             uint32
 }
 
+// some of fields are pointers instead of values as in some cases they may not exists
+// during WMI query. For example if VM is not running MemoryUsage, ProcessorLoad and Heartbeat
+// are not available
 type msvm_SummaryInformation struct {
 	Name                 string
 	ElementName          string
@@ -57,11 +59,12 @@ type msvm_SummaryInformation struct {
 	EnabledState         EnabledState
 	HealthState          HealthState
 	CreationTime         time.Time
-	MemoryUsage          *uint64
-	Uptime               uint64
-	ProcessorLoad        *uint16
-	Heartbeat            *Heartbeat
-	NumberOfProcessors   uint16
+	// MemoryUsage is in megabytes
+	MemoryUsage        *uint64
+	Uptime             uint64
+	ProcessorLoad      *uint16
+	Heartbeat          *Heartbeat
+	NumberOfProcessors uint16
 }
 
 type msvm_GuestNetworkAdapterConfiguration struct {
@@ -86,9 +89,7 @@ func (im *impl) GetMeasurements() (map[string]interface{}, error) {
 	var countersErr error
 	res, countersErr := im.watcher.GetFormattedQueryData(hypervPath)
 	if countersErr == nil {
-		// Iterate over the reported counter values
 		for _, c := range res {
-			// Some filtering...
 			switch c.InstanceName {
 			case "_Total":
 				meas["cpu_wait_time_per_dispatch_total_ns"] = int64(c.Value)
@@ -101,7 +102,6 @@ func (im *impl) GetMeasurements() (map[string]interface{}, error) {
 			}
 		}
 	} else {
-		fmt.Println(countersErr.Error())
 		log.WithError(countersErr)
 	}
 
@@ -147,7 +147,6 @@ func (im *impl) GetMeasurements() (map[string]interface{}, error) {
 			vmEntry["enabled_state"] = dst[i].EnabledState.String()
 			vmEntry["health_state"] = dst[i].HealthState.String()
 			vmEntry["creation_time"] = dst[i].CreationTime
-			// dst[i].MemoryUsage is in megabytes
 			vmEntry["assigned_memory_B"] = *dst[i].MemoryUsage * 0x100000
 			vmEntry["uptime_s"] = dst[i].Uptime
 			vmEntry["processor_load_percent"] = dst[i].ProcessorLoad

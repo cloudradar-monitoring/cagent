@@ -10,8 +10,6 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 	"github.com/cloudradar-monitoring/cagent/pkg/wmi"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -40,8 +38,7 @@ func (im *impl) Run() error {
 
 	err := im.watcher.StartContinuousQuery(hypervPath, interval)
 	if err != nil {
-		log.Printf("Failed to StartQuery: %s", err)
-		return err
+		return fmt.Errorf("vmstat run failure: %s", err.Error())
 	}
 
 	return nil
