@@ -411,7 +411,9 @@ func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 		err := ca.TestHub()
 		if err != nil {
 			if runtime.GOOS == "windows" {
-				sendErrorNotification("Cagent connection test failed", err.Error())
+				// ignore toast error to make the main error clear for user
+				// toast error probably means toast not supported on the system
+				_ = sendErrorNotification("Cagent connection test failed", err.Error())
 			}
 			fmt.Printf("Cagent HUB test failed: %s\n", err.Error())
 			os.Exit(1)
@@ -419,7 +421,7 @@ func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 		}
 
 		if runtime.GOOS == "windows" {
-			sendSuccessNotification("Cagent connection test succeed", "")
+			_ = sendSuccessNotification("Cagent connection test succeed", "")
 		}
 
 		fmt.Printf("HUB connection test succeed and credentials are correct!\n")
