@@ -140,6 +140,7 @@ func (im *impl) GetMeasurements() (map[string]interface{}, error) {
 			if countersErr == nil {
 				vmEntry["cpu_wait_time_per_dispatch_ns"] = int64(stat.List[dst[i].ElementName].CPUWaitTimePerDispatch)
 			}
+
 			vmEntry["name"] = dst[i].ElementName
 			vmEntry["guid"] = dst[i].Name
 			vmEntry["guest_operating_system"] = dst[i].GuestOperatingSystem
@@ -147,11 +148,17 @@ func (im *impl) GetMeasurements() (map[string]interface{}, error) {
 			vmEntry["enabled_state"] = dst[i].EnabledState.String()
 			vmEntry["health_state"] = dst[i].HealthState.String()
 			vmEntry["creation_time"] = dst[i].CreationTime
-			vmEntry["assigned_memory_B"] = *dst[i].MemoryUsage * 0x100000
-			vmEntry["uptime_s"] = dst[i].Uptime
-			vmEntry["processor_load_percent"] = dst[i].ProcessorLoad
 			vmEntry["heartbeat"] = dst[i].Heartbeat.String()
 			vmEntry["number_of_processors"] = dst[i].NumberOfProcessors
+			vmEntry["uptime_s"] = dst[i].Uptime
+
+			if dst[i].MemoryUsage != nil {
+				vmEntry["assigned_memory_B"] = *dst[i].MemoryUsage * 0x100000
+			}
+
+			if dst[i].ProcessorLoad != nil {
+				vmEntry["processor_load_percent"] = dst[i].ProcessorLoad
+			}
 
 			ipv4Count := 1
 			ipv6Count := 1
