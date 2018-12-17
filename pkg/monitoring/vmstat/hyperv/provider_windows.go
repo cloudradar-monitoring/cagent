@@ -12,22 +12,13 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/wmi"
 )
 
-func init() {
-	prov := newImpl()
-
-	err := vmstat.RegisterVMProvider(prov)
-	if err != nil {
-		panic(err.Error())
-	}
-}
-
 type impl struct {
 	watcher *perfcounters.WinPerfCountersWatcher
 }
 
 var _ vmstat.Provider = (*impl)(nil)
 
-func newImpl() vmstat.Provider {
+func New() vmstat.Provider {
 	return &impl{
 		watcher: monitoring.GetWatcher(),
 	}

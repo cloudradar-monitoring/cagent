@@ -23,8 +23,12 @@ type provEntry struct {
 	run  sync.Once
 }
 
-var providers map[string]*provEntry
-var lock sync.Mutex
+type vmstat struct {
+	pr   map[string]*provEntry
+	lock sync.Mutex
+}
+
+var providers *vmstat
 
 var (
 	ErrAlreadyExists = errors.New("vmstat: provider already registered")
@@ -34,29 +38,31 @@ var (
 )
 
 func init() {
-	providers = make(map[string]*provEntry)
+	providers = &vmstat{
+		pr: make(map[string]*provEntry),
+	}
 }
 
 func RegisterVMProvider(p Provider) error {
-	lock.Lock()
-	defer lock.Unlock()
+	providers.lock.Lock()
+	defer providers.lock.Unlock()
 
-	if _, ok := providers[p.Name()]; ok {
+	if _, ok := providers.pr[p.Name()]; ok {
 		return fmt.Errorf("%s: %s", ErrAlreadyExists.Error(), p.Name())
 	}
 
-	providers[p.Name()] = &provEntry{prov: p}
+	providers.pr[p.Name()] = &provEntry{prov: p}
 
 	return nil
 }
 
 func Acquire(name string) (Provider, error) {
-	lock.Lock()
-	defer lock.Unlock()
+	providers.lock.Lock()
+	defer providers.lock.Unlock()
 
 	var err error
 
-	if entry, ok := providers[name]; ok {
+	if entry, ok := providers.pr[name]; ok {
 		entry.wg.Add(1)
 		entry.run.Do(func() {
 			if err = entry.prov.Run(); err != nil {
@@ -75,10 +81,10 @@ func Acquire(name string) (Provider, error) {
 }
 
 func Release(p Provider) error {
-	lock.Lock()
-	defer lock.Unlock()
+	providers.lock.Lock()
+	defer providers.lock.Unlock()
 
-	if entry, ok := providers[p.Name()]; ok {
+	if entry, ok := providers.pr[p.Name()]; ok {
 		entry.wg.Done()
 		return nil
 	}
@@ -87,10 +93,10 @@ func Release(p Provider) error {
 }
 
 func IterateRegistered(f func(string, Provider) bool) {
-	lock.Lock()
-	defer lock.Unlock()
+	providers.lock.Lock()
+	defer providers.lock.Unlock()
 
-	for name, p := range providers {
+	for name, p := range providers.pr {
 		if !f(name, p.prov) {
 			break
 		}

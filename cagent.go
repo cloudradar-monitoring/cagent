@@ -63,6 +63,10 @@ func New(cfg *Config, version string) *Cagent {
 		}
 	}
 
+	if err := InitVMStat(); err != nil {
+		log.Error("cannot instantiate virtual machines API: ", err.Error())
+	}
+
 	for _, name := range ca.Config.VirtualMachinesStat {
 		vm, err := vmstat.Acquire(name)
 		if err != nil {
