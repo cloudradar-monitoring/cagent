@@ -4,8 +4,14 @@ package main
 
 import (
 	"os"
-	"gopkg.in/toast.v1"
+	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
+
+	"gopkg.in/toast.v1"
+
+	"github.com/cloudradar-monitoring/cagent"
 )
 
 const urlScheme = "cagent"
