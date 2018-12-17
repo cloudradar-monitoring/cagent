@@ -3,5 +3,5 @@
 package toml
 
 const (
-	defaultLineEnding = OptionLineEndingCRLF
+	defaultLineEnding = OptionNewLineCRLF
 )
