@@ -1,5 +1,5 @@
 builds:
-- main: cmd/cagent/main.go
+- main: ./cmd/cagent
   binary: cagent
   goos:
   - windows

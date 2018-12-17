@@ -177,7 +177,7 @@ func GenerateDefaultConfigFile(mvc *MinValuableConfig, configFilePath string) er
 	}
 
 	var f *os.File
-	if f, err = os.OpenFile(configFilePath, os.O_WRONLY|os.O_CREATE, 0644); err != nil {
+	if f, err = os.OpenFile(configFilePath, os.O_WRONLY|os.O_CREATE, 0666); err != nil {
 		return fmt.Errorf("failed to create the default Config file: '%s'", configFilePath)
 	}
 

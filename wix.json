@@ -10,11 +10,36 @@
       "example.config.toml"
     ]
   },
+  "directories": [
+    "resources"
+  ],
   "env": {
     "guid": "dbb726d1-1e32-4509-8a7e-7cec9e00335c",
     "vars": [
     ]
   },
+  "shortcuts": {
+    "guid": "36ceeac6-4c99-45f9-91f2-645b066fa27e",
+    "items": [
+      {
+        "name": "Cagent – test the connection",
+        "description": "Test the connection to Cagent HUB",
+        "target": "[INSTALLDIR]\\cagent.exe",
+        "wdir": "INSTALLDIR",
+        "arguments": "-t"
+      },
+      {
+        "name": "Cagent – open config",
+        "description": "Opens the config",
+        "target": "[INSTALLDIR]\\cagent.exe",
+        "wdir": "INSTALLDIR",
+        "arguments": "cagent:config"
+      }
+    ]
+  },
+  "hooks": [
+    {"when": "install", "command": "[INSTALLDIR]\\cagent.exe -t"}
+  ],
   "choco": {
     "description": "Monitoring proxy for agentless monitoring of subnets",
     "project-url": "https://github.com/cloudradar-monitoring/cagent",
