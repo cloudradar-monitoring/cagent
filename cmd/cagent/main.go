@@ -98,7 +98,7 @@ func main() {
 
 	cfg, err := cagent.HandleAllConfigSetup(*cfgPathPtr)
 	if err != nil {
-		log.Fatalf("Failed to handle cagent configuration: %s", err)
+		log.Fatal("Failed to handle cagent configuration: ", err.Error())
 	}
 
 	ca := cagent.New(cfg, version)
@@ -252,7 +252,7 @@ func handleFlagServiceUninstall(ca *cagent.Cagent, serviceUninstallPtr bool) {
 
 	systemService, err := getServiceFromFlags(ca, "", "")
 	if err != nil {
-		log.Fatalf("Failed to get system service", err.Error())
+		log.Fatal("Failed to get system service: ", err.Error())
 	}
 
 	err = systemService.Stop()
@@ -377,13 +377,13 @@ func handleFlagServiceInstall(ca *cagent.Cagent, systemManager service.System, s
 func runUnderOsServiceManager(ca *cagent.Cagent) {
 	systemService, err := getServiceFromFlags(ca, "", "")
 	if err != nil {
-		log.Fatalf("Failed to get system service: %s", err.Error())
+		log.Fatal("Failed to get system service: ", err.Error())
 	}
 
 	// we are running under OS service manager
 	err = systemService.Run()
 	if err != nil {
-		log.Fatalf("Failed to run system service: %s", err.Error())
+		log.Fatal("Failed to run system service: ", err.Error())
 	}
 
 	os.Exit(0)
