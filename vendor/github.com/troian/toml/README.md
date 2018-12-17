@@ -11,22 +11,22 @@ Spec: https://github.com/toml-lang/toml
 Compatible with TOML version
 [v0.4.0](https://github.com/toml-lang/toml/blob/master/versions/en/toml-v0.4.0.md)
 
-Documentation: https://godoc.org/github.com/BurntSushi/toml
+Documentation: https://godoc.org/github.com/troian/toml
 
 Installation:
 
 ```bash
-go get github.com/BurntSushi/toml
+go get github.com/troian/toml
 ```
 
 Try the toml validator:
 
 ```bash
-go get github.com/BurntSushi/toml/cmd/tomlv
+go get github.com/troian/toml/cmd/tomlv
 tomlv some-toml-file.toml
 ```
 
-[![Build Status](https://travis-ci.org/BurntSushi/toml.svg?branch=master)](https://travis-ci.org/BurntSushi/toml) [![GoDoc](https://godoc.org/github.com/BurntSushi/toml?status.svg)](https://godoc.org/github.com/BurntSushi/toml)
+[![Build Status](https://travis-ci.org/troian/toml.svg?branch=master)](https://travis-ci.org/troian/toml) [![GoDoc](https://godoc.org/github.com/troian/toml?status.svg)](https://godoc.org/github.com/troian/toml)
 
 ### Testing
 
@@ -210,6 +210,35 @@ type clients struct {
 	Data [][]interface{}
 	Hosts []string
 }
+```
+
+Comments allowed in tags
+```go
+type database struct {
+	Server string `comment:"server address"`
+	Ports []int `commented:"true"`
+	ConnMax int `toml:"connection_max"`
+	Enabled bool
+}
+
+type tomlConfig struct {
+	Title string
+	Owner ownerInfo
+	DB database `toml:"database" comment:"database settings"`
+	Servers map[string]server
+	Clients clients
+}
+```
+goes into
+```toml
+# database
+[database]
+# server address
+server = "192.168.1.1"
+#
+ports = [ 8001, 8001, 8002 ]
+connection_max = 5000
+enabled = true
 ```
 
 Note that a case insensitive match will be tried if an exact match can't be

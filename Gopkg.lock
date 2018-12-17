@@ -85,12 +85,12 @@
   version = "v1.0.6"
 
 [[projects]]
-  digest = "1:a70ca62283aa65bdc12c2678c80e30720b174602b203ea73ee86b023356406bd"
+  digest = "1:132db50478098fe71f8a7e1179f1b19da1cd8229842ecc10ed373c48c79e8ca6"
   name = "github.com/troian/toml"
   packages = ["."]
   pruneopts = "UT"
-  revision = "53867168f7a11b973cb694a0cb53ec30a445959d"
-  version = "v0.3.2"
+  revision = "3aabc923c93fa34025734927824f6a8f7c76a069"
+  version = "v0.4.1"
 
 [[projects]]
   branch = "master"
