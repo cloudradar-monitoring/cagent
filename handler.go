@@ -239,6 +239,8 @@ func (ca *Cagent) ReportMeasurements(measurements MeasurementsMap, outputFile *o
 		if err != nil {
 			return fmt.Errorf("Results json encode error: %s", err.Error())
 		}
+
+		return nil
 	}
 
 	err := ca.PostResultsToHub(result)
