@@ -134,7 +134,6 @@ func parseProcStatusFile(b []byte) procStatus {
 			if err != nil {
 				log.Errorf("[PROC] proc/status: failed to convert PPID(%s) to int: %s", fields[1], err.Error())
 			}
-			break
 		case "state:":
 			// extract raw long state
 			// eg "State:	S (sleeping)"
@@ -146,7 +145,6 @@ func parseProcStatusFile(b []byte) procStatus {
 			// determine long state from the short one in case long one is not available
 			// eg "State:	S"
 			status.State = getProcLongState(fields[1][0])
-			break
 		}
 
 		if status.PPID >= 0 && status.State != "" {
