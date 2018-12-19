@@ -9,11 +9,11 @@ import (
 )
 
 func sendErrorNotification(_, _ string) error {
-	return errors.New("Implemented only or Windows")
+	return errors.New("implemented only or Windows")
 }
 
 func sendSuccessNotification(_, _ string) error {
-	return errors.New("Implemented only or Windows")
+	return errors.New("implemented only or Windows")
 }
 
 func handleToastFeedback(_ *cagent.Cagent, _ string) {
