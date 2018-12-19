@@ -33,7 +33,7 @@ jobs:
       # Copy other build dependencies
       - run: scp -i /tmp/id_win_ssh -P 24481 -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/build-win.bat hero@144.76.9.139:/cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/build-win.bat
       - run: ssh -i /tmp/id_win_ssh -p 24481 -oStrictHostKeyChecking=no hero@144.76.9.139 chmod +x /cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/build-win.bat
-      - run: scp -r -i /tmp/id_win_ssh -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/pkg-scripts/  hero@144.76.9.139:/cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}
+      - run: scp -r -i /tmp/id_win_ssh -P 24481 -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/pkg-scripts/  hero@144.76.9.139:/cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}
       - run: scp -i /tmp/id_win_ssh -P 24481 -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/example.config.toml hero@144.76.9.139:/cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/example.config.toml
       - run: scp -i /tmp/id_win_ssh -P 24481 -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/README.md hero@144.76.9.139:/cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/README.md
       - run: scp -i /tmp/id_win_ssh -P 24481 -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/LICENSE hero@144.76.9.139:/cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/LICENSE
