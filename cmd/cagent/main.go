@@ -40,7 +40,7 @@ func askForConfirmation(s string) bool {
 
 		response, err := reader.ReadString('\n')
 		if err != nil {
-			log.Fatal("Failed to read confirmation", err.Error())
+			log.Fatalf("Failed to read confirmation: %s", err.Error())
 		}
 
 		response = strings.ToLower(strings.TrimSpace(response))
@@ -98,7 +98,7 @@ func main() {
 
 	cfg, err := cagent.HandleAllConfigSetup(*cfgPathPtr)
 	if err != nil {
-		log.Fatal("Failed to handle cagent configuration: ", err.Error())
+		log.Fatalf("Failed to handle cagent configuration: %s", err.Error())
 	}
 
 	ca := cagent.New(cfg, version)
@@ -252,7 +252,7 @@ func handleFlagServiceUninstall(ca *cagent.Cagent, serviceUninstallPtr bool) {
 
 	systemService, err := getServiceFromFlags(ca, "", "")
 	if err != nil {
-		log.Fatal("Failed to get system service: ", err.Error())
+		log.Fatalf("Failed to get system service: %s", err.Error())
 	}
 
 	err = systemService.Stop()
@@ -377,13 +377,13 @@ func handleFlagServiceInstall(ca *cagent.Cagent, systemManager service.System, s
 func runUnderOsServiceManager(ca *cagent.Cagent) {
 	systemService, err := getServiceFromFlags(ca, "", "")
 	if err != nil {
-		log.Fatal("Failed to get system service: ", err.Error())
+		log.Fatalf("Failed to get system service: %s", err.Error())
 	}
 
 	// we are running under OS service manager
 	err = systemService.Run()
 	if err != nil {
-		log.Fatal("Failed to run system service: ", err.Error())
+		log.Fatalf("Failed to run system service: %s", err.Error())
 	}
 
 	os.Exit(0)
