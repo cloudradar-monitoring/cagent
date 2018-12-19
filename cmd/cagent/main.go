@@ -121,6 +121,9 @@ func main() {
 	handleFlagDaemonizeMode(*daemonizeModePtr)
 
 	output := handleFlagOutput(*outputFilePtr, *oneRunOnlyModePtr)
+	if output != nil {
+		defer output.Close()
+	}
 
 	handleFlagOneRunOnlyMode(ca, *oneRunOnlyModePtr, output)
 
@@ -211,7 +214,6 @@ func handleFlagOutput(outputFile string, oneRunOnlyMode bool) *os.File {
 	if err != nil {
 		log.WithError(err).Fatalf("Failed to open the output file: '%s'", outputFile)
 	}
-	defer output.Close()
 
 	return output
 }
