@@ -85,9 +85,6 @@ func processesFromProc() ([]ProcStat, error) {
 		stat := ProcStat{ParentPID: procStatus.PPID, State: procStatus.State}
 		// get the PID from the filepath(/proc/<pid>/status) itself
 		pathParts := strings.Split(statusFilepath, string(filepath.Separator))
-		fmt.Println(statusFilepath)
-		fmt.Printf("%+v", pathParts)
-
 		pidString := pathParts[len(pathParts)-2]
 		stat.PID, err = strconv.Atoi(pidString)
 		if err != nil {
