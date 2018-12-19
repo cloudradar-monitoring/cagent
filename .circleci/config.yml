@@ -26,23 +26,27 @@ jobs:
           command: |
            if [[ ${CIRCLE_TAG} =~ -{1}((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$ ]] ; then github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} -p; fi
       # Create remote build dir
-      - run: ssh -i /tmp/id_win_ssh -oStrictHostKeyChecking=no hero@13.80.137.211 mkdir -p /cygdrive/c/Users/hero/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/dist
+      - run: ssh -i /tmp/id_win_ssh -p 24481 -oStrictHostKeyChecking=no hero@144.76.9.139 mkdir -p /cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/dist
       # Copy exe files to Windows VM for bundingling and signing
-      - run: scp -i /tmp/id_win_ssh -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/dist/windows_386/cagent.exe  hero@13.80.137.211:/cygdrive/c/Users/hero/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/dist/cagent_386.exe
-      - run: scp -i /tmp/id_win_ssh -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/dist/windows_amd64/cagent.exe hero@13.80.137.211:/cygdrive/c/Users/hero/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/dist/cagent_64.exe
+      - run: scp -i /tmp/id_win_ssh -P 24481 -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/dist/windows_386/cagent.exe hero@144.76.9.139:/cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/dist/cagent_386.exe
+      - run: scp -i /tmp/id_win_ssh -P 24481 -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/dist/windows_amd64/cagent.exe hero@144.76.9.139:/cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/dist/cagent_64.exe
       # Copy other build dependencies
-      - run: scp -i /tmp/id_win_ssh -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/build-win.bat hero@13.80.137.211:/cygdrive/c/Users/hero/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/build-win.bat
-      - run: ssh -i /tmp/id_win_ssh -oStrictHostKeyChecking=no hero@13.80.137.211 chmod +x /cygdrive/c/Users/hero/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/build-win.bat
-      - run: scp -r -i /tmp/id_win_ssh -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/pkg-scripts/  hero@13.80.137.211:/cygdrive/c/Users/hero/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}
-      - run: scp -i /tmp/id_win_ssh -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/example.config.toml hero@13.80.137.211:/cygdrive/c/Users/hero/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/example.config.toml
-      - run: scp -i /tmp/id_win_ssh -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/README.md hero@13.80.137.211:/cygdrive/c/Users/hero/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/README.md
-      - run: scp -i /tmp/id_win_ssh -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/LICENSE hero@13.80.137.211:/cygdrive/c/Users/hero/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/LICENSE
-      - run: scp -i /tmp/id_win_ssh -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/wix.json hero@13.80.137.211:/cygdrive/c/Users/hero/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/wix.json
-      # Trigger msi creating and signing
-      - run: ssh -i /tmp/id_win_ssh -oStrictHostKeyChecking=no hero@13.80.137.211 /cygdrive/c/Users/hero/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/build-win.bat ${CIRCLE_BUILD_NUM} ${CIRCLE_TAG} ${SIGN_CERT_PASS}
+      - run: scp -i /tmp/id_win_ssh -P 24481 -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/build-win.bat hero@144.76.9.139:/cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/build-win.bat
+      - run: ssh -i /tmp/id_win_ssh -p 24481 -oStrictHostKeyChecking=no hero@144.76.9.139 chmod +x /cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/build-win.bat
+      - run: scp -r -i /tmp/id_win_ssh -P 24481 -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/pkg-scripts/  hero@144.76.9.139:/cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}
+      - run: scp -i /tmp/id_win_ssh -P 24481 -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/example.config.toml hero@144.76.9.139:/cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/example.config.toml
+      - run: scp -i /tmp/id_win_ssh -P 24481 -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/README.md hero@144.76.9.139:/cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/README.md
+      - run: scp -i /tmp/id_win_ssh -P 24481 -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/LICENSE hero@144.76.9.139:/cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/LICENSE
+      - run: scp -i /tmp/id_win_ssh -P 24481 -oStrictHostKeyChecking=no /go/src/github.com/cloudradar-monitoring/cagent/wix.json hero@144.76.9.139:/cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/wix.json
+      # Trigger msi creating
+      - run: ssh -i /tmp/id_win_ssh -p 24481 -oStrictHostKeyChecking=no hero@144.76.9.139 /cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/build-win.bat ${CIRCLE_BUILD_NUM} ${CIRCLE_TAG}
+      # Trigger signing 
+      - run: ssh -i /tmp/id_win_ssh -p 24481 -oStrictHostKeyChecking=no hero@144.76.9.139 curl http://localhost:8080/?file=cagent_32.msi
+      - run: sleep 10
+      - run: ssh -i /tmp/id_win_ssh -p 24481 -oStrictHostKeyChecking=no hero@144.76.9.139 curl http://localhost:8080/?file=cagent_64.msi
       # Copy msi files back to build machine
-      - run: scp -i /tmp/id_win_ssh -oStrictHostKeyChecking=no hero@13.80.137.211:/cygdrive/c/Users/hero/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/dist/cagent_32.msi /go/src/github.com/cloudradar-monitoring/cagent/dist/cagent_386.msi
-      - run: scp -i /tmp/id_win_ssh -oStrictHostKeyChecking=no hero@13.80.137.211:/cygdrive/c/Users/hero/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/dist/cagent_64.msi /go/src/github.com/cloudradar-monitoring/cagent/dist/cagent_64.msi
+      - run: scp -i /tmp/id_win_ssh -P 24481 -oStrictHostKeyChecking=no hero@144.76.9.139:/cygdrive/C/Users/hero/ci/cagent_32.msi /go/src/github.com/cloudradar-monitoring/cagent/dist/cagent_386.msi
+      - run: scp -i /tmp/id_win_ssh -P 24481 -oStrictHostKeyChecking=no hero@144.76.9.139:/cygdrive/C/Users/hero/ci/cagent_64.msi /go/src/github.com/cloudradar-monitoring/cagent/dist/cagent_64.msi
       # Add files to Github release
       - run: github-release upload --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --name "cagent_${CIRCLE_TAG}_Windows_386.msi" --file "/go/src/github.com/cloudradar-monitoring/cagent/dist/cagent_386.msi"
       - run: github-release upload --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --name "cagent_${CIRCLE_TAG}_Windows_x86_64.msi" --file "/go/src/github.com/cloudradar-monitoring/cagent/dist/cagent_64.msi"
