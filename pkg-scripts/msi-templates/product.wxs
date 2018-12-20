@@ -139,7 +139,7 @@
       <InstallExecuteSequence>
          <RemoveExistingProducts After="InstallValidate"/>
          {{range $i, $e := .InstallHooks}}
-         <Custom Action="CustomInstallExec{{$i}}" After="{{if eq $i 0}}InstallFiles{{else}}CustomInstallExec{{dec $i}}{{end}}">NOT Installed AND NOT REMOVE</Custom>
+         <Custom Action="CustomInstallExec{{$i}}" {{if eq $i 0}}Before="InstallFinalize{{else}}After="CustomInstallExec{{dec $i}}{{end}}">NOT Installed AND NOT REMOVE</Custom>
          {{end}}
          {{range $i, $e := .UninstallHooks}}
          <Custom Action="CustomUninstallExec{{$i}}" After="{{if eq $i 0}}InstallInitialize{{else}}CustomUninstallExec{{dec $i}}{{end}}">REMOVE ~= "ALL"</Custom>

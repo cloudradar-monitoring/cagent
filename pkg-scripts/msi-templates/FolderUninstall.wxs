@@ -3,7 +3,7 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
 
  <Fragment Id="FolderUninstall">
-     <?define RegDir="SYSTEM\ControlSet001\services\[Manufacturer]:[ProductName]"?>
+     <?define RegDir="SYSTEM\ControlSet001\Services\{{.Company}}:{{.Product}}"?>
      <?define RegValueName="InstallDir"?>
      <Property Id="INSTALLFOLDER">
          <RegistrySearch Root="HKLM" Key="$(var.RegDir)" Type="raw"
