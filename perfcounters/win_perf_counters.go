@@ -12,15 +12,15 @@ import (
 )
 
 type WinPerfCountersWatcher struct {
-	query          PerformanceQuery
-	continousQuery PerformanceQuery
-	handles        map[string]PDH_HCOUNTER
+	query           PerformanceQuery
+	continuousQuery PerformanceQuery
+	handles         map[string]PDH_HCOUNTER
 }
 
-func (m *WinPerfCountersWatcher) StartContinousQuery(counterPath string, interval time.Duration) error {
+func (m *WinPerfCountersWatcher) StartContinuousQuery(counterPath string, interval time.Duration) error {
 	var counterHandle PDH_HCOUNTER
 
-	err := m.continousQuery.Open()
+	err := m.continuousQuery.Open()
 	if err != nil {
 		return errors.Wrap(err, "Failed to open PerformanceQuery")
 	}
@@ -28,12 +28,12 @@ func (m *WinPerfCountersWatcher) StartContinousQuery(counterPath string, interva
 	// Add counter to query depending on OS we're running
 	// Systems from Vista onward support a generic english language counter independent from the OS language
 	if !m.query.IsVistaOrNewer() {
-		counterHandle, err = m.continousQuery.AddCounterToQuery(counterPath)
+		counterHandle, err = m.continuousQuery.AddCounterToQuery(counterPath)
 		if err != nil {
 			return errors.Wrap(err, "Failed to AddCounterToQuery")
 		}
 	} else {
-		counterHandle, err = m.continousQuery.AddEnglishCounterToQuery(counterPath)
+		counterHandle, err = m.continuousQuery.AddEnglishCounterToQuery(counterPath)
 		if err != nil {
 			return errors.Wrap(err, "Failed to AddEnglishCounterToQuery")
 		}
@@ -44,7 +44,7 @@ func (m *WinPerfCountersWatcher) StartContinousQuery(counterPath string, interva
 	// Start collecting data in the background so we can query them later
 	go func() {
 		for {
-			if ret := PdhCollectQueryData(m.continousQuery.Query()); ret != ERROR_SUCCESS {
+			if ret := PdhCollectQueryData(m.continuousQuery.Query()); ret != ERROR_SUCCESS {
 				err := NewPdhError(ret)
 				log.Printf("Error collecting PerformanceQuery data: %s", err)
 			}
@@ -62,7 +62,7 @@ func (m *WinPerfCountersWatcher) GetFormattedQueryData(counterPath string) ([]Co
 		return nil, fmt.Errorf("No query going on for counterPath: %s", counterPath)
 	}
 
-	counterValues, err := m.continousQuery.GetFormattedCounterArrayDouble(handle)
+	counterValues, err := m.continuousQuery.GetFormattedCounterArrayDouble(handle)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to call GetFormattedCounterArrayDouble")
 	}
@@ -146,8 +146,8 @@ func isKnownCounterDataError(err error) bool {
 
 func Watcher() *WinPerfCountersWatcher {
 	return &WinPerfCountersWatcher{
-		handles:        make(map[string]PDH_HCOUNTER),
-		continousQuery: &PerformanceQueryImpl{},
-		query:          &PerformanceQueryImpl{},
+		handles:         make(map[string]PDH_HCOUNTER),
+		continuousQuery: &PerformanceQueryImpl{},
+		query:           &PerformanceQueryImpl{},
 	}
 }

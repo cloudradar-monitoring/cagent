@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -22,6 +24,7 @@ type Cagent struct {
 	fsWatcher            *FSWatcher
 	netWatcher           *NetWatcher
 	windowsUpdateWatcher *WindowsUpdateWatcher // nolint: structcheck,megacheck
+	vmWatchers           map[string]vmstat.Provider
 
 	rootCAs *x509.CertPool
 
@@ -30,8 +33,9 @@ type Cagent struct {
 
 func New(cfg *Config, version string) *Cagent {
 	ca := &Cagent{
-		Config:  cfg,
-		version: version,
+		Config:     cfg,
+		version:    version,
+		vmWatchers: make(map[string]vmstat.Provider),
 	}
 
 	if rootCertsPath != "" {
@@ -59,6 +63,23 @@ func New(cfg *Config, version string) *Cagent {
 		}
 	}
 
+	if err := InitVMStat(); err != nil {
+		log.Error("cannot instantiate virtual machines API: ", err.Error())
+	}
+
+	for _, name := range ca.Config.VirtualMachinesStat {
+		vm, err := vmstat.Acquire(name)
+		if err != nil {
+			log.Warnf("acquire vm provider \"%s\": %s", name, err.Error())
+		} else {
+			if err = vm.IsAvailable(); err != nil {
+				log.Warnf("vm provider \"%s\" either not available or not enabled for host system %s: %s", name, runtime.GOOS, err.Error())
+			}
+
+			ca.vmWatchers[name] = vm
+		}
+	}
+
 	return ca
 }
 
@@ -73,4 +94,16 @@ func (ca *Cagent) userAgent() string {
 	parts := strings.Split(ca.version, "-")
 
 	return fmt.Sprintf("Cagent v%s %s %s", parts[0], runtime.GOOS, runtime.GOARCH)
+}
+
+func (ca *Cagent) Shutdown() error {
+	for name, p := range ca.vmWatchers {
+		if err := vmstat.Release(p); err != nil {
+			log.Errorf("release vm provider \"%s\": %s", name, err.Error())
+		}
+
+		delete(ca.vmWatchers, name)
+	}
+
+	return nil
 }
