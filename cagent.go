@@ -70,10 +70,10 @@ func New(cfg *Config, version string) *Cagent {
 	for _, name := range ca.Config.VirtualMachinesStat {
 		vm, err := vmstat.Acquire(name)
 		if err != nil {
-			log.WithError(err).Warnf("acquire vm provider \"%s\"", name)
+			log.Warnf("acquire vm provider \"%s\": %s", name, err.Error())
 		} else {
 			if err = vm.IsAvailable(); err != nil {
-				log.WithError(err).Warnf("vm provider \"%s\" either not available or not enabled for host system %s", name, runtime.GOOS)
+				log.Warnf("vm provider \"%s\" either not available or not enabled for host system %s: %s", name, runtime.GOOS, err.Error())
 			}
 
 			ca.vmWatchers[name] = vm
@@ -99,7 +99,7 @@ func (ca *Cagent) userAgent() string {
 func (ca *Cagent) Shutdown() error {
 	for name, p := range ca.vmWatchers {
 		if err := vmstat.Release(p); err != nil {
-			log.WithError(err).Errorf("release vm provider \"%s\"", name)
+			log.Errorf("release vm provider \"%s\": %s", name, err.Error())
 		}
 
 		delete(ca.vmWatchers, name)

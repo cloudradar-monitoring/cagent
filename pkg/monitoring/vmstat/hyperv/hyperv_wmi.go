@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/StackExchange/wmi"
-
-	log "github.com/sirupsen/logrus"
+	"github.com/prometheus/common/log"
+	"github.com/sirupsen/logrus"
 )
 
 var guestNetworkRegexp *regexp.Regexp
@@ -102,7 +102,7 @@ func (im *impl) GetMeasurements() (map[string]interface{}, error) {
 			}
 		}
 	} else {
-		log.WithError(countersErr)
+		logrus.Errorf("[vmstat:hyperv] couldn't fetch perfcounters: %s", countersErr.Error())
 	}
 
 	var list []interface{}
@@ -125,14 +125,14 @@ func (im *impl) GetMeasurements() (map[string]interface{}, error) {
 			}
 		}
 	} else {
-		log.WithError(err)
+		log.Errorf("[vmstat:hyperv] query : %s", err.Error())
 	}
 
 	var dst []msvm_SummaryInformation
 	q = wmi.CreateQuery(&dst, "")
 
 	if err := wmi.QueryNamespace(q, &dst, `root\virtualization\v2`); err != nil {
-		log.WithError(err)
+		logrus.Errorf("[vmstat:hyperv] couldn't query vms: %s", countersErr.Error())
 	} else {
 		for i := range dst {
 			vmEntry := make(map[string]interface{})
@@ -201,7 +201,7 @@ func (st EnabledState) String() string {
 	case 10:
 		return "starting"
 	default:
-		return "<unknown>"
+		return "unknown"
 	}
 }
 
@@ -214,7 +214,7 @@ func (st HealthState) String() string {
 	case 25:
 		return "critical failure"
 	default:
-		return "<unknown>"
+		return "unknown"
 	}
 }
 

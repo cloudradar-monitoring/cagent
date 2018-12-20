@@ -66,7 +66,7 @@ func Acquire(name string) (Provider, error) {
 		entry.wg.Add(1)
 		entry.run.Do(func() {
 			if err = entry.prov.Run(); err != nil {
-				logrus.WithError(err).Errorf("vmstat: unable to start \"%s\" provider", name)
+				logrus.Errorf("[vmstat] unable to start \"%s\" provider: %s", name, err.Error())
 			}
 		})
 
