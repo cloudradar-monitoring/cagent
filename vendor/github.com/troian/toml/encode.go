@@ -38,13 +38,28 @@ var quotedReplacer = strings.NewReplacer(
 	"\\", "\\\\",
 )
 
+type Opts struct {
+	lineEnding string
+	// A single indentation level. By default it is two spaces.
+	indent string
+}
+
+func (op *Opts) SetOptions(opts ...Option) error {
+	for _, opt := range opts {
+		if err := opt(op); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Encoder controls the encoding of Go values to a TOML document to some
 // io.Writer.
 //
 // The indentation level can be controlled with the Indent field.
 type Encoder struct {
-	// A single indentation level. By default it is two spaces.
-	Indent string
+	Opts
 
 	// hasWritten is whether we have written any output to w yet.
 	hasWritten bool
@@ -53,11 +68,20 @@ type Encoder struct {
 
 // NewEncoder returns a TOML encoder that encodes Go values to the io.Writer
 // given. By default, a single indentation level is 2 spaces.
-func NewEncoder(w io.Writer) *Encoder {
-	return &Encoder{
-		w:      bufio.NewWriter(w),
-		Indent: "  ",
+func NewEncoder(w io.Writer, opts ...Option) *Encoder {
+	enc := &Encoder{
+		w: bufio.NewWriter(w),
+		Opts: Opts{
+			lineEnding: defaultNewLine,
+			indent:     OptionIndentDefault,
+		},
 	}
+
+	for _, opt := range opts {
+		opt(&enc.Opts)
+	}
+
+	return enc
 }
 
 // Encode writes a TOML representation of the Go value to the underlying
@@ -115,7 +139,7 @@ func (enc *Encoder) encodeCommented(key Key, rv reflect.Value, comment string, c
 
 		var format string
 		if enc.hasWritten {
-			format += "\n"
+			format += enc.lineEnding
 		}
 
 		format += "%s"
@@ -123,15 +147,13 @@ func (enc *Encoder) encodeCommented(key Key, rv reflect.Value, comment string, c
 			format += "# "
 		}
 
-		format += "%s\n"
+		format += "%s" + enc.lineEnding
 
 		if comment != "" {
 			comment = strings.Replace(comment, "\n", "\n"+enc.indentStr(key)+"# ", -1)
 		}
 
-		if _, err := fmt.Fprintf(enc.w, format, enc.indentStr(key), comment); err != nil {
-			panic(err)
-		}
+		enc.wf(format, enc.indentStr(key), comment)
 	}
 
 	enc.encode(key, rv)
@@ -548,7 +570,7 @@ func isEmpty(rv reflect.Value) bool {
 
 func (enc *Encoder) newline() {
 	if enc.hasWritten {
-		enc.wf("\n")
+		enc.wf(enc.lineEnding)
 	}
 }
 
@@ -563,14 +585,15 @@ func (enc *Encoder) keyEqElement(key Key, val reflect.Value) {
 }
 
 func (enc *Encoder) wf(format string, v ...interface{}) {
-	if _, err := fmt.Fprintf(enc.w, format, v...); err != nil {
+	normalized := enc.toConfiguredNewLines(normalizeNewlines(format))
+	if _, err := fmt.Fprintf(enc.w, string(normalized), v...); err != nil {
 		encPanic(err)
 	}
 	enc.hasWritten = true
 }
 
 func (enc *Encoder) indentStr(key Key) string {
-	return strings.Repeat(enc.Indent, len(key)-1)
+	return strings.Repeat(enc.indent, len(key)-1)
 }
 
 func encPanic(err error) {
@@ -606,4 +629,18 @@ func panicIfInvalidKey(key Key) {
 
 func isValidKeyName(s string) bool {
 	return len(s) != 0
+}
+
+// normalizeNewlines normalizes \r\n (windows) and \r (mac)
+// into \n (unix)
+func normalizeNewlines(d string) string {
+	// replace CR LF \r\n (windows) with LF \n (unix)
+	d = strings.Replace(d, "\r\n", "\n", -1)
+	// replace CF \r (mac) with LF \n (unix)
+	d = strings.Replace(d, "\r", "\n", -1)
+	return d
+}
+
+func (enc *Encoder) toConfiguredNewLines(d string) string {
+	return strings.Replace(d, "\n", enc.lineEnding, -1)
 }

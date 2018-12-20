@@ -51,7 +51,7 @@ func (ca *Cagent) initHubHTTPClient() {
 
 func (ca *Cagent) TestHub() error {
 	if ca.Config.HubURL == "" {
-		return fmt.Errorf("please set the hub_url Config param")
+		return fmt.Errorf("please set the hub_url config param")
 	}
 
 	ca.initHubHTTPClient()

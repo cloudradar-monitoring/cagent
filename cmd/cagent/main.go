@@ -40,7 +40,7 @@ func askForConfirmation(s string) bool {
 
 		response, err := reader.ReadString('\n')
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Failed to read confirmation: %s", err.Error())
 		}
 
 		response = strings.ToLower(strings.TrimSpace(response))
@@ -67,6 +67,7 @@ func main() {
 	oneRunOnlyModePtr := flag.Bool("r", false, "one run only – perform checks once and exit. Overwrites output file")
 	serviceUninstallPtr := flag.Bool("u", false, fmt.Sprintf("stop and uninstall the system service(%s)", systemManager.String()))
 	printConfigPtr := flag.Bool("p", false, "print the active config")
+	testConfigPtr := flag.Bool("t", false, "test the HUB config")
 	versionPtr := flag.Bool("version", false, "show the cagent version")
 
 	// some OS specific flags
@@ -97,7 +98,7 @@ func main() {
 
 	cfg, err := cagent.HandleAllConfigSetup(*cfgPathPtr)
 	if err != nil {
-		log.Fatalf("Failed to handle cagent configuration: %s", err)
+		log.Fatalf("Failed to handle cagent configuration: %s", err.Error())
 	}
 
 	ca := cagent.New(cfg, version)
@@ -111,6 +112,9 @@ func main() {
 
 	writePidFileIfNeeded(ca, oneRunOnlyModePtr)
 	defer removePidFileIfNeeded(ca, oneRunOnlyModePtr)
+
+	handleToastFeedback(ca, *cfgPathPtr)
+	handleFlagTest(*testConfigPtr, ca)
 
 	if !service.Interactive() {
 		runUnderOsServiceManager(ca)
@@ -248,7 +252,7 @@ func handleFlagServiceUninstall(ca *cagent.Cagent, serviceUninstallPtr bool) {
 
 	systemService, err := getServiceFromFlags(ca, "", "")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to get system service: %s", err.Error())
 	}
 
 	err = systemService.Stop()
@@ -373,13 +377,13 @@ func handleFlagServiceInstall(ca *cagent.Cagent, systemManager service.System, s
 func runUnderOsServiceManager(ca *cagent.Cagent) {
 	systemService, err := getServiceFromFlags(ca, "", "")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to get system service: %s", err.Error())
 	}
 
 	// we are running under OS service manager
 	err = systemService.Run()
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatalf("Failed to run system service: %s", err.Error())
 	}
 
 	os.Exit(0)
@@ -401,6 +405,30 @@ func removePidFileIfNeeded(ca *cagent.Cagent, oneRunOnlyModePtr *bool) {
 			log.Errorf("Failed to remove pid file at: %s", ca.Config.PidFile)
 		}
 	}
+}
+
+func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
+	if !testConfig {
+		return
+	}
+
+	err := ca.TestHub()
+	if err != nil {
+		if runtime.GOOS == "windows" {
+			// ignore toast error to make the main error clear for user
+			// toast error probably means toast not supported on the system
+			_ = sendErrorNotification("Cagent connection test failed", err.Error())
+		}
+		fmt.Printf("Cagent HUB test failed: %s\n", err.Error())
+		os.Exit(1)
+	}
+
+	if runtime.GOOS == "windows" {
+		_ = sendSuccessNotification("Cagent connection test succeed", "")
+	}
+
+	fmt.Printf("HUB connection test succeed and credentials are correct!\n")
+	os.Exit(0)
 }
 
 func rerunDetached() error {
