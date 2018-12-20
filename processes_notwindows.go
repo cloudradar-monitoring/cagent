@@ -139,6 +139,9 @@ func parseProcStatusFile(b []byte) procStatus {
 				break
 			}
 
+			if len(fields) < 2 {
+				break
+			}
 			// determine long state from the short one in case long one is not available
 			// eg "State:	S"
 			status.State = getProcLongState(fields[1][0])
