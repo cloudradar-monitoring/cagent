@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/StackExchange/wmi"
-	"github.com/prometheus/common/log"
 	"github.com/sirupsen/logrus"
 )
 
@@ -117,7 +116,7 @@ func (im *impl) GetMeasurements() (map[string]interface{}, error) {
 			// InstanceID is in form of Microsoft:GuestNetwork\GUID\GUID
 			// First GUID matches field Name in struct msvm_SummaryInformation
 			if !guestNetworkRegexp.Match([]byte(ips[i].InstanceID)) {
-				log.Warn("invalid InstanceID in hyper-v response. expected form:"+
+				logrus.Warnf("[vmstat:hyperv] invalid InstanceID in hyper-v response. expected form:"+
 					"[Microsoft:GuestNetwork\\<GUID>\\<GUID>] actual form: [%s]", ips[i].InstanceID)
 			} else {
 				id := guestNetworkRegexp.FindAllStringSubmatch(ips[i].InstanceID, -1)
@@ -125,7 +124,7 @@ func (im *impl) GetMeasurements() (map[string]interface{}, error) {
 			}
 		}
 	} else {
-		log.Errorf("[vmstat:hyperv] query : %s", err.Error())
+		logrus.Errorf("[vmstat:hyperv] query : %s", err.Error())
 	}
 
 	var dst []msvm_SummaryInformation
