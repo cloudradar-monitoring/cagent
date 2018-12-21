@@ -3,6 +3,7 @@
 package cagent
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io/ioutil"
@@ -19,6 +20,11 @@ import (
 
 var errorProcessTerminated = fmt.Errorf("Process was terminated")
 
+type procStatus struct {
+	PPID  int
+	State string
+}
+
 func processes() ([]ProcStat, error) {
 	if runtime.GOOS == "linux" {
 		return processesFromProc()
@@ -27,88 +33,128 @@ func processes() ([]ProcStat, error) {
 }
 
 func getHostProc() string {
-	if hostProc := os.Getenv("HOST_PROC");  hostProc != "" {
+	if hostProc := os.Getenv("HOST_PROC"); hostProc != "" {
 		return hostProc
 	}
 
 	return "/proc"
 }
 
+func getProcLongState(shortState byte) string {
+	switch shortState {
+	case 'R':
+		return "running"
+	case 'S':
+		return "sleeping"
+	case 'D':
+		return "blocked"
+	case 'Z':
+		return "zombie"
+	case 'X':
+		return "dead"
+	case 'T', 't':
+		return "stopped"
+	case 'W':
+		return "paging"
+	case 'I':
+		return "idle"
+	default:
+		return fmt.Sprintf("unknown(%s)", string(shortState))
+	}
+}
+
 // get process states from /proc/(pid)/stat
 func processesFromProc() ([]ProcStat, error) {
-	filenames, err := filepath.Glob(getHostProc() + "/[0-9]*/stat")
+	filepaths, err := filepath.Glob(getHostProc() + "/[0-9]*/status")
 	if err != nil {
 		return nil, err
 	}
 
 	var procs []ProcStat
 
-	for _, filename := range filenames {
-		data, err := readProcFile(filename)
+	for _, statusFilepath := range filepaths {
+		statusFile, err := readProcFile(statusFilepath)
 		if err != nil {
 			if err != errorProcessTerminated {
-				log.Error("readProcFile error ", err.Error())
+				log.Error("[PROC] readProcFile error ", err.Error())
 			}
 			continue
 		}
 
-		stats := bytes.Fields(data)
-
-		if len(stats) < 3 {
-			return nil, fmt.Errorf("Something is terribly wrong with %s", filename)
-		}
-
-		pid, err := strconv.Atoi(string(stats[0]))
+		procStatus := parseProcStatusFile(statusFile)
+		stat := ProcStat{ParentPID: procStatus.PPID, State: procStatus.State}
+		// get the PID from the filepath(/proc/<pid>/status) itself
+		pathParts := strings.Split(statusFilepath, string(filepath.Separator))
+		pidString := pathParts[len(pathParts)-2]
+		stat.PID, err = strconv.Atoi(pidString)
 		if err != nil {
-			log.Errorf("Failed to convert PID(%s) to int: %s", stats[0], err.Error())
-			continue
+			log.Errorf("[PROC] proc/status: failed to convert PID(%s) to int: %s", pidString, err.Error())
 		}
 
-		ppid, err := strconv.Atoi(string(stats[4]))
-		if err != nil {
-			log.Errorf("Failed to convert PPID(%s) to int: %s", stats[4], err.Error())
-		}
-
-		stat := ProcStat{PID: pid, ParentPID: ppid}
-
-		comm, err := readProcFile(getHostProc() + "/" + string(stats[0]) + "/comm")
+		commFilepath := getHostProc() + "/" + pidString + "/comm"
+		comm, err := readProcFile(commFilepath)
 		if err != nil && err != errorProcessTerminated {
-			log.Errorf("Failed to read comm(%s): %s", stats[0], err.Error())
+			log.Errorf("[PROC] failed to read comm(%s): %s", commFilepath, err.Error())
 		} else if err == nil {
 			stat.Name = string(bytes.TrimRight(comm, "\n"))
 		}
 
-		cmdline, err := readProcFile(getHostProc() + "/" + string(stats[0]) + "/cmdline")
+		cmdLineFilepath := getHostProc() + "/" + pidString + "/cmdline"
+		cmdline, err := readProcFile(cmdLineFilepath)
 		if err != nil && err != errorProcessTerminated {
-			log.Errorf("Failed to read cmdline(%s): %s", stats[0], err.Error())
+			log.Errorf("[PROC] failed to read cmdline(%s): %s", cmdLineFilepath, err.Error())
 		} else if err == nil {
 			stat.Cmdline = strings.Replace(string(bytes.TrimRight(cmdline, "\x00")), "\x00", " ", -1)
 		}
 
-		switch stats[2][0] {
-		case 'R':
-			stat.State = "running"
-		case 'S':
-			stat.State = "sleeping"
-		case 'D':
-			stat.State = "blocked"
-		case 'Z':
-			stat.State = "zombie"
-		case 'X':
-			stat.State = "dead"
-		case 'T', 't':
-			stat.State = "stopped"
-		case 'W':
-			stat.State = "paging"
-		case 'I':
-			stat.State = "idle"
-		default:
-			stat.State = "unknown"
-		}
 		procs = append(procs, stat)
 	}
 
 	return procs, nil
+}
+
+func parseProcStatusFile(b []byte) procStatus {
+	// fill default value
+	// we need non-zero values in order to check if we set them, because PPID can be 0
+	status := procStatus{
+		PPID: -1,
+	}
+
+	scanner := bufio.NewScanner(bytes.NewReader(b))
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+
+		switch strings.ToLower(fields[0]) {
+		case "ppid:":
+			var err error
+			status.PPID, err = strconv.Atoi(fields[1])
+			if err != nil {
+				log.Errorf("[PROC] proc/status: failed to convert PPID(%s) to int: %s", fields[1], err.Error())
+			}
+		case "state:":
+			// extract raw long state
+			// eg "State:	S (sleeping)"
+			if len(fields) >= 3 {
+				status.State = strings.ToLower(strings.Trim(fields[2], "()"))
+				break
+			}
+
+			if len(fields) < 2 {
+				break
+			}
+			// determine long state from the short one in case long one is not available
+			// eg "State:	S"
+			status.State = getProcLongState(fields[1][0])
+		}
+
+		if status.PPID >= 0 && status.State != "" {
+			// we found all fields we want to
+			// we can break and return
+			break
+		}
+	}
+
+	return status
 }
 
 func readProcFile(filename string) ([]byte, error) {
@@ -153,54 +199,59 @@ func processesFromPS() ([]ProcStat, error) {
 
 	lines := strings.Split(string(out), "\n")
 	var procs []ProcStat
+	var columnsIndex = map[string]int{}
 
 	for i, line := range lines {
+		parts := strings.Fields(line)
+
 		if i == 0 {
-			// skip the header
+			// parse the header
+			for colIndex, colName := range parts {
+				columnsIndex[strings.ToUpper(colName)] = colIndex
+			}
 			continue
 		}
-
-		parts := strings.Fields(line)
 
 		if len(parts) < 3 {
 			continue
 		}
 
-		pid, err := strconv.Atoi(string(parts[0]))
-		if err != nil {
-			log.Errorf("Failed to convert PID(%s) to int: %s", parts[0], err.Error())
+		stat := ProcStat{}
+
+		if pidIndex, exists := columnsIndex["PID"]; exists {
+			pidString := parts[pidIndex]
+			stat.PID, err = strconv.Atoi(pidString)
+			if err != nil {
+				log.Errorf("[PROC] ps: failed to convert PID(%s) to int: %s", pidString, err.Error())
+			}
+		} else {
+			// we can't set PID set to default 0 if it is unavailable for some reason, because 0 PID means the kernel(Swapper) process
+			stat.PID = -1
 		}
 
-		last := strings.Join(parts[3:], " ")
-		fileBaseWithArgs := filepath.Base(last)
-		fileBaseParts := strings.Fields(fileBaseWithArgs)
-		ppid, err := strconv.Atoi(string(parts[1]))
-
-		if err != nil {
-			log.Errorf("Failed to convert PPID(%s) to int: %s", parts[4], err.Error())
+		if ppidIndex, exists := columnsIndex["PPID"]; exists {
+			ppidString := parts[ppidIndex]
+			stat.ParentPID, err = strconv.Atoi(ppidString)
+			if err != nil {
+				log.Errorf("[PROC] ps: failed to convert PPID(%s) to int: %s", ppidString, err.Error())
+			}
+		} else {
+			// we can't left ParentPID set to default 0 if it is unavailable for some reason, because 0 PID means the kernel(Swapper) process
+			stat.ParentPID = -1
 		}
 
-		stat := ProcStat{PID: pid, ParentPID: ppid, Name: fileBaseParts[0], Cmdline: last}
-		switch parts[2][0] {
-		case 'W':
-			stat.State = "wait"
-		case 'U', 'D', 'L':
-			// Also known as uninterruptible sleep or disk sleep
-			stat.State = "blocked"
-		case 'Z':
-			stat.State = "zombie"
-		case 'X':
-			stat.State = "dead"
-		case 'T':
-			stat.State = "stopped"
-		case 'R':
-			stat.State = "running"
-		case 'S':
-			stat.State = "sleeping"
-		case 'I':
-			stat.State = "idle"
-		default:
-			stat.State = "unknown"
+		if statIndex, exists := columnsIndex["STAT"]; exists {
+			stat.State = getProcLongState(parts[statIndex][0])
+		}
+
+		// COMMAND must be the last column otherwise we can't parse it because it can contains spaces
+		if commandIndex, exists := columnsIndex["COMMAND"]; exists && commandIndex == (len(columnsIndex)-1) {
+			stat.Cmdline = strings.Join(parts[commandIndex:], " ")
+
+			// extract the executable name without the arguments
+			fileBaseWithArgs := filepath.Base(stat.Cmdline)
+			fileBaseParts := strings.Fields(fileBaseWithArgs)
+			stat.Name = fileBaseParts[0]
 		}
 
 		procs = append(procs, stat)
