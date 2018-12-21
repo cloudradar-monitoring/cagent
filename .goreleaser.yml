@@ -92,4 +92,4 @@ release:
   github:
     owner: cloudradar-monitoring
     name: cagent
-  draft: false
+  draft: true
