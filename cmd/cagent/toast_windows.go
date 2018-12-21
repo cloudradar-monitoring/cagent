@@ -30,9 +30,10 @@ func getExecutablePath() string {
 
 func sendErrorNotification(title, message string) error {
 	msg := toast.Notification{
-		AppID:   toastAppID,
-		Title:   title,
-		Message: message,
+		AppID:    toastAppID,
+		Title:    title,
+		Message:  message,
+		Duration: toast.Long,
 		Actions: []toast.Action{
 			{"protocol", "Test again", "cagent:test"},
 			{"protocol", "How to fix?", "https://kb.cloudradar.io/books/configuring-hosts/page/installing-agents#bkmrk-potential-problems-a"},
@@ -48,10 +49,11 @@ func sendErrorNotification(title, message string) error {
 
 func sendSuccessNotification(title, message string) error {
 	msg := toast.Notification{
-		AppID:   toastAppID,
-		Title:   title,
-		Message: message,
-		Actions: []toast.Action{},
+		AppID:    toastAppID,
+		Title:    title,
+		Message:  message,
+		Duration: toast.Long,
+		Actions:  []toast.Action{},
 	}
 
 	iconPath := getExecutablePath() + "\\" + toastSuccessIcon
