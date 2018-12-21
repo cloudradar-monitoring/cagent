@@ -109,7 +109,7 @@ fs_metrics = ['a', 'b']
 
 	t.Run("config-file-does-not-exist", func(t *testing.T) {
 		// Create a temp file to get a file path we can use for temp
-		// config generation. But delete it so we can acutally write our
+		// config generation. But delete it so we can actually write our
 		// config file under the path.
 		tmpFile, err := ioutil.TempFile("", "")
 		assert.Nil(t, err)
