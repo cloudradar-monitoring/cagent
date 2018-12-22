@@ -8,8 +8,10 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -24,7 +26,8 @@ type Cagent struct {
 	fsWatcher            *FSWatcher
 	netWatcher           *NetWatcher
 	windowsUpdateWatcher *WindowsUpdateWatcher // nolint: structcheck,megacheck
-	vmWatchers           map[string]vmstat.Provider
+	vmstatLazyInit       sync.Once
+	vmWatchers           map[string]vmstatTypes.Provider
 
 	rootCAs *x509.CertPool
 
@@ -35,7 +38,7 @@ func New(cfg *Config, version string) *Cagent {
 	ca := &Cagent{
 		Config:     cfg,
 		version:    version,
-		vmWatchers: make(map[string]vmstat.Provider),
+		vmWatchers: make(map[string]vmstatTypes.Provider),
 	}
 
 	if rootCertsPath != "" {
@@ -60,23 +63,6 @@ func New(cfg *Config, version string) *Cagent {
 		err := addLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 		if err != nil {
 			log.Error("Can't write logs to file: ", err.Error())
-		}
-	}
-
-	if err := InitVMStat(); err != nil {
-		log.Error("cannot instantiate virtual machines API: ", err.Error())
-	}
-
-	for _, name := range ca.Config.VirtualMachinesStat {
-		vm, err := vmstat.Acquire(name)
-		if err != nil {
-			log.Warnf("acquire vm provider \"%s\": %s", name, err.Error())
-		} else {
-			if err = vm.IsAvailable(); err != nil {
-				log.Warnf("vm provider \"%s\" either not available or not enabled for host system %s: %s", name, runtime.GOOS, err.Error())
-			}
-
-			ca.vmWatchers[name] = vm
 		}
 	}
 

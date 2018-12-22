@@ -4,21 +4,13 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
 )
 
-type Provider interface {
-	Run() error
-	Shutdown() error
-
-	Name() string
-	IsAvailable() error
-	GetMeasurements() (map[string]interface{}, error)
-}
-
 type provEntry struct {
-	prov Provider
+	prov vmstatTypes.Provider
 	wg   sync.WaitGroup
 	run  sync.Once
 }
@@ -30,25 +22,18 @@ type vmstat struct {
 
 var providers *vmstat
 
-var (
-	ErrAlreadyExists = errors.New("vmstat: provider already registered")
-	ErrNotAvailable  = errors.New("vmstat: provider not available")
-	ErrCheck         = errors.New("vmstat: check provider availability")
-	ErrNotRegistered = errors.New("vmstat: provider not registered")
-)
-
 func init() {
 	providers = &vmstat{
 		pr: make(map[string]*provEntry),
 	}
 }
 
-func RegisterVMProvider(p Provider) error {
+func RegisterVMProvider(p vmstatTypes.Provider) error {
 	providers.lock.Lock()
 	defer providers.lock.Unlock()
 
 	if _, ok := providers.pr[p.Name()]; ok {
-		return fmt.Errorf("%s: %s", ErrAlreadyExists.Error(), p.Name())
+		return fmt.Errorf("%s: %s", vmstatTypes.ErrAlreadyExists.Error(), p.Name())
 	}
 
 	providers.pr[p.Name()] = &provEntry{prov: p}
@@ -56,7 +41,7 @@ func RegisterVMProvider(p Provider) error {
 	return nil
 }
 
-func Acquire(name string) (Provider, error) {
+func Acquire(name string) (vmstatTypes.Provider, error) {
 	providers.lock.Lock()
 	defer providers.lock.Unlock()
 
@@ -77,10 +62,10 @@ func Acquire(name string) (Provider, error) {
 		return entry.prov, nil
 	}
 
-	return nil, ErrNotRegistered
+	return nil, vmstatTypes.ErrNotRegistered
 }
 
-func Release(p Provider) error {
+func Release(p vmstatTypes.Provider) error {
 	providers.lock.Lock()
 	defer providers.lock.Unlock()
 
@@ -89,10 +74,10 @@ func Release(p Provider) error {
 		return nil
 	}
 
-	return ErrNotRegistered
+	return vmstatTypes.ErrNotRegistered
 }
 
-func IterateRegistered(f func(string, Provider) bool) {
+func IterateRegistered(f func(string, vmstatTypes.Provider) bool) {
 	providers.lock.Lock()
 	defer providers.lock.Unlock()
 
