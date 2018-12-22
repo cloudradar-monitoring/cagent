@@ -1,4 +1,4 @@
-package vmstatTypes
+package vmstattypes
 
 import (
 	"errors"

@@ -27,7 +27,7 @@ type Cagent struct {
 	netWatcher           *NetWatcher
 	windowsUpdateWatcher *WindowsUpdateWatcher // nolint: structcheck,megacheck
 	vmstatLazyInit       sync.Once
-	vmWatchers           map[string]vmstatTypes.Provider
+	vmWatchers           map[string]vmstattypes.Provider
 
 	rootCAs *x509.CertPool
 
@@ -38,7 +38,7 @@ func New(cfg *Config, version string) *Cagent {
 	ca := &Cagent{
 		Config:     cfg,
 		version:    version,
-		vmWatchers: make(map[string]vmstatTypes.Provider),
+		vmWatchers: make(map[string]vmstattypes.Provider),
 	}
 
 	if rootCertsPath != "" {

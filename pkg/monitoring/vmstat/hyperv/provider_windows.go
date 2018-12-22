@@ -16,9 +16,9 @@ type impl struct {
 	watcher *perfcounters.WinPerfCountersWatcher
 }
 
-var _ vmstatTypes.Provider = (*impl)(nil)
+var _ vmstattypes.Provider = (*impl)(nil)
 
-func New() vmstatTypes.Provider {
+func New() vmstattypes.Provider {
 	return &impl{
 		watcher: monitoring.GetWatcher(),
 	}
@@ -47,11 +47,11 @@ func (im *impl) IsAvailable() error {
 	st, err := wmiutil.CheckOptionalFeatureStatus(wmiutil.FeatureMicrosoftHyperV)
 
 	if err != nil {
-		return fmt.Errorf("%s %s", vmstatTypes.ErrCheck.Error(), err.Error())
+		return fmt.Errorf("%s %s", vmstattypes.ErrCheck.Error(), err.Error())
 	}
 
 	if st != wmiutil.FeatureInstallStateEnabled {
-		return vmstatTypes.ErrNotAvailable
+		return vmstattypes.ErrNotAvailable
 	}
 
 	return nil

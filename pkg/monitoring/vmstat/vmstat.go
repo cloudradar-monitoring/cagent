@@ -10,7 +10,7 @@ import (
 )
 
 type provEntry struct {
-	prov vmstatTypes.Provider
+	prov vmstattypes.Provider
 	wg   sync.WaitGroup
 	run  sync.Once
 }
@@ -28,12 +28,12 @@ func init() {
 	}
 }
 
-func RegisterVMProvider(p vmstatTypes.Provider) error {
+func RegisterVMProvider(p vmstattypes.Provider) error {
 	providers.lock.Lock()
 	defer providers.lock.Unlock()
 
 	if _, ok := providers.pr[p.Name()]; ok {
-		return fmt.Errorf("%s: %s", vmstatTypes.ErrAlreadyExists.Error(), p.Name())
+		return fmt.Errorf("%s: %s", vmstattypes.ErrAlreadyExists.Error(), p.Name())
 	}
 
 	providers.pr[p.Name()] = &provEntry{prov: p}
@@ -41,7 +41,7 @@ func RegisterVMProvider(p vmstatTypes.Provider) error {
 	return nil
 }
 
-func Acquire(name string) (vmstatTypes.Provider, error) {
+func Acquire(name string) (vmstattypes.Provider, error) {
 	providers.lock.Lock()
 	defer providers.lock.Unlock()
 
@@ -62,10 +62,10 @@ func Acquire(name string) (vmstatTypes.Provider, error) {
 		return entry.prov, nil
 	}
 
-	return nil, vmstatTypes.ErrNotRegistered
+	return nil, vmstattypes.ErrNotRegistered
 }
 
-func Release(p vmstatTypes.Provider) error {
+func Release(p vmstattypes.Provider) error {
 	providers.lock.Lock()
 	defer providers.lock.Unlock()
 
@@ -74,10 +74,10 @@ func Release(p vmstatTypes.Provider) error {
 		return nil
 	}
 
-	return vmstatTypes.ErrNotRegistered
+	return vmstattypes.ErrNotRegistered
 }
 
-func IterateRegistered(f func(string, vmstatTypes.Provider) bool) {
+func IterateRegistered(f func(string, vmstattypes.Provider) bool) {
 	providers.lock.Lock()
 	defer providers.lock.Unlock()
 
