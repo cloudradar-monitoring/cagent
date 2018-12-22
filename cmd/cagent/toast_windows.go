@@ -33,7 +33,7 @@ func sendErrorNotification(title, message string) error {
 		AppID:    toastAppID,
 		Title:    title,
 		Message:  message,
-		Duration: toast.Long,
+		Duration: toast.Long, // last for 25sec
 		Actions: []toast.Action{
 			{"protocol", "Test again", "cagent:test"},
 			{"protocol", "How to fix?", "https://kb.cloudradar.io/books/configuring-hosts/page/installing-agents#bkmrk-potential-problems-a"},
@@ -52,7 +52,7 @@ func sendSuccessNotification(title, message string) error {
 		AppID:    toastAppID,
 		Title:    title,
 		Message:  message,
-		Duration: toast.Long,
+		Duration: toast.Long, // last for 25sec
 		Actions:  []toast.Action{},
 	}
 
