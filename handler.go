@@ -15,6 +15,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 )
 
 func (ca *Cagent) initHubHTTPClient() {
@@ -205,6 +207,14 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 		}
 	}
 
+	ca.getVMStatMeasurements(func(name string, meas MeasurementsMap, err error) {
+		if err == nil {
+			measurements = measurements.AddWithPrefix("virt."+name+".", meas)
+		} else {
+			errs = append(errs, err.Error())
+		}
+	})
+
 	if runtime.GOOS == "linux" {
 		raid, err := ca.RaidState()
 		if err != nil {
@@ -283,5 +293,32 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 		case <-time.After(secToDuration(ca.Config.Interval)):
 			continue
 		}
+	}
+}
+
+func (ca *Cagent) getVMStatMeasurements(f func(string, MeasurementsMap, error)) {
+	ca.vmstatLazyInit.Do(func() {
+		if err := vmstat.Init(); err != nil {
+			log.Error("cannot instantiate virtual machines API: ", err.Error())
+			return
+		}
+
+		for _, name := range ca.Config.VirtualMachinesStat {
+			vm, err := vmstat.Acquire(name)
+			if err != nil {
+				log.Warnf("acquire vm provider \"%s\": %s", name, err.Error())
+			} else {
+				if err = vm.IsAvailable(); err != nil {
+					log.Warnf("vm provider \"%s\" either not available or not enabled for host system %s: %s", name, runtime.GOOS, err.Error())
+				}
+
+				ca.vmWatchers[name] = vm
+			}
+		}
+	})
+
+	for name, p := range ca.vmWatchers {
+		res, err := p.GetMeasurements()
+		f(name, res, err)
 	}
 }

@@ -8,7 +8,7 @@ import (
 
 	"github.com/cloudradar-monitoring/cagent/perfcounters"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring"
-	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
 	"github.com/cloudradar-monitoring/cagent/pkg/wmi"
 )
 
@@ -16,9 +16,9 @@ type impl struct {
 	watcher *perfcounters.WinPerfCountersWatcher
 }
 
-var _ vmstat.Provider = (*impl)(nil)
+var _ vmstattypes.Provider = (*impl)(nil)
 
-func New() vmstat.Provider {
+func New() vmstattypes.Provider {
 	return &impl{
 		watcher: monitoring.GetWatcher(),
 	}
@@ -47,11 +47,11 @@ func (im *impl) IsAvailable() error {
 	st, err := wmiutil.CheckOptionalFeatureStatus(wmiutil.FeatureMicrosoftHyperV)
 
 	if err != nil {
-		return fmt.Errorf("%s %s", vmstat.ErrCheck.Error(), err.Error())
+		return fmt.Errorf("%s %s", vmstattypes.ErrCheck.Error(), err.Error())
 	}
 
 	if st != wmiutil.FeatureInstallStateEnabled {
-		return vmstat.ErrNotAvailable
+		return vmstattypes.ErrNotAvailable
 	}
 
 	return nil
