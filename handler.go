@@ -16,6 +16,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 )
 
@@ -234,6 +235,14 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 
 		measurements = measurements.AddWithPrefix("windows_update.", wu)
 	}
+
+	servicesList, err := services.ListServices()
+	if err != nil && err != services.ErrorNotImplementedForOS {
+		// no need to log because already done inside ListServices()
+		errs = append(errs, err.Error())
+	}
+
+	measurements = measurements.AddWithPrefix("services.", servicesList)
 
 	if len(errs) == 0 {
 		measurements["cagent.success"] = 1
