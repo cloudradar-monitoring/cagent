@@ -58,7 +58,7 @@ func main() {
 
 	var serviceInstallUserPtr *string
 	var serviceInstallPtr *bool
-	
+
 	// Setup flag pointers
 	outputFilePtr := flag.String("o", "", "file to write the results (default ./results.out)")
 	cfgPathPtr := flag.String("c", cagent.DefaultCfgPath, "config file path")
