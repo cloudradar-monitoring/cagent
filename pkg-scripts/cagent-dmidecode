@@ -1,0 +1,3 @@
+# configuration to allow cagent run demidecode command
+
+cagent ALL= NOPASSWD: /usr/sbin/dmidecode

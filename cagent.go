@@ -28,6 +28,7 @@ type Cagent struct {
 	windowsUpdateWatcher *WindowsUpdateWatcher // nolint: structcheck,megacheck
 	vmstatLazyInit       sync.Once
 	vmWatchers           map[string]vmstattypes.Provider
+	hwInventory          sync.Once
 
 	rootCAs *x509.CertPool
 

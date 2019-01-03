@@ -109,6 +109,14 @@
   version = "v1.2.2"
 
 [[projects]]
+  digest = "1:bb36cd3b93335dcee96ecb3abf7c1e2e8e4ebb827bae7eefe9b930d93dcaf53f"
+  name = "github.com/troian/dmidecode"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "341005da86c7e25657b175ed8ff69466336a96e3"
+  version = "0.0.1"
+
+[[projects]]
   digest = "1:269cca5d1f0528e8aea51a26e96f02c37a024e8075b556d34609d6fcf9baccdc"
   name = "github.com/troian/toml"
   packages = ["."]
@@ -165,6 +173,7 @@
     "github.com/shirou/gopsutil/process",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
+    "github.com/troian/dmidecode",
     "github.com/troian/toml",
     "golang.org/x/sys/windows",
     "gopkg.in/toast.v1",

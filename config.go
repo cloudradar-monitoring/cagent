@@ -65,6 +65,8 @@ type Config struct {
 	WindowsUpdatesWatcherInterval int `toml:"windows_updates_watcher_interval" comment:"default 3600"`
 
 	VirtualMachinesStat []string `toml:"virtual_machines_stat" comment:"default ['hyper-v'], available options 'hyper-v'"`
+
+	HardwareInventory bool `toml:"hardware_inventory" comment:"default false"`
 }
 
 func init() {
@@ -103,6 +105,7 @@ func NewConfig() *Config {
 		NetInterfaceExcludeRegex:        []string{},
 		NetInterfaceExcludeLoopback:     true,
 		SystemFields:                    []string{"uname", "os_kernel", "os_family", "os_arch", "cpu_model", "fqdn", "memory_total_B"},
+		HardwareInventory:               true,
 	}
 
 	if runtime.GOOS == "windows" {

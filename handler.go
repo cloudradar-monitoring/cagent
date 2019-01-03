@@ -16,6 +16,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/hwinfo"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 )
@@ -200,19 +201,19 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 
 	measurements = measurements.AddWithPrefix("swap.", swap)
 
-	for name, p := range ca.vmWatchers {
-		if res, err := p.GetMeasurements(); err == nil {
-			measurements = measurements.AddWithPrefix("virt."+name+".", res)
-		} else {
-			errs = append(errs, err.Error())
-		}
-	}
-
 	ca.getVMStatMeasurements(func(name string, meas MeasurementsMap, err error) {
 		if err == nil {
 			measurements = measurements.AddWithPrefix("virt."+name+".", meas)
 		} else {
 			errs = append(errs, err.Error())
+		}
+	})
+
+	ca.hwInventory.Do(func() {
+		if hwInfo, err := hwinfo.Inventory(); err != nil {
+			errs = append(errs, err.Error())
+		} else {
+			measurements = measurements.AddWithPrefix("hw.inventory", hwInfo)
 		}
 	})
 
