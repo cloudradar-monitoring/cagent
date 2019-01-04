@@ -99,10 +99,10 @@ func ListSystemdServices() ([]SystemdService, error) {
 
 		services = append(services,
 			SystemdService{
-				UnitFile: rowColumnsValues["UNIT"],
-				LoadState: rowColumnsValues["LOAD"],
+				UnitFile:    rowColumnsValues["UNIT"],
+				LoadState:   rowColumnsValues["LOAD"],
 				ActiveState: rowColumnsValues["ACTIVE"],
-				SubState: rowColumnsValues["SUB"],
+				SubState:    rowColumnsValues["SUB"],
 				Description: rowColumnsValues["DESCRIPTION"],
 			},
 		)
