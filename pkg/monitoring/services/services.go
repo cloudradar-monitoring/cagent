@@ -83,7 +83,6 @@ func ListSystemdServices() ([]SystemdService, error) {
 
 		rowColumnsValues := map[string]string{}
 		for colIndex, colName := range columns {
-
 			// most likely impossible but still need to check the boundaries
 			if colIndex >= len(parts) {
 				break
@@ -99,7 +98,13 @@ func ListSystemdServices() ([]SystemdService, error) {
 		}
 
 		services = append(services,
-			SystemdService{UnitFile: rowColumnsValues["UNIT"], LoadState: rowColumnsValues["LOAD"], ActiveState: rowColumnsValues["ACTIVE"], SubState: rowColumnsValues["SUB"], Description: rowColumnsValues["DESCRIPTION"]},
+			SystemdService{
+				UnitFile: rowColumnsValues["UNIT"],
+				LoadState: rowColumnsValues["LOAD"],
+				ActiveState: rowColumnsValues["ACTIVE"],
+				SubState: rowColumnsValues["SUB"],
+				Description: rowColumnsValues["DESCRIPTION"],
+			},
 		)
 	}
 
@@ -129,6 +134,10 @@ func ListSysVinitServices() ([]SysVService, error) {
 
 	for scanner.Scan() {
 		parts := sysVinitServiceRE.FindStringSubmatch(scanner.Text())
+		if parts == nil {
+			// skip invalid line
+			continue
+		}
 
 		var state string
 
@@ -214,8 +223,7 @@ func isUpstart() bool {
 }
 
 func setPathEnvVar(cmd *exec.Cmd) {
-	// path PATH env var to be able to found right exec location
-	cmd.Env = append(cmd.Env, "PATH="+os.Getenv("PATH"))
+	//ServiceManagerUnitd.Env = append(cmd.Env, "PATH="+os.Getenv("PATH"))
 }
 
 // ListServices detect the linux system manager and parse/combine results
@@ -230,10 +238,10 @@ func ListServices() (map[string]interface{}, error) {
 			// in case of error lets try to query other
 			log.Errorf("[Services] Systemd appears running but failed to list a services: %s", err.Error())
 		} else {
-			var servicesList []map[string]interface{}
+			var servicesList []map[string]string
 			for _, service := range services {
 				servicesList = append(servicesList,
-					map[string]interface{}{
+					map[string]string{
 						"name":         service.UnitFile,
 						"load_state":   service.LoadState,
 						"active_state": service.ActiveState,
@@ -254,9 +262,9 @@ func ListServices() (map[string]interface{}, error) {
 	}
 
 	// create the map to check the services by name
-	servicesMap := map[string]map[string]interface{}{}
+	servicesMap := map[string]map[string]string{}
 	for _, service := range sysVServices {
-		servicesMap[service.UnitFile] = map[string]interface{}{
+		servicesMap[service.UnitFile] = map[string]string{
 			"name":    service.UnitFile,
 			"status":  service.Status,
 			"manager": "sysvinit",
@@ -273,7 +281,7 @@ func ListServices() (map[string]interface{}, error) {
 		for _, service := range upstartServices {
 			// overwrite sysVInit services returned by 'service --status-all'
 			// because it also contains services run under Upstart but with more accurate status
-			servicesMap[service.UnitFile] = map[string]interface{}{
+			servicesMap[service.UnitFile] = map[string]string{
 				"name":    service.UnitFile,
 				"status":  service.Status,
 				"manager": "upstart",
@@ -281,7 +289,8 @@ func ListServices() (map[string]interface{}, error) {
 		}
 	}
 
-	var servicesList []map[string]interface{}
+	// transform map[string]map[string]string -> []map[string]string
+	var servicesList []map[string]string
 	for _, service := range servicesMap {
 		servicesList = append(servicesList, service)
 	}

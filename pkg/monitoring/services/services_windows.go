@@ -43,14 +43,13 @@ func ListServices() (map[string]interface{}, error) {
 
 	var wmiServices []Win32_Service
 	err := wmiQueryWithContext(ctx, "Select Name,DisplayName,StartMode,State,Status from Win32_Service", &wmiServices)
-
 	if err != nil {
 		return nil, err
 	}
 
-	var servicesList []map[string]interface{}
+	var servicesList []map[string]string
 	for _, wmiService := range wmiServices {
-		servicesList = append(servicesList, map[string]interface{}{
+		servicesList = append(servicesList, map[string]string{
 			"name":         wmiService.Name,
 			"display_name": wmiService.DisplayName,
 			"start":        wmiService.StartMode,
