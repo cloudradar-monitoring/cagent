@@ -223,7 +223,7 @@ func isUpstart() bool {
 }
 
 func setPathEnvVar(cmd *exec.Cmd) {
-	//ServiceManagerUnitd.Env = append(cmd.Env, "PATH="+os.Getenv("PATH"))
+	cmd.Env = append(cmd.Env, "PATH="+os.Getenv("PATH"))
 }
 
 func listSystemdServices() ([]map[string]string, error) {
