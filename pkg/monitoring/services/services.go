@@ -226,43 +226,41 @@ func setPathEnvVar(cmd *exec.Cmd) {
 	//ServiceManagerUnitd.Env = append(cmd.Env, "PATH="+os.Getenv("PATH"))
 }
 
-// ListServices detect the linux system manager and parse/combine results
-func ListServices() (map[string]interface{}, error) {
-	if runtime.GOOS != "linux" {
-		return nil, ErrorNotImplementedForOS
+func listSystemdServices() ([]map[string]string, error) {
+	var servicesList []map[string]string
+
+	services, err := ListSystemdServices()
+	if err != nil {
+		return []map[string]string{}, err
 	}
 
-	if isSystemd() {
-		services, err := ListSystemdServices()
-		if err != nil {
-			// in case of error lets try to query other
-			log.Errorf("[Services] Systemd appears running but failed to list a services: %s", err.Error())
-		} else {
-			var servicesList []map[string]string
-			for _, service := range services {
-				servicesList = append(servicesList,
-					map[string]string{
-						"name":         service.UnitFile,
-						"load_state":   service.LoadState,
-						"active_state": service.ActiveState,
-						"sub_state":    service.SubState,
-						"description":  service.Description,
-						"manager":      "systemd",
-					})
-			}
-			// if systemd returns results we can return here cause systemd can't work simultaneously with sysvinit/upstart
-			return map[string]interface{}{"list": servicesList}, err
-		}
+	for _, service := range services {
+		servicesList = append(servicesList,
+			map[string]string{
+				"name":         service.UnitFile,
+				"load_state":   service.LoadState,
+				"active_state": service.ActiveState,
+				"sub_state":    service.SubState,
+				"description":  service.Description,
+				"manager":      "systemd",
+			})
 	}
 
+	return servicesList, nil
+}
+
+func listSysVAndUpstartServicesCombined() []map[string]string {
 	sysVServices, err := ListSysVinitServices()
 	if err != nil {
+		// return map[string]map[string]string{}, err
 		// in case of error lets try to query other
 		log.Errorf("[Services] SysVinit: failed to list a services: %s", err.Error())
 	}
 
 	// create the map to check the services by name
 	servicesMap := map[string]map[string]string{}
+
+	// add SysV services to map
 	for _, service := range sysVServices {
 		servicesMap[service.UnitFile] = map[string]string{
 			"name":    service.UnitFile,
@@ -271,6 +269,7 @@ func ListServices() (map[string]interface{}, error) {
 		}
 	}
 
+	// if we detect Upstart also add Upstart services to map
 	if isUpstart() {
 		upstartServices, err := ListUpstartServices()
 		if err != nil {
@@ -289,11 +288,38 @@ func ListServices() (map[string]interface{}, error) {
 		}
 	}
 
-	// transform map[string]map[string]string -> []map[string]string
+	// the use of map[string]map[string]string{} was temporary, so that we can
+	// merge the services together. Now convert it back to our internal
+	// format which is []map[string]string.
 	var servicesList []map[string]string
 	for _, service := range servicesMap {
 		servicesList = append(servicesList, service)
 	}
+
+	return servicesList
+}
+
+// ListServices detect the linux system manager and parse/combine results
+func ListServices() (map[string]interface{}, error) {
+	if runtime.GOOS != "linux" {
+		return nil, ErrorNotImplementedForOS
+	}
+
+	var err error
+	var servicesList []map[string]string
+
+	// first try to get Systemd services
+	if isSystemd() {
+		servicesList, err = listSystemdServices()
+		if err != nil {
+			log.Errorf("[Services] Systemd appears running but failed to list a services: %s", err.Error())
+		} else {
+			return map[string]interface{}{"list": servicesList}, nil
+		}
+	}
+
+	// in case we failed to get systemd services, try to get services from SysV and Upstart
+	servicesList = listSysVAndUpstartServicesCombined()
 
 	return map[string]interface{}{"list": servicesList}, nil
 }
