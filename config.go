@@ -175,6 +175,8 @@ func TryUpdateConfigFromFile(cfg *Config, configFilePath string) error {
 		return err
 	}
 
+	// log.Printf("WARP: %+v", cfg)
+
 	return nil
 }
 
@@ -265,13 +267,11 @@ func HandleAllConfigSetup(configFilePath string) (*Config, error) {
 		if strings.Contains(err.Error(), "cannot load TOML value of type int64 into a Go float") {
 			return nil, fmt.Errorf("Config load error: please use numbers with a decimal point for numerical values")
 		}
-
 		return nil, fmt.Errorf("Config load error: %s", err.Error())
 	}
 
 	if err = cfg.validate(); err != nil {
 		return nil, err
 	}
-
 	return cfg, nil
 }

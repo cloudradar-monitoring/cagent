@@ -310,7 +310,22 @@ func (ca *Cagent) RunOnce(outputFile *os.File) error {
 	return ca.ReportMeasurements(measurements, outputFile)
 }
 
-func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
+func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, cfg *Config) {
+	// Start process utilisation monitoringi in the background
+	ca.Top.Run()
+	defer ca.Top.Stop()
+
+	// go func() {
+	// 	for {
+	// 		res := ca.Top.HighestNLoad(5)
+	// 		for _, v := range res {
+	// 			log.Printf("Top5: %+v", *v)
+	// 		}
+
+	// 		time.Sleep(5 * time.Second)
+	// 	}
+	// }()
+
 	for {
 		err := ca.RunOnce(outputFile)
 		if err != nil {

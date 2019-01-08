@@ -150,7 +150,7 @@ func main() {
 	interruptChan := make(chan struct{})
 	doneChan := make(chan struct{})
 	go func() {
-		ca.Run(output, interruptChan)
+		ca.Run(output, interruptChan, cfg)
 		doneChan <- struct{}{}
 	}()
 
@@ -489,7 +489,7 @@ func (sw *serviceWrapper) Start(s service.Service) error {
 	sw.InterruptChan = make(chan struct{})
 	sw.DoneChan = make(chan struct{})
 	go func() {
-		sw.Cagent.Run(nil, sw.InterruptChan)
+		sw.Cagent.Run(nil, sw.InterruptChan, sw.Cagent.Config)
 		sw.DoneChan <- struct{}{}
 	}()
 

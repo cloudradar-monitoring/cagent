@@ -3,17 +3,31 @@ package top
 import (
 	"container/ring"
 	"log"
+	"sort"
 	"sync"
 	"time"
 )
 
 // Process is used to store aggregated load data about an OS process
 type Process struct {
-	PID     uint32
-	Load    float64
-	Load5   *ring.Ring
-	Load15  *ring.Ring
-	Command string
+	PID        uint32
+	Load       float64
+	Load5      *ring.Ring
+	Load15     *ring.Ring
+	Command    string
+	Identifier string
+}
+
+type ProcessSlice []*Process
+
+func (s ProcessSlice) Len() int {
+	return len(s)
+}
+func (s ProcessSlice) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+func (s ProcessSlice) Less(i, j int) bool {
+	return s[i].Load < s[j].Load
 }
 
 // ProcessInfo is used to store a snapshot of load data about an OS process
@@ -22,13 +36,18 @@ type ProcessInfo struct {
 	PID        uint32
 	Command    string
 	Load       float64
+	Load5      float64
+	Load15     float64
 }
 
 // Top holds a map with information about process loads
 type Top struct {
-	pList    map[string]*Process
-	pListMtx sync.RWMutex
-	stop     bool
+	pList       map[string]*Process
+	pListMtx    sync.RWMutex
+	LoadTotal1  float64
+	LoadTotal5  float64
+	LoadTotal15 float64
+	stop        bool
 }
 
 // New returns a new instance of Top struct
@@ -40,12 +59,8 @@ func New() *Top {
 	return t
 }
 
-// Run starts measuring process load on the system
-func (t *Top) Run() {
-	interval := time.Second * 1
-	// Call to os agnostic implementation
+func (t *Top) startMearueProcessLoad(interval time.Duration) {
 	t.startCollect(interval)
-
 	for {
 		// Check if stop was requested
 		if t.stop {
@@ -67,10 +82,11 @@ func (t *Top) Run() {
 			// Check if we already track the process ad if not start tracking it
 			if _, ok := t.pList[p.Identifier]; !ok {
 				pr = &Process{
-					PID:     p.PID,
-					Command: p.Command,
-					Load5:   ring.New(5 * 60),
-					Load15:  ring.New(15 * 60),
+					PID:        p.PID,
+					Command:    p.Command,
+					Identifier: p.Identifier,
+					Load5:      ring.New(5 * 60),
+					Load15:     ring.New(15 * 60),
 				}
 				t.pList[p.Identifier] = pr
 			} else {
@@ -84,14 +100,52 @@ func (t *Top) Run() {
 			pr.Load15.Value = p.Load
 			pr.Load15 = pr.Load15.Next()
 		}
+
 		t.pListMtx.Unlock()
 		time.Sleep(interval)
 	}
 }
 
+// Run starts measuring process load on the system
+func (t *Top) Run() {
+	// Start collecting process info every sec
+	go t.startMearueProcessLoad(time.Second * 1)
+}
+
 // Stop signals that load measuring should be stopped
 func (t *Top) Stop() {
+	log.Printf("Top Stop called")
 	t.stop = true
+}
+
+func (t *Top) HighestNLoad(n int) []*ProcessInfo {
+	pl := make([]*Process, 0, len(t.pList))
+
+	t.pListMtx.RLock()
+	for _, v := range t.pList {
+		pl = append(pl, v)
+	}
+	sort.Sort(ProcessSlice(pl))
+	t.pListMtx.RUnlock()
+
+	result := make([]*ProcessInfo, 0, len(pl))
+	for _, p := range pl {
+		pi := &ProcessInfo{
+			Identifier: p.Identifier,
+			Command:    p.Command,
+			PID:        p.PID,
+			Load:       p.Load,
+			Load5:      Avg5(p),
+			Load15:     Avg15(p),
+		}
+		result = append(result, pi)
+	}
+
+	if n <= len(result) {
+		return result[:n]
+	}
+
+	return nil
 }
 
 // HighestLoad returns information about the process causing highest CPU load
@@ -159,4 +213,36 @@ func (t *Top) HighestLoad() (string, float64, float64, float64) {
 	}
 
 	return identifier, pi.Load, avg5, avg15
+}
+
+// Func to calculate 5min average
+func Avg5(pi *Process) float64 {
+	total := float64(0)
+	count := 0
+	pi.Load5.Do(func(p interface{}) {
+		if p == nil {
+			return
+		}
+		count++
+		total += p.(float64)
+	})
+	return total / float64(count)
+}
+
+// Func to calculate 15min average
+func Avg15(pi *Process) float64 {
+	total := float64(0)
+	count := 0
+	pi.Load15.Do(func(p interface{}) {
+		if p == nil {
+			return
+		}
+		count++
+		total += p.(float64)
+	})
+	return total / float64(count)
+}
+
+func LowerThan(value, threshold float64) bool {
+	return value < threshold
 }

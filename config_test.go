@@ -89,6 +89,11 @@ pid = "/pid"
 interval = 1.0
 hub_gzip = true
 fs_metrics = ['a', 'b']
+
+[cpu_utilisation_analysis]
+threshold = 30.0
+gathering_mode = "avg5"
+report_processes = 7
 `
 
 		tmpFile, err := ioutil.TempFile("", "")
@@ -105,6 +110,9 @@ fs_metrics = ['a', 'b']
 		assert.Equal(t, 1.0, config.Interval)
 		assert.Equal(t, true, config.HubGzip)
 		assert.Equal(t, []string{"a", "b"}, config.FSMetrics)
+		assert.Equal(t, 30.0, config.CPUUtilisationAnalysis.Threshold)
+		assert.Equal(t, 7, config.CPUUtilisationAnalysis.ReportProcesses)
+		assert.Equal(t, "avg5", config.CPUUtilisationAnalysis.GatheringMode)
 	})
 
 	t.Run("config-file-does-not-exist", func(t *testing.T) {
