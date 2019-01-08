@@ -30,7 +30,7 @@
   version = "0.4.2"
 
 [[constraint]]
-  name = "github.com/troian/dmidecode"
+  name = "github.com/cloudradar-monitoring/dmidecode"
   version = "0.0.2"
 
 [[constraint]]
