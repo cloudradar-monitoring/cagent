@@ -109,12 +109,12 @@
   version = "v1.2.2"
 
 [[projects]]
-  digest = "1:bb36cd3b93335dcee96ecb3abf7c1e2e8e4ebb827bae7eefe9b930d93dcaf53f"
+  digest = "1:98a97652081e7436576a129bbf9e1d6a20f8a884723cab8d2f1a8067e6822bc7"
   name = "github.com/troian/dmidecode"
   packages = ["."]
   pruneopts = "UT"
-  revision = "341005da86c7e25657b175ed8ff69466336a96e3"
-  version = "0.0.1"
+  revision = "adf43c6a76d582d676e289561c95111accf5ea81"
+  version = "0.0.2"
 
 [[projects]]
   digest = "1:269cca5d1f0528e8aea51a26e96f02c37a024e8075b556d34609d6fcf9baccdc"

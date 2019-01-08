@@ -28,46 +28,46 @@ func fetchInventory() (map[string]interface{}, error) {
 
 	res := make(map[string]interface{})
 
-	var sysArray []dmidecode.ReqBaseBoard
-	if err = dmi.Get(&sysArray); err != nil {
+	var reqSys []dmidecode.ReqBaseBoard
+	if err = dmi.Get(&reqSys); err != nil {
 		return nil, err
 	}
 
-	var memArray []dmidecode.ReqPhysicalMemoryArray
-	if err = dmi.Get(&memArray); err != nil {
+	var reqMem []dmidecode.ReqPhysicalMemoryArray
+	if err = dmi.Get(&reqMem); err != nil {
 		return nil, err
 	}
 
-	var memDevicesArr []dmidecode.ReqMemoryDevice
-	if err = dmi.Get(&memDevicesArr); err != nil {
+	var reqMemDevs []dmidecode.ReqMemoryDevice
+	if err = dmi.Get(&reqMemDevs); err != nil {
 		return nil, err
 	}
 
-	var processorArr []dmidecode.ReqProcessor
-	if err = dmi.Get(&processorArr); err != nil {
+	var reqCPU []dmidecode.ReqProcessor
+	if err = dmi.Get(&reqCPU); err != nil {
 		return nil, err
 	}
 
-	res["baseboard.manufacturer"] = sysArray[0].Manufacturer
-	res["baseboard.model"] = sysArray[0].Version
-	res["baseboard.serial_number"] = sysArray[0].SerialNumber
+	res["baseboard.manufacturer"] = reqSys[0].Manufacturer
+	res["baseboard.model"] = reqSys[0].Version
+	res["baseboard.serial_number"] = reqSys[0].SerialNumber
 
-	res["ram.number_of_modules"] = memArray[0].NumberOfDevices
-	for i := range memDevicesArr {
-		if memDevicesArr[i].Size == -1 {
+	res["ram.number_of_modules"] = reqMem[0].NumberOfDevices
+	for i := range reqMemDevs {
+		if reqMemDevs[i].Size == -1 {
 			continue
 		}
-		res[fmt.Sprintf("ram.%d.size_B", i)] = memDevicesArr[i].Size
-		res[fmt.Sprintf("ram.%d.type", i)] = memDevicesArr[i].Type
+		res[fmt.Sprintf("ram.%d.size_B", i)] = reqMemDevs[i].Size
+		res[fmt.Sprintf("ram.%d.type", i)] = reqMemDevs[i].Type
 	}
 
-	for i := range processorArr {
-		res[fmt.Sprintf("cpu.%d.manufacturer", i)] = processorArr[i].Manufacturer
-		res[fmt.Sprintf("cpu.%d.manufacturing_info", i)] = processorArr[i].Signature.String()
-		res[fmt.Sprintf("cpu.%d.description", i)] = processorArr[i].Version
-		res[fmt.Sprintf("cpu.%d.core_count", i)] = processorArr[i].CoreCount
-		res[fmt.Sprintf("cpu.%d.core_enabled", i)] = processorArr[i].CoreEnabled
-		res[fmt.Sprintf("cpu.%d.thread_count", i)] = processorArr[i].ThreadCount
+	for i := range reqCPU {
+		res[fmt.Sprintf("cpu.%d.manufacturer", i)] = reqCPU[i].Manufacturer
+		res[fmt.Sprintf("cpu.%d.manufacturing_info", i)] = reqCPU[i].Signature.String()
+		res[fmt.Sprintf("cpu.%d.description", i)] = reqCPU[i].Version
+		res[fmt.Sprintf("cpu.%d.core_count", i)] = reqCPU[i].CoreCount
+		res[fmt.Sprintf("cpu.%d.core_enabled", i)] = reqCPU[i].CoreEnabled
+		res[fmt.Sprintf("cpu.%d.thread_count", i)] = reqCPU[i].ThreadCount
 	}
 
 	return res, nil

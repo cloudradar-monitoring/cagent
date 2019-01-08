@@ -66,7 +66,7 @@ type Config struct {
 
 	VirtualMachinesStat []string `toml:"virtual_machines_stat" comment:"default ['hyper-v'], available options 'hyper-v'"`
 
-	HardwareInventory bool `toml:"hardware_inventory" comment:"default false"`
+	HardwareInventory bool `toml:"hardware_inventory" comment:"default true"`
 }
 
 func init() {

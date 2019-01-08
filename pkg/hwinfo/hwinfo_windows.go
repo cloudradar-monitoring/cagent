@@ -7,9 +7,13 @@ import (
 	"time"
 
 	"github.com/StackExchange/wmi"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/wmi"
 )
 
 type winMemoryType uint16
+
+const reqTimeout = time.Second * 10
 
 type win32_PhysicalMemory struct {
 	BankLabel     string
@@ -107,7 +111,7 @@ func fetchInventory() (map[string]interface{}, error) {
 
 	var cpus []win32_Processor
 	query := wmi.CreateQuery(&cpus, "")
-	err := wmi.Query(query, &cpus)
+	err := wmiutil.QueryWithContext(reqTimeout, query, &cpus)
 	if err != nil {
 		return nil, fmt.Errorf("hwinfo: request cpus info %s", err.Error())
 	}
@@ -123,12 +127,12 @@ func fetchInventory() (map[string]interface{}, error) {
 
 	var baseBoard []win32_BaseBoard
 	query = wmi.CreateQuery(&baseBoard, "")
-	if err = wmi.Query(query, &baseBoard); err != nil {
-		return nil, fmt.Errorf("hwinfo: request baseboard info %s", err.Error())
+	if err = wmiutil.QueryWithContext(reqTimeout, query, &baseBoard); err != nil {
+		return res, fmt.Errorf("hwinfo: request baseboard info %s", err.Error())
 	}
 
 	if len(baseBoard) == 0 {
-		return nil, fmt.Errorf("hwinfo: request baseboard info %s", err.Error())
+		return res, fmt.Errorf("hwinfo: request baseboard info %s", err.Error())
 	}
 
 	res["baseboard.manufacturer"] = baseBoard[0].Manufacturer
@@ -140,11 +144,11 @@ func fetchInventory() (map[string]interface{}, error) {
 	var ram []win32_PhysicalMemory
 	query = wmi.CreateQuery(&ram, "")
 	if err = wmi.Query(query, &ram); err != nil {
-		return nil, fmt.Errorf("hwinfo: request ram info %s", err.Error())
+		return res, fmt.Errorf("hwinfo: request ram info %s", err.Error())
 	}
 
 	if len(ram) == 0 {
-		return nil, fmt.Errorf("hwinfo: request ram info %s", err.Error())
+		return res, fmt.Errorf("hwinfo: request ram info %s", err.Error())
 	}
 
 	res["ram.number_of_modules"] = len(ram)

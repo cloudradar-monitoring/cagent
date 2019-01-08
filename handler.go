@@ -213,7 +213,7 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 		if hwInfo, err := hwinfo.Inventory(); err != nil {
 			errs = append(errs, err.Error())
 		} else {
-			measurements = measurements.AddWithPrefix("hw.inventory", hwInfo)
+			measurements = measurements.AddInnerWithPrefix("hw.inventory", hwInfo)
 		}
 	})
 

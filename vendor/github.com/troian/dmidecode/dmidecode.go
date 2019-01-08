@@ -289,11 +289,10 @@ func (dmi *DMI) decode() (err error) {
 				continue
 			}
 
-			if v, ok := val.(string); ok && ((v == "Not Provided") || (v == "Not Specified") || (v == "Unknown")){
+			if v, ok := val.(string); ok && ((v == "Not Provided") || (v == "Not Specified") || (v == "Unknown")) {
 				continue
 			}
 
-			fmt.Println(val)
 			switch fieldType.Type.Kind() {
 			case reflect.Int:
 				vl, e := strconv.Atoi(val.(string))
@@ -392,7 +391,7 @@ func (dmi *DMI) decode() (err error) {
 
 					fieldValue.Set(reflect.ValueOf(vl))
 				default:
-					fmt.Println("unknown type", fieldValue.Type().String())
+					return fmt.Errorf("dmidecode: unknown type %s", fieldValue.Type().String())
 				}
 			}
 		}
