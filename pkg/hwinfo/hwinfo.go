@@ -6,8 +6,5 @@ func Inventory() (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	// res := make(map[string]interface{})
-	// res[""] = hw
-
 	return hw, nil
 }

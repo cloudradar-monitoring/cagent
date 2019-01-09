@@ -3,7 +3,6 @@
 package wmiutil
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -56,18 +55,16 @@ func CheckOptionalFeatureStatus(feature string) (FeatureInstallState, error) {
 	return dst[0].InstallState, nil
 }
 
-func QueryWithContext(timeout time.Duration, query string, dst interface{}, connectServerArgs ...interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
+func QueryWithTimeout(timeout time.Duration, query string, dst interface{}, connectServerArgs ...interface{}) error {
 	errChan := make(chan error, 1)
+
 	go func() {
 		errChan <- wmi.Query(query, dst, connectServerArgs...)
 	}()
 
 	select {
-	case <-ctx.Done():
-		return ctx.Err()
+	case <-time.After(timeout):
+		return fmt.Errorf("wmiutil: query timedout")
 	case err := <-errChan:
 		return err
 	}
