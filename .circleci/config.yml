@@ -20,12 +20,7 @@ jobs:
       - checkout
       # Build binaries
       # All windows related build/singning stuff
-      - run: ci
-      # After everything went fine, publish the release and keep the --pre-release flag if needed
-      - run:
-          shell: /bin/bash
-          command: |
-            
+      - run: make ci
 
   goreleasse-test:
     docker:
