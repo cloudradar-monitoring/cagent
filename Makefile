@@ -10,16 +10,35 @@ BINARY_NAME=cagent
 all: test build
 build: 
 	$(GOBUILD) -o $(BINARY_NAME) -v ./cmd/cagent/...
+
 test: 
 	$(GOTEST) -v ./...
+
 clean: 
 	$(GOCLEAN)
 	rm -f $(BINARY_NAME)
 	# rm -f $(BINARY_UNIX)
+
 run:
 	$(GOBUILD) -o $(BINARY_NAME) -v ./cmd/cagent/...
 	./$(BINARY_NAME)
-windows-sign-ci:
+
+ci: goreleaser-rm-dist windows-sign publish-release
+
+goreleaser-rm-dist:
+	goreleaser --rm-dist
+
+goreleaser-snapshot:
+	goreleaser --snapshot
+
+publish-release:
+	if [[ ${CIRCLE_TAG} =~ -{1}((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$ ]] ; then
+		github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --pre-release 
+	else
+		github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG}
+	fi
+
+windows-sign:
 	# Create remote build dir
 	ssh -i /tmp/id_win_ssh -p 24481 -oStrictHostKeyChecking=no hero@144.76.9.139 mkdir -p /cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/dist
 	# Copy exe files to Windows VM for bundingling and signing

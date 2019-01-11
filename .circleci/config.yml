@@ -7,11 +7,11 @@ jobs:
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       - checkout
-      - run: go test $(go list ./... | grep -v /vendor/)
+      - run: make test
 
   gorelease:
     docker:
-      - image: cloudradario/go-build:0.0.7
+      - image: cloudradario/go-build:0.0.8
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       # Setup our ssh key from env var to be able to connect to Windows VM
@@ -19,26 +19,21 @@ jobs:
       - run: chmod 0600 /tmp/id_win_ssh
       - checkout
       # Build binaries
-      - run: goreleaser --rm-dist
       # All windows related build/singning stuff
-      - run: make windows-sign-ci
+      - run: ci
       # After everything went fine, publish the release and keep the --pre-release flag if needed
       - run:
           shell: /bin/bash
           command: |
-            if [[ ${CIRCLE_TAG} =~ -{1}((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$ ]] ; then
-              github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --pre-release 
-            else
-              github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG}
-            fi
+            
 
   goreleasse-test:
     docker:
-      - image: cloudradario/go-build:0.0.6
+      - image: cloudradario/go-build:0.0.8
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       - checkout
-      - run: goreleaser --snapshot
+      - run: make goreleaser-snapshot
 
 workflows:
   version: 2
