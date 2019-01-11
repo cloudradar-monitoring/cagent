@@ -33,10 +33,10 @@ goreleaser-snapshot:
 
 publish-release:
 	# After everything went fine, publish the release and keep the --pre-release flag if needed
-	if [[ ${CIRCLE_TAG} =~ -{1}((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$ ]] ; then
-		github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --pre-release 
-	else
-		github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG}
+	if [[ ${CIRCLE_TAG} =~ -{1}((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$ ]] ; then \
+		github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --pre-release \
+	else \
+		github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} \
 	fi
 
 windows-sign:
