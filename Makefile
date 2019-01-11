@@ -19,7 +19,7 @@ clean:
 run:
 	$(GOBUILD) -o $(BINARY_NAME) -v ./cmd/cagent/...
 	./$(BINARY_NAME)
-ci:
+windows-sign-ci:
 	# Create remote build dir
 	ssh -i /tmp/id_win_ssh -p 24481 -oStrictHostKeyChecking=no hero@144.76.9.139 mkdir -p /cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/dist
 	# Copy exe files to Windows VM for bundingling and signing

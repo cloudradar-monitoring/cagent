@@ -3,7 +3,7 @@ version: 2
 jobs:
   test:
     docker:
-      - image: cloudradario/go-build:0.0.6
+      - image: cloudradario/go-build:0.0.8
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       - checkout
@@ -20,15 +20,8 @@ jobs:
       - checkout
       # Build binaries
       - run: goreleaser --rm-dist
-      # Since goreleaser can't handle pre-releases as we need it we mark it later as pre-release using github-release
-      - run:
-          shell: /bin/bash
-          command: |
-            if [[ ${CIRCLE_TAG} =~ -{1}((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$ ]] ; then
-              github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --draft --pre-release
-            fi
-      # windows build related tasks
-      - run: make ci
+      # All windows related build/singning stuff
+      - run: make windows-sign-ci
       # After everything went fine, publish the release and keep the --pre-release flag if needed
       - run:
           shell: /bin/bash
