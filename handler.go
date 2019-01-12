@@ -57,8 +57,14 @@ func (ca *Cagent) TestHub() error {
 		return fmt.Errorf("please set the hub_url config param")
 	}
 
-	if _, err := url.Parse(ca.Config.HubURL); err != nil {
+	var u *url.URL
+	var err error
+	if u, err = url.Parse(ca.Config.HubURL); err != nil {
 		return fmt.Errorf("can't parse hub_url: %s", err.Error())
+	}
+
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("wrong scheme: hub_url must start with 'https' or 'http'")
 	}
 
 	ca.initHubHTTPClient()
