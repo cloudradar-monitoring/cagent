@@ -158,12 +158,12 @@ func windowsShowSettingsUI(ca *cagent.Cagent) {
 	}
 	exPath := filepath.Dir(ex)
 
-	ui.SuccessIcon, err = walk.NewIconFromFile(filepath.Join(exPath,"resources", "success.ico"))
+	ui.SuccessIcon, err = walk.NewIconFromFile(filepath.Join(exPath, "resources", "success.ico"))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	ui.ErrorIcon, err = walk.NewIconFromFile(filepath.Join(exPath,"resources", "error.ico"))
+	ui.ErrorIcon, err = walk.NewIconFromFile(filepath.Join(exPath, "resources", "error.ico"))
 	if err != nil {
 		log.Fatal(err)
 	}
