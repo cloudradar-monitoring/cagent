@@ -75,7 +75,7 @@ func handleToastFeedback(ca *cagent.Cagent, cfgPath string) {
 
 	switch os.Args[1] {
 	case urlScheme + ":settings":
-		ShowUI(ca)
+		windowsShowSettingsUI(ca)
 	case urlScheme + ":test":
 		toastCmdTest(ca)
 	case urlScheme + ":config":

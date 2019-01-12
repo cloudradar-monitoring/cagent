@@ -181,7 +181,7 @@ func handleFlagPrintConfig(printConfig bool, cfg *cagent.Config) {
 
 func handleFlagSettings(settingsUI *bool, ca *cagent.Cagent) {
 	if settingsUI != nil && *settingsUI {
-		ShowUI(ca)
+		windowsShowSettingsUI(ca)
 		os.Exit(0)
 	}
 }
@@ -427,7 +427,6 @@ func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 		return
 	}
 
-	ShowUI(ca)
 	err := ca.TestHub()
 	if err != nil {
 		if runtime.GOOS == "windows" {

@@ -148,7 +148,7 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 	ui.StatusBar.SetIcon(ui.SuccessIcon)
 }
 
-func ShowUI(ca *cagent.Cagent) {
+func windowsShowSettingsUI(ca *cagent.Cagent) {
 	ui := UI{ca: ca}
 
 	var err error
