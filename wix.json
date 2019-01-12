@@ -22,15 +22,15 @@
     "guid": "36ceeac6-4c99-45f9-91f2-645b066fa27e",
     "items": [
       {
-        "name": "Cagent – test the connection",
-        "description": "Test the connection to Cagent HUB",
+        "name": "Cagent – open settings",
+        "description": "Opens the settings UI",
         "target": "[INSTALLDIR]\\cagent.exe",
         "wdir": "INSTALLDIR",
-        "arguments": "-t"
+        "arguments": "cagent:settings"
       },
       {
         "name": "Cagent – open config",
-        "description": "Opens the config",
+        "description": "Edit the config via notepad",
         "target": "[INSTALLDIR]\\cagent.exe",
         "wdir": "INSTALLDIR",
         "arguments": "cagent:config"

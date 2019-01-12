@@ -58,6 +58,7 @@ func main() {
 
 	var serviceInstallUserPtr *string
 	var serviceInstallPtr *bool
+	var settingsPtr *bool
 
 	// Setup flag pointers
 	outputFilePtr := flag.String("o", "", "file to write the results (default ./results.out)")
@@ -68,6 +69,11 @@ func main() {
 	serviceUninstallPtr := flag.Bool("u", false, fmt.Sprintf("stop and uninstall the system service(%s)", systemManager.String()))
 	printConfigPtr := flag.Bool("p", false, "print the active config")
 	testConfigPtr := flag.Bool("t", false, "test the HUB config")
+
+	if runtime.GOOS == "windows" {
+		settingsPtr = flag.Bool("x", false, "open the settings UI")
+	}
+
 	versionPtr := flag.Bool("version", false, "show the cagent version")
 
 	// some OS specific flags
@@ -101,9 +107,11 @@ func main() {
 		log.Fatalf("Failed to handle cagent configuration: %s", err.Error())
 	}
 
-	ca := cagent.New(cfg, version)
+	ca := cagent.New(cfg, *cfgPathPtr, version)
 
 	handleFlagPrintConfig(*printConfigPtr, cfg)
+
+	handleFlagSettings(settingsPtr, ca)
 
 	setDefaultLogFormatter()
 
@@ -167,6 +175,13 @@ func handleFlagVersion(versionFlag bool) {
 func handleFlagPrintConfig(printConfig bool, cfg *cagent.Config) {
 	if printConfig {
 		fmt.Println(cfg.DumpToml())
+		os.Exit(0)
+	}
+}
+
+func handleFlagSettings(settingsUI *bool, ca *cagent.Cagent) {
+	if settingsUI != nil && *settingsUI {
+		ShowUI(ca)
 		os.Exit(0)
 	}
 }
@@ -412,6 +427,7 @@ func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 		return
 	}
 
+	ShowUI(ca)
 	err := ca.TestHub()
 	if err != nil {
 		if runtime.GOOS == "windows" {

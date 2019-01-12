@@ -46,6 +46,25 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:fca53945eb13b37a6b4fe26be569c634985be1dc55734c6f0e508c76daa40941"
+  name = "github.com/lxn/walk"
+  packages = [
+    ".",
+    "declarative",
+  ]
+  pruneopts = "UT"
+  revision = "6d09625fb5d5f545a76a726c7eb85a1303806c85"
+
+[[projects]]
+  branch = "master"
+  digest = "1:a65caa49a129fb2fc74981bfcd815cba09ea1e67cabe8130fe14be2751b93c81"
+  name = "github.com/lxn/win"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "a7f87360b10eafe73bd3ff01db16976fe7560fbf"
+
+[[projects]]
+  branch = "master"
   digest = "1:0e1e5f960c58fdc677212fcc70e55042a0084d367623e51afbdb568963832f5d"
   name = "github.com/nu7hatch/gouuid"
   packages = ["."]
@@ -140,6 +159,14 @@
   revision = "4910a1d54f876d7b22162a85f4d066d3ee649450"
 
 [[projects]]
+  digest = "1:5d3e23515e7916c152cc665eda0f7eaf6fdf8fdfe7c3dbac97049bcbd649b33f"
+  name = "gopkg.in/Knetic/govaluate.v3"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "d216395917cc49052c7c7094cf57f09657ca08a8"
+  version = "v3.0.0"
+
+[[projects]]
   branch = "v1"
   digest = "1:b71ccd8615521db4ea2f9381f55780a1312654f5d8431d2e58eca51c74110de2"
   name = "gopkg.in/toast.v1"
@@ -155,6 +182,8 @@
     "github.com/go-ole/go-ole",
     "github.com/go-ole/go-ole/oleutil",
     "github.com/kardianos/service",
+    "github.com/lxn/walk",
+    "github.com/lxn/walk/declarative",
     "github.com/pkg/errors",
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/disk",

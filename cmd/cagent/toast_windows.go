@@ -35,8 +35,8 @@ func sendErrorNotification(title, message string) error {
 		Message:  message,
 		Duration: toast.Long, // last for 25sec
 		Actions: []toast.Action{
-			{"protocol", "Test again", "cagent:test"},
-			{"protocol", "How to fix?", "https://kb.cloudradar.io/books/configuring-hosts/page/installing-agents#bkmrk-potential-problems-a"},
+			//	{"protocol", "Test again", "cagent:test"},
+			{"protocol", "Open settings", "cagent:settings"},
 		},
 	}
 
@@ -74,6 +74,8 @@ func handleToastFeedback(ca *cagent.Cagent, cfgPath string) {
 	}
 
 	switch os.Args[1] {
+	case urlScheme + ":settings":
+		ShowUI(ca)
 	case urlScheme + ":test":
 		toastCmdTest(ca)
 	case urlScheme + ":config":

@@ -57,6 +57,10 @@ func (ca *Cagent) TestHub() error {
 		return fmt.Errorf("please set the hub_url config param")
 	}
 
+	if _, err := url.Parse(ca.Config.HubURL); err != nil {
+		return fmt.Errorf("can't parse hub_url: %s", err.Error())
+	}
+
 	ca.initHubHTTPClient()
 	req, err := http.NewRequest("HEAD", ca.Config.HubURL, nil)
 	if err != nil {
