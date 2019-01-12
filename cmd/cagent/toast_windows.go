@@ -3,6 +3,7 @@
 package main
 
 import (
+	"github.com/shirou/w32"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -75,6 +76,11 @@ func handleToastFeedback(ca *cagent.Cagent, cfgPath string) {
 
 	switch os.Args[1] {
 	case urlScheme + ":settings":
+		// hide console window
+		console := w32.GetConsoleWindow()
+		if console != 0 {
+			w32.ShowWindow(console, w32.SW_HIDE)
+		}
 		windowsShowSettingsUI(ca)
 	case urlScheme + ":test":
 		toastCmdTest(ca)
