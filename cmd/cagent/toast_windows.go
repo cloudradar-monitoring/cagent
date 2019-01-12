@@ -3,13 +3,13 @@
 package main
 
 import (
-	"github.com/shirou/w32"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 
+	"github.com/shirou/w32"
 	"gopkg.in/toast.v1"
 
 	"github.com/cloudradar-monitoring/cagent"

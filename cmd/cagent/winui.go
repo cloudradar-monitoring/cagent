@@ -8,14 +8,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/cloudradar-monitoring/cagent"
 	"github.com/lxn/walk"
+	. "github.com/lxn/walk/declarative"
 	"github.com/lxn/win"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
 
-	. "github.com/lxn/walk/declarative"
+	"github.com/cloudradar-monitoring/cagent"
 )
 
 func RunDialog(owner walk.Form, icon *walk.Icon, title, text string) (int, error) {
@@ -258,7 +258,7 @@ func windowsShowSettingsUI(ca *cagent.Cagent) {
 func startService(s *mgr.Service) error {
 	err := s.Start("is", "manual-started")
 	if err != nil {
-		return fmt.Errorf("could not start service: %v", err)
+		return err
 	}
 
 	return waitServiceState(s, svc.Status{}, svc.Running, time.Second*15)
@@ -267,7 +267,7 @@ func startService(s *mgr.Service) error {
 func stopService(s *mgr.Service) error {
 	status, err := s.Control(svc.Stop)
 	if err != nil {
-		return fmt.Errorf("could not stop the service: %v", err.Error())
+		return err
 	}
 
 	return waitServiceState(s, status, svc.Stopped, time.Second*15)
