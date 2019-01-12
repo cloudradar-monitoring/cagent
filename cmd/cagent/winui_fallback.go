@@ -7,6 +7,6 @@ import (
 )
 
 // this dumb func exists only for cross-platform compiling, because it was mentioned in the main.go(which is compiling for all platforms)
-func windowsShowUI(ca *cagent.Cagent) {
+func windowsShowSettingsUI(ca *cagent.Cagent) {
 
 }
