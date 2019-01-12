@@ -4,6 +4,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/cloudradar-monitoring/cagent"
@@ -150,14 +152,18 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 
 func windowsShowSettingsUI(ca *cagent.Cagent) {
 	ui := UI{ca: ca}
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	exPath := filepath.Dir(ex)
 
-	var err error
-	ui.SuccessIcon, err = walk.NewIconFromFile("success.ico")
+	ui.SuccessIcon, err = walk.NewIconFromFile(filepath.Join(exPath,"resources", "success.ico"))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	ui.ErrorIcon, err = walk.NewIconFromFile("error.ico")
+	ui.ErrorIcon, err = walk.NewIconFromFile(filepath.Join(exPath,"resources", "error.ico"))
 	if err != nil {
 		log.Fatal(err)
 	}
