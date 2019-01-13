@@ -207,19 +207,17 @@ func handleServiceCommand(ca *cagent.Cagent, check, start, stop, restart bool) {
 		os.Exit(0)
 	}
 
-	if (stop || restart) && (status == service.StatusRunning) {
-		if err = svc.Stop(); (err != nil) && stop {
+	if stop && (status == service.StatusRunning) {
+		if err = svc.Stop(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 
-		if stop {
-			fmt.Println("stopped")
-			os.Exit(0)
-		}
+		fmt.Println("stopped")
+		os.Exit(0)
 	}
 
-	if start || restart {
+	if start {
 		if status == service.StatusRunning {
 			fmt.Println("already")
 			os.Exit(1)
@@ -231,6 +229,16 @@ func handleServiceCommand(ca *cagent.Cagent, check, start, stop, restart bool) {
 		}
 
 		fmt.Println("started")
+		os.Exit(0)
+	}
+
+	if restart {
+		if err = svc.Restart(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		fmt.Println("restarted")
 		os.Exit(0)
 	}
 }
