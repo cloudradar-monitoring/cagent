@@ -59,14 +59,15 @@ func New(cfg *Config, version string) *Cagent {
 
 	ca.SetLogLevel(ca.Config.LogLevel)
 
+	return ca
+}
+
+func (ca *Cagent) Initialize() error {
 	if ca.Config.LogFile != "" {
-		err := addLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
-		if err != nil {
-			log.Error("Can't write logs to file: ", err.Error())
-		}
+		return addLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 	}
 
-	return ca
+	return nil
 }
 
 func (ca *Cagent) SetVersion(version string) {
