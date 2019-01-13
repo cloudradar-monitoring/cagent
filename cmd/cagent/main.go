@@ -113,6 +113,8 @@ func main() {
 
 	handleServiceCommand(ca, *flagServiceStatusPtr, *flagServiceStartPtr, *flagServiceStopPtr, *flagServiceRestartPtr)
 
+	handleFlagTest(*testConfigPtr, ca)
+
 	setDefaultLogFormatter()
 
 	// cagent Initialize must be called handleFlagPrintConfig and handleServiceCommand
@@ -130,7 +132,6 @@ func main() {
 	defer removePidFileIfNeeded(ca, oneRunOnlyModePtr)
 
 	handleToastFeedback(ca, *cfgPathPtr)
-	handleFlagTest(*testConfigPtr, ca)
 
 	if !service.Interactive() {
 		runUnderOsServiceManager(ca)
