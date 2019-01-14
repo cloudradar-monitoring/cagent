@@ -36,7 +36,6 @@ func sendErrorNotification(title, message string) error {
 		Message:  message,
 		Duration: toast.Long, // last for 25sec
 		Actions: []toast.Action{
-			//	{"protocol", "Test again", "cagent:test"},
 			{"protocol", "Open settings", "cagent:settings"},
 		},
 	}
