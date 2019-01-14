@@ -5,7 +5,6 @@ GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 BINARY_NAME=cagent
-# BINARY_UNIX=$(BINARY_NAME)_unix
 
 all: test build
 build: 
@@ -17,7 +16,6 @@ test:
 clean: 
 	$(GOCLEAN)
 	rm -f $(BINARY_NAME)
-	# rm -f $(BINARY_UNIX)
 
 run:
 	$(GOBUILD) -o $(BINARY_NAME) -v ./cmd/cagent/...
@@ -30,6 +28,12 @@ goreleaser-rm-dist:
 
 goreleaser-snapshot:
 	goreleaser --snapshot
+
+vendor:
+	go mod vendor
+
+goimports:
+	goimports -l $$(find . -type f -name '*.go' -not -path "./vendor/*")
 
 windows-sign:
 	# Create remote build dir
@@ -58,7 +62,3 @@ windows-sign:
 	# Add files to Github release
 	github-release upload --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --name "cagent_${CIRCLE_TAG}_Windows_386.msi" --file "/go/src/github.com/cloudradar-monitoring/cagent/dist/cagent_386.msi"
 	github-release upload --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --name "cagent_${CIRCLE_TAG}_Windows_x86_64.msi" --file "/go/src/github.com/cloudradar-monitoring/cagent/dist/cagent_64.msi"
-
-# deps:
-# 				$(GOGET) github.com/markbates/goth
-# 				$(GOGET) github.com/markbates/pop
