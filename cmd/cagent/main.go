@@ -119,11 +119,9 @@ func main() {
 
 	// cagent Initialize must be called handleFlagPrintConfig and handleServiceCommand
 	// to prevent print logger setup error
-	if err = ca.Initialize(); err != nil {
-		if err != nil {
-			log.Error("Can't write logs to file: ", err.Error())
-		}
-	}
+	// if err = ca.Initialize(); err != nil {
+	// 	log.Error("Can't write logs to file: ", err.Error())
+	// }
 
 	// log level set in flag has a precedence. If specified we need to set it ASAP
 	handleFlagLogLevel(ca, *logLevelPtr)
@@ -591,11 +589,18 @@ func getServiceFromFlags(ca *cagent.Cagent, configPath, userName string) (servic
 	return service.New(prg, svcConfig)
 }
 
-func setDefaultLogFormatter() {
+func setDefaultLogFormatter(ca *cagent.Cagent) {
 	tfmt := log.TextFormatter{FullTimestamp: true}
 	if runtime.GOOS == "windows" {
 		tfmt.DisableColors = true
 	}
 
 	log.SetFormatter(&tfmt)
+
+	if ca.Config.LogFile != "" {
+		if err := cagent.AddLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644); err != nil {
+			log.Errorf("Failed to setup log file: %s: %s", ca.Config.PidFile, err.Error())
+		}
+	}
+
 }

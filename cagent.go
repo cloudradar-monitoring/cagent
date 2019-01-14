@@ -62,14 +62,6 @@ func New(cfg *Config, version string) *Cagent {
 	return ca
 }
 
-func (ca *Cagent) Initialize() error {
-	if ca.Config.LogFile != "" {
-		return addLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
-	}
-
-	return nil
-}
-
 func (ca *Cagent) SetVersion(version string) {
 	ca.version = version
 }
