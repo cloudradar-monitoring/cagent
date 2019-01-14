@@ -115,13 +115,7 @@ func main() {
 
 	handleFlagTest(*testConfigPtr, ca)
 
-	setDefaultLogFormatter()
-
-	// cagent Initialize must be called handleFlagPrintConfig and handleServiceCommand
-	// to prevent print logger setup error
-	// if err = ca.Initialize(); err != nil {
-	// 	log.Error("Can't write logs to file: ", err.Error())
-	// }
+	setDefaultLogFormatter(ca)
 
 	// log level set in flag has a precedence. If specified we need to set it ASAP
 	handleFlagLogLevel(ca, *logLevelPtr)
