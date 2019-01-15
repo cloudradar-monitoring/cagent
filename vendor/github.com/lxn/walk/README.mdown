@@ -1,0 +1,94 @@
+About Walk
+==========
+
+Walk is a "Windows Application Library Kit" for the Go Programming Language.
+
+Its primarily useful for Desktop GUI development, but there is some more stuff.
+
+Setup
+=====
+
+Make sure you have a working Go installation.
+See [Getting Started](http://golang.org/doc/install.html)
+
+##### Note
+`Go 1.7.x` doesn't work with walk anymore, Make sure you use `Go 1.8.x` or later.
+
+##### To Install
+Now run `go get github.com/lxn/walk`
+
+Using Walk
+==========
+
+The preferred way to create GUIs with Walk is to use its declarative sub package,
+as illustrated in this small example:
+
+##### `test.go`
+
+```go
+package main
+
+import (
+	"github.com/lxn/walk"
+	. "github.com/lxn/walk/declarative"
+	"strings"
+)
+
+func main() {
+	var inTE, outTE *walk.TextEdit
+
+	MainWindow{
+		Title:   "SCREAMO",
+		MinSize: Size{600, 400},
+		Layout:  VBox{},
+		Children: []Widget{
+			HSplitter{
+				Children: []Widget{
+					TextEdit{AssignTo: &inTE},
+					TextEdit{AssignTo: &outTE, ReadOnly: true},
+				},
+			},
+			PushButton{
+				Text: "SCREAM",
+				OnClicked: func() {
+					outTE.SetText(strings.ToUpper(inTE.Text()))
+				},
+			},
+		},
+	}.Run()
+}
+```
+
+##### Build app
+
+In the directory containing `test.go` run
+
+	go build
+	
+To get rid of the cmd window, instead run
+
+	go build -ldflags="-H windowsgui"
+
+##### Run app
+	
+	test.exe
+	
+##### Sample Output (Windows 7)
+
+![alt tag](http://i.imgur.com/lUrgE2Q.png)
+
+##### More Examples
+There are some [examples](examples) that should get you started.
+
+Program Crashes
+===============
+By default Go uses os threads with small stack sizes of 128KB. If your walk app crashes, it may be due
+to a stack overflow. Until a [better solution is found](https://github.com/golang/go/issues/20975),
+you can work around this by adding
+
+    import _ "runtime/cgo"
+
+somewhere in your program. If you don't have `gcc` installed and on your `PATH`,
+you can alternatively add `-linkmode internal` to the `-ldflags` of your `go build` command like so:
+
+    go build -ldflags="-H windowsgui -linkmode internal"
