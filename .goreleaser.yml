@@ -66,6 +66,10 @@ nfpm:
   - deb
   - rpm
 
+  # Package dependencies
+  dependencies:
+  - dmidecode
+
   # Recommend to install root SSL certificates
   recommends:
   - ca-certificates
