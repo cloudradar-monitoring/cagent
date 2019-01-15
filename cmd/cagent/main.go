@@ -111,7 +111,11 @@ func main() {
 
 	handleFlagPrintConfig(*printConfigPtr, cfg)
 
-	handleServiceCommand(ca, *flagServiceStatusPtr, *flagServiceStartPtr, *flagServiceStopPtr, *flagServiceRestartPtr)
+	if ((serviceInstallPtr == nil) || ((serviceInstallPtr != nil) && (!*serviceInstallPtr))) &&
+		((serviceInstallUserPtr == nil) || ((serviceInstallUserPtr != nil) && (*serviceInstallUserPtr == ""))) &&
+		!*serviceUninstallPtr {
+		handleServiceCommand(ca, *flagServiceStatusPtr, *flagServiceStartPtr, *flagServiceStopPtr, *flagServiceRestartPtr)
+	}
 
 	handleFlagTest(*testConfigPtr, ca)
 
@@ -174,6 +178,10 @@ func handleFlagVersion(versionFlag bool) {
 }
 
 func handleServiceCommand(ca *cagent.Cagent, check, start, stop, restart bool) {
+	if !check && !start && !stop && !restart {
+		return
+	}
+
 	svc, err := getServiceFromFlags(ca, "", "")
 	if err != nil {
 		fmt.Println(err)
