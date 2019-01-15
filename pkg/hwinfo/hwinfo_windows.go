@@ -35,6 +35,7 @@ type win32_PhysicalMemory struct {
 
 type win32_BaseBoard struct {
 	Manufacturer string
+	Product      *string
 	Model        *string
 	SerialNumber string
 }
@@ -137,8 +138,8 @@ func fetchInventory() (map[string]interface{}, error) {
 
 	res["baseboard.manufacturer"] = baseBoard[0].Manufacturer
 	res["baseboard.serial_number"] = baseBoard[0].SerialNumber
-	if baseBoard[0].Model != nil {
-		res["baseboard.model"] = baseBoard[0].Model
+	if baseBoard[0].Product != nil {
+		res["baseboard.model"] = baseBoard[0].Product
 	}
 
 	var ram []win32_PhysicalMemory
