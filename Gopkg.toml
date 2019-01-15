@@ -72,3 +72,7 @@
 [[override]]
   name = "github.com/docker/libnetwork"
   branch = "411d3142b9923e872f5a58fef53ebe9faf1e4dd8"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/lxn/walk"
