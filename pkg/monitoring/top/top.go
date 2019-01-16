@@ -2,10 +2,11 @@ package top
 
 import (
 	"container/ring"
-	"log"
 	"sort"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Process is used to store aggregated load data about an OS process
@@ -47,13 +48,16 @@ type Top struct {
 	LoadTotal1  float64
 	LoadTotal5  float64
 	LoadTotal15 float64
+	isRunning   bool
 	stop        bool
 }
 
 // New returns a new instance of Top struct
 func New() *Top {
 	t := &Top{
-		pList: make(map[string]*Process),
+		pList:     make(map[string]*Process),
+		isRunning: false,
+		stop:      false,
 	}
 
 	return t
@@ -64,6 +68,7 @@ func (t *Top) startMearueProcessLoad(interval time.Duration) {
 	for {
 		// Check if stop was requested
 		if t.stop {
+			t.isRunning = false
 			return
 		}
 
@@ -108,8 +113,13 @@ func (t *Top) startMearueProcessLoad(interval time.Duration) {
 
 // Run starts measuring process load on the system
 func (t *Top) Run() {
-	// Start collecting process info every sec
-	go t.startMearueProcessLoad(time.Second * 1)
+	if !t.isRunning {
+		t.isRunning = true
+		// Start collecting process info every sec
+		go t.startMearueProcessLoad(time.Second * 1)
+	} else {
+		log.Debug("Skipped starting Top because it's already running")
+	}
 }
 
 // Stop signals that load measuring should be stopped

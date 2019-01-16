@@ -312,8 +312,8 @@ func (ca *Cagent) RunOnce(outputFile *os.File) error {
 
 func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, cfg *Config) {
 	// Start process utilisation monitoringi in the background
-	ca.Top.Run()
-	defer ca.Top.Stop()
+	ca.processWatcher.Run()
+	defer ca.processWatcher.Stop()
 
 	// go func() {
 	// 	for {
