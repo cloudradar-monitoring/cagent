@@ -43,13 +43,14 @@ type ProcessInfo struct {
 
 // Top holds a map with information about process loads
 type Top struct {
-	pList       map[string]*Process
-	pListMtx    sync.RWMutex
-	LoadTotal1  float64
-	LoadTotal5  float64
-	LoadTotal15 float64
-	isRunning   bool
-	stop        bool
+	pList        map[string]*Process
+	pListMtx     sync.RWMutex
+	LoadTotal1   float64
+	LoadTotal5   float64
+	LoadTotal15  float64
+	isRunning    bool
+	isRunningMtx sync.Mutex
+	stop         bool
 }
 
 // New returns a new instance of Top struct
@@ -113,6 +114,7 @@ func (t *Top) startMearueProcessLoad(interval time.Duration) {
 
 // Run starts measuring process load on the system
 func (t *Top) Run() {
+	t.isRunningMtx.Lock()
 	if !t.isRunning {
 		t.isRunning = true
 		// Start collecting process info every sec
@@ -120,6 +122,7 @@ func (t *Top) Run() {
 	} else {
 		log.Debug("Skipped starting Top because it's already running")
 	}
+	t.isRunningMtx.Unlock()
 }
 
 // Stop signals that load measuring should be stopped
