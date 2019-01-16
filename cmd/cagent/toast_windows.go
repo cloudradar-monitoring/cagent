@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/shirou/w32"
 	"gopkg.in/toast.v1"
 
 	"github.com/cloudradar-monitoring/cagent"
@@ -35,8 +36,7 @@ func sendErrorNotification(title, message string) error {
 		Message:  message,
 		Duration: toast.Long, // last for 25sec
 		Actions: []toast.Action{
-			{"protocol", "Test again", "cagent:test"},
-			{"protocol", "How to fix?", "https://kb.cloudradar.io/books/configuring-hosts/page/installing-agents#bkmrk-potential-problems-a"},
+			{"protocol", "Open settings", "cagent:settings"},
 		},
 	}
 
@@ -74,6 +74,13 @@ func handleToastFeedback(ca *cagent.Cagent, cfgPath string) {
 	}
 
 	switch os.Args[1] {
+	case urlScheme + ":settings":
+		// hide console window
+		console := w32.GetConsoleWindow()
+		if console != 0 {
+			w32.ShowWindow(console, w32.SW_HIDE)
+		}
+		windowsShowSettingsUI(ca)
 	case urlScheme + ":test":
 		toastCmdTest(ca)
 	case urlScheme + ":config":
