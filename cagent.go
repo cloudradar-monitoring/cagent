@@ -17,7 +17,8 @@ import (
 )
 
 type Cagent struct {
-	Config *Config
+	Config         *Config
+	ConfigLocation string
 
 	// internal use
 	hubHTTPClient *http.Client
@@ -35,11 +36,12 @@ type Cagent struct {
 	version string
 }
 
-func New(cfg *Config, version string) *Cagent {
+func New(cfg *Config, cfgPath string, version string) *Cagent {
 	ca := &Cagent{
-		Config:     cfg,
-		version:    version,
-		vmWatchers: make(map[string]vmstattypes.Provider),
+		Config:         cfg,
+		ConfigLocation: cfgPath,
+		version:        version,
+		vmWatchers:     make(map[string]vmstattypes.Provider),
 	}
 
 	if rootCertsPath != "" {

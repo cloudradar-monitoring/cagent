@@ -6,12 +6,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+//todo: make all JSON keys lowercase
 type ProcStat struct {
 	PID       int
 	ParentPID int `json:"parent_PID"`
 	Name      string
 	Cmdline   string
 	State     string
+	Container string `json:",omitempty"`
 }
 
 // Gets possible process states based on the OS

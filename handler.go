@@ -17,6 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/hwinfo"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 )
@@ -56,6 +57,16 @@ func (ca *Cagent) initHubHTTPClient() {
 func (ca *Cagent) TestHub() error {
 	if ca.Config.HubURL == "" {
 		return fmt.Errorf("please set the hub_url config param")
+	}
+
+	var u *url.URL
+	var err error
+	if u, err = url.Parse(ca.Config.HubURL); err != nil {
+		return fmt.Errorf("can't parse hub_url: %s", err.Error())
+	}
+
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("wrong scheme: hub_url must start with 'https' or 'http'")
 	}
 
 	ca.initHubHTTPClient()
@@ -244,6 +255,14 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 	}
 
 	measurements = measurements.AddWithPrefix("services.", servicesList)
+
+	containersList, err := docker.ListContainers()
+	if err != nil {
+		// no need to log because already done inside ListContainers()
+		errs = append(errs, err.Error())
+	}
+
+	measurements = measurements.AddWithPrefix("docker.", containersList)
 
 	if len(errs) == 0 {
 		measurements["cagent.success"] = 1

@@ -10,12 +10,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 )
 
 var errorProcessTerminated = fmt.Errorf("Process was terminated")
@@ -24,6 +27,8 @@ type procStatus struct {
 	PPID  int
 	State string
 }
+
+var dockerContainerIDRE = regexp.MustCompile(`(?m)/docker/([a-f0-9]*)$`)
 
 func processes() ([]ProcStat, error) {
 	if runtime.GOOS == "linux" {
@@ -105,6 +110,23 @@ func processesFromProc() ([]ProcStat, error) {
 			log.Errorf("[PROC] failed to read cmdline(%s): %s", cmdLineFilepath, err.Error())
 		} else if err == nil {
 			stat.Cmdline = strings.Replace(string(bytes.TrimRight(cmdline, "\x00")), "\x00", " ", -1)
+		}
+
+		cgroupFilepath := getHostProc() + "/" + pidString + "/cgroup"
+		cgroup, err := readProcFile(cgroupFilepath)
+		if err != nil && err != errorProcessTerminated {
+			log.Errorf("[PROC] failed to read cgroup(%s): %s", cgroupFilepath, err.Error())
+		} else if err == nil {
+			reParts := dockerContainerIDRE.FindStringSubmatch(string(cgroup))
+			if len(reParts) > 0 {
+				containerID := reParts[1]
+				containerName, err := docker.ContainerNameByID(containerID)
+				if err != nil {
+					log.Errorf("[PROC] failed to read docker container name by id(%s): %s", containerID, err.Error())
+				} else {
+					stat.Container = containerName
+				}
+			}
 		}
 
 		procs = append(procs, stat)
