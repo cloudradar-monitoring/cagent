@@ -29,9 +29,6 @@ goreleaser-rm-dist:
 goreleaser-snapshot:
 	goreleaser --snapshot
 
-vendor:
-	go mod vendor
-
 goimports:
 	goimports -l $$(find . -type f -name '*.go' -not -path "./vendor/*")
 
