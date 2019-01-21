@@ -29,6 +29,14 @@
   version = "1.0.0"
 
 [[projects]]
+  digest = "1:98a97652081e7436576a129bbf9e1d6a20f8a884723cab8d2f1a8067e6822bc7"
+  name = "github.com/cloudradar-monitoring/dmidecode"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "adf43c6a76d582d676e289561c95111accf5ea81"
+  version = "0.0.2"
+
+[[projects]]
   branch = "master"
   digest = "1:e48c63e818c67fbf3d7afe20bba33134ab1a5bf384847385384fd027652a5a96"
   name = "github.com/containerd/continuity"
@@ -317,6 +325,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/StackExchange/wmi",
+    "github.com/cloudradar-monitoring/dmidecode",
     "github.com/fsouza/go-dockerclient",
     "github.com/go-ole/go-ole",
     "github.com/go-ole/go-ole/oleutil",
