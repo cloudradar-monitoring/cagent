@@ -27,7 +27,7 @@
         "target": "[INSTALLDIR]\\cagent.exe",
         "wdir": "INSTALLDIR",
         "arguments": "cagent:settings"
-      },
+      }
     ]
   },
   "hooks": [
