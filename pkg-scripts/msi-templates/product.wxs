@@ -16,7 +16,7 @@
             Manufacturer="{{.Company}}"
             Language="1033">
 
-      <Package InstallerVersion="200" Compressed="yes" Comments="Windows Installer Package"/>
+      <Package InstallScope="perMachine" InstallerVersion="200" Compressed="yes" Comments="Windows Installer Package"/>
 
       <Media Id="1" Cabinet="product.cab" EmbedCab="yes"/>
 
@@ -115,7 +115,7 @@
                         {{end}}
                          </Shortcut>
                 {{end}}
-                  <RegistryValue Root="HKCU"
+                  <RegistryValue Root="HKLM"
                                                       Key="Software\{{$.Company}}\{{$.Product}}"
                                                       Name="installed0"
                                                       Type="integer" Value="1" KeyPath="yes"/>
@@ -167,6 +167,7 @@
          <!-- Define the installer UI -->
          <UIRef Id="WixUI_HK" />
       </UI>
+      <Property Id="ALLUSERS" Value="1"/>
       <Property Id="INSTALLDIR" Secure="yes"/>
       <Property Id="HUB_URL" Secure="yes"/>
       <Property Id="HUB_USER" Secure="yes"/>
