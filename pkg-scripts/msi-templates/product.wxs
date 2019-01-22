@@ -167,7 +167,6 @@
          <!-- Define the installer UI -->
          <UIRef Id="WixUI_HK" />
       </UI>
-      <Property Id="ALLUSERS" Value="1"/>
       <Property Id="INSTALLDIR" Secure="yes"/>
       <Property Id="HUB_URL" Secure="yes"/>
       <Property Id="HUB_USER" Secure="yes"/>
