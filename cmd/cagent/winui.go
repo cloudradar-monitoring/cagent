@@ -18,7 +18,7 @@ import (
 	"github.com/cloudradar-monitoring/cagent"
 )
 
-func RunDialog(owner walk.Form, icon *walk.Icon, title, text string) (int, error) {
+func RunDialog(owner walk.Form, icon *walk.Icon, title, text string, callback func()) (int, error) {
 	var dlg *walk.Dialog
 	var acceptPB *walk.PushButton
 	font := Font{PointSize: 12, Family: "Segoe UI"}
@@ -56,6 +56,9 @@ func RunDialog(owner walk.Form, icon *walk.Icon, title, text string) (int, error
 						Text:     "OK",
 						OnClicked: func() {
 							dlg.Accept()
+							if callback != nil {
+								callback()
+							}
 						},
 					},
 				},
@@ -93,7 +96,7 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 		ui.StatusBar.SetIcon(ui.ErrorIcon)
 
 		if !testOnly {
-			RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", err.Error())
+			RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", err.Error(), nil)
 		}
 		return
 	}
@@ -111,7 +114,7 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 	ui.SaveButton.SetText("Saving...")
 	err = cagent.SaveConfigFile(ui.ca.Config, ui.ca.ConfigLocation)
 	if err != nil {
-		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to save config: "+err.Error())
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to save config: "+err.Error(), nil)
 		return
 	}
 
@@ -119,14 +122,14 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 
 	m, err := mgr.Connect()
 	if err != nil {
-		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to connect to Windows Service Manager: "+err.Error())
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to connect to Windows Service Manager: "+err.Error(), nil)
 		return
 	}
 	defer m.Disconnect()
 
 	s, err := m.OpenService("cagent")
 	if err != nil {
-		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to connect to find 'cagent' service: "+err.Error())
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to connect to find 'cagent' service: "+err.Error(), nil)
 		return
 	}
 	defer s.Close()
@@ -134,23 +137,24 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 	ui.SaveButton.SetText("Stopping the service...")
 	err = stopService(s)
 	if err != nil {
-		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to stop 'cagent' service: "+err.Error())
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to stop 'cagent' service: "+err.Error(), nil)
 		return
 	}
 
 	ui.SaveButton.SetText("Starting the service...")
 	err = startService(s)
 	if err != nil {
-		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to start 'cagent' service: "+err.Error())
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to start 'cagent' service: "+err.Error(), nil)
 		return
 	}
 
-	RunDialog(ui.MainWindow, ui.SuccessIcon, "Success", message+"Service restarted and all changes applied!")
+	RunDialog(ui.MainWindow, ui.SuccessIcon, "Success", message+"Service restarted and all changes applied!", nil)
 	ui.StatusBar.SetText("Status: successfully connected to the HUB")
 	ui.StatusBar.SetIcon(ui.SuccessIcon)
 }
 
 func windowsShowSettingsUI(ca *cagent.Cagent) {
+
 	ui := UI{ca: ca}
 	ex, err := os.Executable()
 	if err != nil {
@@ -246,6 +250,7 @@ func windowsShowSettingsUI(ca *cagent.Cagent) {
 	}.Create()
 
 	go func() {
+		ui.ShowAdminAlert()
 		ui.TestSaveReload(true)
 	}()
 
@@ -288,4 +293,18 @@ func waitServiceState(s *mgr.Service, currentStatus svc.Status, state svc.State,
 	}
 
 	return nil
+}
+
+func (ui *UI) ShowAdminAlert() {
+	if !checkAdmin() {
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", "Please run as administrator", func() { os.Exit(1) })
+	}
+}
+
+func checkAdmin() bool {
+	_, err := os.Open("\\\\.\\PHYSICALDRIVE0")
+	if err != nil {
+		return false
+	}
+	return true
 }
