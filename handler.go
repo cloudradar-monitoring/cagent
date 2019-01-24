@@ -147,7 +147,6 @@ func (ca *Cagent) PostResultsToHub(result Result) error {
 
 func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 	var errs []string
-
 	var measurements = make(MeasurementsMap)
 
 	cpum, err := ca.CPUWatcher().Results()
