@@ -181,7 +181,7 @@ func handleFlagPrintConfig(printConfig bool, cfg *cagent.Config) {
 
 func handleFlagSettings(settingsUI *bool, ca *cagent.Cagent) {
 	if settingsUI != nil && *settingsUI {
-		windowsShowSettingsUI(ca)
+		windowsShowSettingsUI(ca, false)
 		os.Exit(0)
 	}
 }

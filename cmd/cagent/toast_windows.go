@@ -80,7 +80,14 @@ func handleToastFeedback(ca *cagent.Cagent, cfgPath string) {
 		if console != 0 {
 			w32.ShowWindow(console, w32.SW_HIDE)
 		}
-		windowsShowSettingsUI(ca)
+		windowsShowSettingsUI(ca, false)
+	case urlScheme + ":install":
+		// hide console window
+		console := w32.GetConsoleWindow()
+		if console != 0 {
+			w32.ShowWindow(console, w32.SW_HIDE)
+		}
+		windowsShowSettingsUI(ca, true)
 	case urlScheme + ":test":
 		toastCmdTest(ca)
 	case urlScheme + ":config":

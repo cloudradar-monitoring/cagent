@@ -75,9 +75,12 @@ type UI struct {
 	StatusBar   *walk.StatusBarItem
 	SaveButton  *walk.ToolButton
 
-	ca *cagent.Cagent
+	installationMode bool
+	ca               *cagent.Cagent
 }
 
+// TestSaveReload trying to test the HUB address and credentials from the config
+// if testOnly is true do not show alert message about the status(used to test the existed config on start)
 func (ui *UI) TestSaveReload(testOnly bool) {
 	// it will become messy if we will handle all UI errors here
 	// just ignore them and go further, because next steps don't depend on previous ones
@@ -102,8 +105,12 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 	}
 
 	if testOnly {
-		// testOnly runs on start with the current config
-		// so if test is pass we should set the status
+		// in case we running this inside msi installer, just exit
+		if ui.installationMode {
+			os.Exit(0)
+		}
+
+		// otherwise - provide a feedback for user and set the status
 		ui.StatusBar.SetText("Status: successfully connected to the HUB")
 		ui.StatusBar.SetIcon(ui.SuccessIcon)
 		return
@@ -148,14 +155,23 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 		return
 	}
 
-	RunDialog(ui.MainWindow, ui.SuccessIcon, "Success", message+"Service restarted and all changes applied!", nil)
+	var callback func()
+
+	if ui.installationMode {
+		callback = func() {
+			os.Exit(0)
+		}
+	}
+
+	RunDialog(ui.MainWindow, ui.SuccessIcon, "Success", message+"Service restarted and all changes applied!", callback)
 	ui.StatusBar.SetText("Status: successfully connected to the HUB")
 	ui.StatusBar.SetIcon(ui.SuccessIcon)
 }
 
-func windowsShowSettingsUI(ca *cagent.Cagent) {
-
-	ui := UI{ca: ca}
+// windowsShowSettingsUI draws a window and wait until it will be closed closed
+// when installationMode is true close the window after successful test&save
+func windowsShowSettingsUI(ca *cagent.Cagent, installationMode bool) {
+	ui := UI{ca: ca, installationMode: installationMode}
 	ex, err := os.Executable()
 	if err != nil {
 		panic(err)
