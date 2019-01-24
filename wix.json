@@ -18,20 +18,8 @@
     "vars": [
     ]
   },
-  "shortcuts": {
-    "guid": "36ceeac6-4c99-45f9-91f2-645b066fa27e",
-    "items": [
-      {
-        "name": "Cagent",
-        "description": "Opens the settings UI",
-        "target": "[INSTALLDIR]\\cagent.exe",
-        "wdir": "INSTALLDIR",
-        "arguments": "cagent:settings"
-      }
-    ]
-  },
   "hooks": [
-    {"when": "install", "command": "[INSTALLDIR]\\cagent.exe -x"}
+    {"when": "install", "command": "[INSTALLDIR]\\cagent.exe cagent:settings"}
   ],
   "choco": {
     "description": "Monitoring proxy for agentless monitoring of subnets",

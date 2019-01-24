@@ -43,6 +43,9 @@
 
             </RegistryKey>
         </Component>
+        <Directory Id="ProgramMenuFolder">
+            <Directory Id="ApplicationProgramsFolder" Name="Cagent"/>
+        </Directory>
         <Directory Id="$(var.Program_Files)">
             <Directory Id="INSTALLDIR" Name="{{.Product}}">
                {{if gt (.Files.Items | len) 0}}
@@ -54,8 +57,17 @@
                          <ServiceControl Id="StartService" Name="Cagent" Stop="both" Start="install" Remove="uninstall" Wait="yes">
                                <ServiceArgument />
                          </ServiceControl>
+                         <File Id="ApplicationFile{{$i}}" Source="{{$e}}" KeyPath="yes">
+                             <Shortcut Id="CagentShortcut"
+                                     Name="Cagent"
+                                     Arguments="cagent:settings"
+                                     Description="Opens the settings UI"
+                                     Directory="ApplicationProgramsFolder" />
+                         </File>
+                     {{else}}
+                     <File Id="ApplicationFile{{$i}}" Source="{{$e}}" />
                      {{end}}
-               	     <File Id="ApplicationFile{{$i}}" Source="{{$e}}"/>
+
 		         {{end}}
                </Component>
                {{end}}
@@ -93,38 +105,6 @@
                       System="yes" />
            </Component>
 
-         {{if gt (.Shortcuts.Items | len) 0}}
-         <Directory Id="ProgramMenuFolder">
-            <Directory Id="ProgramMenuSubfolder" Name="{{.Product}}">
-               <Component Id="ApplicationShortcuts" Guid="{{.Shortcuts.GUID}}">
-               {{range $i, $e := .Shortcuts.Items}}
-                     <Shortcut Id="ApplicationShortcut{{$i}}"
-                        Name="{{$e.Name}}"
-                        Description="{{$e.Description}}"
-                        Target="{{$e.Target}}"
-                        WorkingDirectory="{{$e.WDir}}"
-                        {{if gt ($e.Arguments | len) 0}}
-                        Arguments="{{$e.Arguments}}"
-                        {{end}}
-                        >
-                        {{if eq $i 0}}
-                            <ShortcutProperty Key="System.AppUserModel.ID" Value="{{$.Company}}.{{$.Product}}" />
-                        {{end}}
-                        {{if gt ($e.Icon | len) 0}}
-                        <Icon Id="Icon{{$i}}" SourceFile="{{$e.Icon}}" />
-                        {{end}}
-                         </Shortcut>
-                {{end}}
-                  <RegistryValue Root="HKLM"
-                                                      Key="Software\{{$.Company}}\{{$.Product}}"
-                                                      Name="installed0"
-                                                      Type="integer" Value="1" KeyPath="yes"/>
-                <RemoveFolder Id="ProgramMenuSubfolder" On="uninstall"/>
-               </Component>
-            </Directory>
-         </Directory>
-         {{end}}
-
       </Directory>
 
       {{range $i, $e := .InstallHooks}}
@@ -150,9 +130,6 @@
          <ComponentRef Id="ENVS"/>
          {{if gt (.Files.Items | len) 0}}
          <ComponentRef Id="ApplicationFiles"/>
-         {{end}}
-         {{if gt (.Shortcuts.Items | len) 0}}
-         <ComponentRef Id="ApplicationShortcuts"/>
          {{end}}
          {{range $i, $e := .Directories}}
          <ComponentGroupRef Id="AppFiles{{$i}}" />
