@@ -147,6 +147,7 @@ func (ca *Cagent) PostResultsToHub(result Result) error {
 
 func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 	var errs []string
+
 	var measurements = make(MeasurementsMap)
 
 	cpum, err := ca.CPUWatcher().Results()
@@ -221,9 +222,9 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 	})
 
 	ca.hwInventory.Do(func() {
-		if hwInfo, err := hwinfo.Inventory(); err != nil {
+		if hwInfo, err := hwinfo.Inventory(); err != nil && err != hwinfo.ErrNotPresent {
 			errs = append(errs, err.Error())
-		} else {
+		} else if err == nil {
 			measurements = measurements.AddInnerWithPrefix("hw.inventory", hwInfo)
 		}
 	})
@@ -266,6 +267,7 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 
 	if len(errs) == 0 {
 		measurements["cagent.success"] = 1
+
 		return measurements, nil
 	}
 

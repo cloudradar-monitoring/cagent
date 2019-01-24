@@ -11,7 +11,20 @@ import (
 	"github.com/cloudradar-monitoring/dmidecode"
 )
 
+func isCommandAvailable(name string) bool {
+	cmd := exec.Command("/bin/sh", "-c", "command -v "+name)
+	if err := cmd.Run(); err != nil {
+		return false
+	}
+	return true
+}
+
 func fetchInventory() (map[string]interface{}, error) {
+	// check dmidecode is present in the system
+	if !isCommandAvailable("dmidecode") {
+		return nil, ErrNotPresent
+	}
+
 	// expecting /etc/sudoers.d/cagent-dmidecode is present
 	cmd := exec.Command("/bin/sh", "-c", "sudo dmidecode")
 
