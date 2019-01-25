@@ -121,7 +121,7 @@ func processesFromProc() ([]ProcStat, error) {
 			if len(reParts) > 0 {
 				containerID := reParts[1]
 				containerName, err := docker.ContainerNameByID(containerID)
-				if err != nil {
+				if err != nil && err != docker.ErrorNotImplementedForOS {
 					log.Errorf("[PROC] failed to read docker container name by id(%s): %s", containerID, err.Error())
 				} else {
 					stat.Container = containerName

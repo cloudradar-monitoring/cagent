@@ -7,5 +7,5 @@ func ListContainers() (map[string]interface{}, error) {
 }
 
 func ContainerNameByID(_ string) (string, error) {
-	return "", nil
+	return "", ErrorNotImplementedForOS
 }
