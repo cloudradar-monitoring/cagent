@@ -257,7 +257,7 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 	measurements = measurements.AddWithPrefix("services.", servicesList)
 
 	containersList, err := docker.ListContainers()
-	if err != nil {
+	if err != nil && err != docker.ErrorNotImplementedForOS {
 		// no need to log because already done inside ListContainers()
 		errs = append(errs, err.Error())
 	}
