@@ -67,6 +67,17 @@ type Config struct {
 	VirtualMachinesStat []string `toml:"virtual_machines_stat" comment:"default ['hyper-v'], available options 'hyper-v'"`
 
 	HardwareInventory bool `toml:"hardware_inventory" comment:"default true"`
+
+	CPUUtilisationAnalysis CPUUtilisationAnalysis `toml:"cpu_utilisation_analysis"`
+}
+
+type CPUUtilisationAnalysis struct {
+	Threshold               float64 `toml:"threshold"`
+	Function                string  `toml:"function"`
+	Metric                  string  `toml:"metrics"`
+	GatheringMode           string  `toml:"gathering_mode"`
+	ReportProcesses         int     `toml:"report_processes"`
+	TrailingRecoveryMinutes int     `toml:"trailing_recovery_minutes"`
 }
 
 func init() {

@@ -264,6 +264,13 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 
 	measurements = measurements.AddWithPrefix("docker.", containersList)
 
+	cpuUtilisationAnalyser, err := ca.CPUUtilisationAnalyser().Results()
+	if err != nil {
+		// no need to log because already done inside
+		errs = append(errs, err.Error())
+	}
+	measurements = measurements.AddWithPrefix("cpu_analyser.", cpuUtilisationAnalyser)
+
 	if len(errs) == 0 {
 		measurements["cagent.success"] = 1
 
