@@ -44,6 +44,14 @@ type TimeSeriesAverage struct {
 	_DurationInMinutes []int // do not set directly, use SetDurationsMinutes
 }
 
+type thresholdNotifier struct {
+	Percentage           float64
+	Metric               string // possible values: system, user, nice, idle, iowait, irq, softirq, steal
+	Function             func(current, threshold float64) (notify bool)
+	GatheringModeMinutes int // supported values: 1, 5, 15
+	Chan                 chan float64
+}
+
 type CPUWatcher struct {
 	LoadAvg1  bool
 	LoadAvg5  bool
@@ -51,6 +59,8 @@ type CPUWatcher struct {
 
 	UtilAvg   TimeSeriesAverage
 	UtilTypes []string
+
+	ThresholdNotifiers []thresholdNotifier
 }
 
 var utilisationMetricsByOSMap = make(map[string]map[string]struct{})
@@ -276,13 +286,13 @@ func (ca *Cagent) CPUWatcher() *CPUWatcher {
 func (cw *CPUWatcher) Once() error {
 
 	cw.UtilAvg.mu.Lock()
-	defer cw.UtilAvg.mu.Unlock()
 
 	ctx, cancel := context.WithTimeout(context.Background(), cpuGetUtilisationTimeout)
 	defer cancel()
 	times, err := cpu.TimesWithContext(ctx, true)
 
 	if err != nil {
+		cw.UtilAvg.mu.Unlock()
 		return err
 	}
 
@@ -357,6 +367,22 @@ func (cw *CPUWatcher) Once() error {
 	}
 
 	cw.UtilAvg.Add(time.Now(), values)
+	cw.UtilAvg.mu.Unlock()
+	if cw.ThresholdNotifiers != nil {
+		avg, _ := cw.UtilAvg.Percentage()
+
+		for _, tm := range cw.ThresholdNotifiers {
+			var values ValuesMap
+			var exists bool
+			if values, exists = avg[tm.GatheringModeMinutes]; !exists {
+				continue
+			}
+
+			if val, exists := values[tm.Metric+".%d.total"]; exists && tm.Function(val, tm.Percentage) {
+				tm.Chan <- val
+			}
+		}
+	}
 	return nil
 }
 
@@ -421,4 +447,61 @@ func (cw *CPUWatcher) Results() (MeasurementsMap, error) {
 
 	return results, errors.New("CPU: " + strings.Join(errs, "; "))
 
+}
+
+func (cw *CPUWatcher) AddThresholdNotifier(percentage float64, metric string, operator string, gatheringMode string, ch chan float64) error {
+
+	if ch == nil {
+		return fmt.Errorf("ch should be non-nil chan")
+	}
+
+	if percentage <= 0 || percentage > 100 {
+		return fmt.Errorf("percentage should be more >0 and <=100")
+	}
+	tn := thresholdNotifier{Percentage: percentage, Chan: ch}
+
+	tn.Percentage = percentage
+
+	switch metric {
+	case "system", "user", "nice", "idle", "iowait", "irq", "softirq", "steal":
+		tn.Metric = metric
+	default:
+		return fmt.Errorf("wrong metric: should be one of: system, user, nice, idle, iowait, irq, softirq, steal")
+	}
+
+	switch operator {
+	case "lt":
+		tn.Function = func(current, threshold float64) bool {
+			return current < threshold
+		}
+	case "lte":
+		tn.Function = func(current, threshold float64) bool {
+			return current <= threshold
+		}
+	case "gt":
+		tn.Function = func(current, threshold float64) bool {
+			return current > threshold
+		}
+	case "gte":
+		tn.Function = func(current, threshold float64) bool {
+			return current > threshold
+		}
+	default:
+		return fmt.Errorf("wrong operator: should be one of: lt, lte, gt, gte")
+	}
+
+	switch gatheringMode {
+	case "avg1":
+		tn.GatheringModeMinutes = 1
+	case "avg5":
+		tn.GatheringModeMinutes = 5
+	case "avg15":
+		tn.GatheringModeMinutes = 15
+	default:
+		return fmt.Errorf("wrong gathering mode: should be one of: avg1, avg5, avg15")
+	}
+
+	cw.ThresholdNotifiers = append(cw.ThresholdNotifiers, tn)
+
+	return nil
 }
