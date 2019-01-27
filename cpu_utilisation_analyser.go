@@ -8,8 +8,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/top"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/top"
 )
 
 type CPUUtilisationAnalyser struct {
