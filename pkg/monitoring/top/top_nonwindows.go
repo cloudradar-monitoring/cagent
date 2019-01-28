@@ -3,8 +3,6 @@
 package top
 
 import (
-	"log"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -23,21 +21,25 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to get processes")
 	}
+
+	skipped := 0
 	// Fetch load percentage for every process
 	for _, p := range ps {
 		// Run in background because the call to Percent blocks for the duration
 		go func(p *process.Process) {
 			load, err := p.Percent(time.Second * 1)
-			if err != nil && !strings.Contains(err.Error(), "no such file") {
-				// Ignore the file not not found case to avoid a lot of error messages for
-				// short lived processes
-				log.Printf("Err getting Percent: %s", err)
+			if err != nil {
+				// If we log the error in this place, we get _a lot of_ messages
+				skipped++
+				return
 			}
 
 			name, _ := p.Name()
 			cmd, err := p.Cmdline()
 			if err != nil {
-				log.Printf("Failed to get cmdLine: %s", err)
+				// If we log the error in this place, we get _a lot of_ messages
+				skipped++
+				return
 			}
 
 			// Report result back to main goroutine
@@ -59,7 +61,7 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 		pi = <-results
 		result = append(result, pi)
 		count++
-		if count == lenTotal {
+		if count == lenTotal-skipped {
 			break
 		}
 	}
