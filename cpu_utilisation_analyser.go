@@ -1,10 +1,8 @@
 package cagent
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
-	"sort"
 	"syscall"
 	"time"
 
@@ -82,19 +80,7 @@ func (cuan *CPUUtilisationAnalyser) Results() (MeasurementsMap, error) {
 	}
 
 	cuan.hasUnclaimedResults = false
-	topProcs, err := cuan.top.GetProcesses()
-	if err != nil {
-		log.Errorf("[CPU_ANALYSIS] top.GetProcesses() error: %s", err.Error())
-		return nil, fmt.Errorf("CPU TOP PROCS: %s", err.Error())
-	}
-
-	sort.Slice(topProcs, func(i, j int) bool {
-		return topProcs[i].Load > topProcs[j].Load
-	})
-
-	if len(topProcs) > cuan.NumberOfProcesses {
-		topProcs = topProcs[0:cuan.NumberOfProcesses]
-	}
+	topProcs := cuan.top.HighestNLoad(cuan.NumberOfProcesses)
 
 	return MeasurementsMap{"top": topProcs}, nil
 }
