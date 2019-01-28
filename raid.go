@@ -2,8 +2,11 @@ package cagent
 
 import (
 	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type RaidArrays []Raid
@@ -117,6 +120,12 @@ func (ar RaidArrays) Measurements() MeasurementsMap {
 }
 
 func (ca *Cagent) RaidState() (MeasurementsMap, error) {
+	if _, err := os.Stat("/proc/mdstat"); os.IsNotExist(err) {
+		log.Error("[RAID] /proc/mdstat is missing")
+		// do not return error if mdstat is missing
+		return nil, nil
+	}
+
 	buf, err := ioutil.ReadFile("/proc/mdstat")
 	if err != nil {
 		return nil, err
