@@ -310,7 +310,11 @@ func (ca *Cagent) RunOnce(outputFile *os.File) error {
 	return ca.ReportMeasurements(measurements, outputFile)
 }
 
-func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
+func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, cfg *Config) {
+	// Start process utilization monitoringi in the background
+	ca.processWatcher.Run()
+	defer ca.processWatcher.Stop()
+
 	for {
 		err := ca.RunOnce(outputFile)
 		if err != nil {
