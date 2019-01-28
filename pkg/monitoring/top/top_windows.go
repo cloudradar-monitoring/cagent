@@ -41,9 +41,9 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 		// Only pay attention to processes that do something
 		// if c.Value != 0 {
 		pi := &ProcessInfo{
-			Identifier: c.InstanceName,
-			Command:    c.InstanceName,
-			Load:       c.Value,
+			Name:    c.InstanceName,
+			Command: c.InstanceName,
+			Load:    c.Value,
 		}
 		result = append(result, pi)
 		// }
