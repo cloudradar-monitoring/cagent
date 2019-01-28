@@ -315,17 +315,6 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, cfg *Config)
 	ca.processWatcher.Run()
 	defer ca.processWatcher.Stop()
 
-	// go func() {
-	// 	for {
-	// 		res := ca.Top.HighestNLoad(5)
-	// 		for _, v := range res {
-	// 			log.Printf("Top5: %+v", *v)
-	// 		}
-
-	// 		time.Sleep(5 * time.Second)
-	// 	}
-	// }()
-
 	for {
 		err := ca.RunOnce(outputFile)
 		if err != nil {
