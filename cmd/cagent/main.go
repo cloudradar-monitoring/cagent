@@ -270,10 +270,17 @@ func handleFlagServiceUninstall(ca *cagent.Cagent, serviceUninstallPtr bool) {
 		log.Fatalf("Failed to get system service: %s", err.Error())
 	}
 
-	err = systemService.Stop()
+	status, err := systemService.Status()
 	if err != nil {
-		// don't return error here, just write a warning and try to uninstall
-		fmt.Println("Failed to stop the service: ", err.Error())
+		fmt.Println("Failed to get service status: ", err.Error())
+	}
+
+	if status == service.StatusRunning {
+		err = systemService.Stop()
+		if err != nil {
+			// don't exit here, just write a warning and try to uninstall
+			fmt.Println("Failed to stop the running service: ", err.Error())
+		}
 	}
 
 	err = systemService.Uninstall()
