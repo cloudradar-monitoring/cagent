@@ -67,6 +67,8 @@ type Config struct {
 	VirtualMachinesStat []string `toml:"virtual_machines_stat" comment:"default ['hyper-v'], available options 'hyper-v'"`
 
 	HardwareInventory bool `toml:"hardware_inventory" comment:"default true"`
+
+	DiscoverAutostartingServicesOnly bool `toml:"discover_autostarting_services_only" comment:"default true"`
 }
 
 func init() {
@@ -92,20 +94,21 @@ func init() {
 
 func NewConfig() *Config {
 	cfg := &Config{
-		LogFile:                         defaultLogPath,
-		Interval:                        90,
-		CPULoadDataGather:               []string{"avg1"},
-		CPUUtilTypes:                    []string{"user", "system", "idle", "iowait"},
-		CPUUtilDataGather:               []string{"avg1"},
-		FSTypeInclude:                   []string{"ext3", "ext4", "xfs", "jfs", "ntfs", "btrfs", "hfs", "apfs", "fat32"},
-		FSMetrics:                       []string{"free_B", "free_percent", "total_B"},
-		NetMetrics:                      []string{"in_B_per_s", "out_B_per_s"},
-		NetInterfaceExcludeDisconnected: true,
-		NetInterfaceExclude:             []string{},
-		NetInterfaceExcludeRegex:        []string{},
-		NetInterfaceExcludeLoopback:     true,
-		SystemFields:                    []string{"uname", "os_kernel", "os_family", "os_arch", "cpu_model", "fqdn", "memory_total_B"},
-		HardwareInventory:               true,
+		LogFile:                          defaultLogPath,
+		Interval:                         90,
+		CPULoadDataGather:                []string{"avg1"},
+		CPUUtilTypes:                     []string{"user", "system", "idle", "iowait"},
+		CPUUtilDataGather:                []string{"avg1"},
+		FSTypeInclude:                    []string{"ext3", "ext4", "xfs", "jfs", "ntfs", "btrfs", "hfs", "apfs", "fat32"},
+		FSMetrics:                        []string{"free_B", "free_percent", "total_B"},
+		NetMetrics:                       []string{"in_B_per_s", "out_B_per_s"},
+		NetInterfaceExcludeDisconnected:  true,
+		NetInterfaceExclude:              []string{},
+		NetInterfaceExcludeRegex:         []string{},
+		NetInterfaceExcludeLoopback:      true,
+		SystemFields:                     []string{"uname", "os_kernel", "os_family", "os_arch", "cpu_model", "fqdn", "memory_total_B"},
+		HardwareInventory:                true,
+		DiscoverAutostartingServicesOnly: true,
 	}
 
 	if runtime.GOOS == "windows" {

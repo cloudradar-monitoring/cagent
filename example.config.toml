@@ -37,3 +37,6 @@ system_fields = ['uname','os_kernel','os_family','os_arch','cpu_model','fqdn','m
 
 # Windows
 windows_updates_watcher_interval = 3600 # default 3600
+
+hardware_inventory = true
+discover_autostarting_services_only = true

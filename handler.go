@@ -248,7 +248,7 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 		measurements = measurements.AddWithPrefix("windows_update.", wu)
 	}
 
-	servicesList, err := services.ListServices()
+	servicesList, err := services.ListServices(ca.Config.DiscoverAutostartingServicesOnly)
 	if err != nil && err != services.ErrorNotImplementedForOS {
 		// no need to log because already done inside ListServices()
 		errs = append(errs, err.Error())
