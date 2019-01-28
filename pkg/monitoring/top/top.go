@@ -33,12 +33,12 @@ func (s ProcessSlice) Less(i, j int) bool {
 
 // ProcessInfo is used to store a snapshot of load data about an OS process
 type ProcessInfo struct {
-	Identifier string
-	PID        uint32
-	Command    string
-	Load       float64
-	Load5      float64
-	Load15     float64
+	Name    string  `json:"name"`
+	PID     uint32  `json:"pid"`
+	Command string  `json:"command"`
+	Load    float64 `json:"load"`
+	Load5   float64 `json:"load5"`
+	Load15  float64 `json:"load15"`
 }
 
 // Top holds a map with information about process loads
@@ -86,17 +86,17 @@ func (t *Top) startMearueProcessLoad(interval time.Duration) {
 		var pr *Process
 		for _, p := range processes {
 			// Check if we already track the process ad if not start tracking it
-			if _, ok := t.pList[p.Identifier]; !ok {
+			if _, ok := t.pList[p.Name]; !ok {
 				pr = &Process{
 					PID:        p.PID,
 					Command:    p.Command,
-					Identifier: p.Identifier,
+					Identifier: p.Name,
 					Load5:      ring.New(5 * 60),
 					Load15:     ring.New(15 * 60),
 				}
-				t.pList[p.Identifier] = pr
+				t.pList[p.Name] = pr
 			} else {
-				pr = t.pList[p.Identifier]
+				pr = t.pList[p.Name]
 			}
 
 			// Add load value to rings for later calculation of load load5 and load15
@@ -144,12 +144,12 @@ func (t *Top) HighestNLoad(n int) []*ProcessInfo {
 	result := make([]*ProcessInfo, 0, len(pl))
 	for _, p := range pl {
 		pi := &ProcessInfo{
-			Identifier: p.Identifier,
-			Command:    p.Command,
-			PID:        p.PID,
-			Load:       p.Load,
-			Load5:      Avg5(p),
-			Load15:     Avg15(p),
+			Name:    p.Identifier,
+			Command: p.Command,
+			PID:     p.PID,
+			Load:    p.Load,
+			Load5:   Avg5(p),
+			Load15:  Avg15(p),
 		}
 		result = append(result, pi)
 	}

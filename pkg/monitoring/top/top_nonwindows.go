@@ -42,10 +42,10 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 
 			// Report result back to main goroutine
 			results <- &ProcessInfo{
-				Identifier: name,
-				PID:        uint32(p.Pid),
-				Command:    cmd,
-				Load:       load,
+				Name:    name,
+				PID:     uint32(p.Pid),
+				Command: cmd,
+				Load:    load,
 			}
 		}(p)
 	}
