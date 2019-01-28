@@ -18,7 +18,7 @@ import (
 	"github.com/cloudradar-monitoring/cagent"
 )
 
-func RunDialog(owner walk.Form, icon *walk.Icon, title, text string) (int, error) {
+func RunDialog(owner walk.Form, icon *walk.Icon, title, text string, callback func()) (int, error) {
 	var dlg *walk.Dialog
 	var acceptPB *walk.PushButton
 	font := Font{PointSize: 12, Family: "Segoe UI"}
@@ -56,6 +56,9 @@ func RunDialog(owner walk.Form, icon *walk.Icon, title, text string) (int, error
 						Text:     "OK",
 						OnClicked: func() {
 							dlg.Accept()
+							if callback != nil {
+								callback()
+							}
 						},
 					},
 				},
@@ -72,9 +75,12 @@ type UI struct {
 	StatusBar   *walk.StatusBarItem
 	SaveButton  *walk.ToolButton
 
-	ca *cagent.Cagent
+	installationMode bool
+	ca               *cagent.Cagent
 }
 
+// TestSaveReload trying to test the HUB address and credentials from the config
+// if testOnly is true do not show alert message about the status(used to test the existed config on start)
 func (ui *UI) TestSaveReload(testOnly bool) {
 	// it will become messy if we will handle all UI errors here
 	// just ignore them and go further, because next steps don't depend on previous ones
@@ -93,14 +99,18 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 		ui.StatusBar.SetIcon(ui.ErrorIcon)
 
 		if !testOnly {
-			RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", err.Error())
+			RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", err.Error(), nil)
 		}
 		return
 	}
 
 	if testOnly {
-		// testOnly runs on start with the current config
-		// so if test is pass we should set the status
+		// in case we running this inside msi installer, just exit
+		if ui.installationMode {
+			os.Exit(0)
+		}
+
+		// otherwise - provide a feedback for user and set the status
 		ui.StatusBar.SetText("Status: successfully connected to the HUB")
 		ui.StatusBar.SetIcon(ui.SuccessIcon)
 		return
@@ -111,7 +121,7 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 	ui.SaveButton.SetText("Saving...")
 	err = cagent.SaveConfigFile(ui.ca.Config, ui.ca.ConfigLocation)
 	if err != nil {
-		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to save config: "+err.Error())
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to save config: "+err.Error(), nil)
 		return
 	}
 
@@ -119,14 +129,14 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 
 	m, err := mgr.Connect()
 	if err != nil {
-		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to connect to Windows Service Manager: "+err.Error())
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to connect to Windows Service Manager: "+err.Error(), nil)
 		return
 	}
 	defer m.Disconnect()
 
 	s, err := m.OpenService("cagent")
 	if err != nil {
-		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to connect to find 'cagent' service: "+err.Error())
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to connect to find 'cagent' service: "+err.Error(), nil)
 		return
 	}
 	defer s.Close()
@@ -134,24 +144,34 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 	ui.SaveButton.SetText("Stopping the service...")
 	err = stopService(s)
 	if err != nil {
-		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to stop 'cagent' service: "+err.Error())
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to stop 'cagent' service: "+err.Error(), nil)
 		return
 	}
 
 	ui.SaveButton.SetText("Starting the service...")
 	err = startService(s)
 	if err != nil {
-		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to start 'cagent' service: "+err.Error())
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to start 'cagent' service: "+err.Error(), nil)
 		return
 	}
 
-	RunDialog(ui.MainWindow, ui.SuccessIcon, "Success", message+"Service restarted and all changes applied!")
+	var callback func()
+
+	if ui.installationMode {
+		callback = func() {
+			os.Exit(0)
+		}
+	}
+
+	RunDialog(ui.MainWindow, ui.SuccessIcon, "Success", message+"Service restarted and all changes applied!", callback)
 	ui.StatusBar.SetText("Status: successfully connected to the HUB")
 	ui.StatusBar.SetIcon(ui.SuccessIcon)
 }
 
-func windowsShowSettingsUI(ca *cagent.Cagent) {
-	ui := UI{ca: ca}
+// windowsShowSettingsUI draws a window and wait until it will be closed closed
+// when installationMode is true close the window after successful test&save
+func windowsShowSettingsUI(ca *cagent.Cagent, installationMode bool) {
+	ui := UI{ca: ca, installationMode: installationMode}
 	ex, err := os.Executable()
 	if err != nil {
 		panic(err)
@@ -246,6 +266,7 @@ func windowsShowSettingsUI(ca *cagent.Cagent) {
 	}.Create()
 
 	go func() {
+		ui.ShowAdminAlert()
 		ui.TestSaveReload(true)
 	}()
 
@@ -288,4 +309,18 @@ func waitServiceState(s *mgr.Service, currentStatus svc.Status, state svc.State,
 	}
 
 	return nil
+}
+
+func (ui *UI) ShowAdminAlert() {
+	if !checkAdmin() {
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", "Please run as administrator", func() { os.Exit(1) })
+	}
+}
+
+func checkAdmin() bool {
+	_, err := os.Open("\\\\.\\PHYSICALDRIVE0")
+	if err != nil {
+		return false
+	}
+	return true
 }
