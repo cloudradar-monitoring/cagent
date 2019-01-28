@@ -4,6 +4,7 @@ package top
 
 import (
 	"log"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -27,7 +28,9 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 		// Run in background because the call to Percent blocks for the duration
 		go func(p *process.Process) {
 			load, err := p.Percent(time.Second * 1)
-			if err != nil {
+			if err != nil && !strings.Contains(err.Error(), "no such file") {
+				// Ignore the file not not found case to avoid a lot of error messages for
+				// short lived processes
 				log.Printf("Err getting Percent: %s", err)
 			}
 
@@ -39,10 +42,10 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 
 			// Report result back to main goroutine
 			results <- &ProcessInfo{
-				Identifier: name,
-				PID:        uint32(p.Pid),
-				Command:    cmd,
-				Load:       load,
+				Name:    name,
+				PID:     uint32(p.Pid),
+				Command: cmd,
+				Load:    load,
 			}
 		}(p)
 	}

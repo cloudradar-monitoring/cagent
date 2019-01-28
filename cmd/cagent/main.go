@@ -150,7 +150,7 @@ func main() {
 	interruptChan := make(chan struct{})
 	doneChan := make(chan struct{})
 	go func() {
-		ca.Run(output, interruptChan)
+		ca.Run(output, interruptChan, cfg)
 		doneChan <- struct{}{}
 	}()
 
@@ -181,7 +181,7 @@ func handleFlagPrintConfig(printConfig bool, cfg *cagent.Config) {
 
 func handleFlagSettings(settingsUI *bool, ca *cagent.Cagent) {
 	if settingsUI != nil && *settingsUI {
-		windowsShowSettingsUI(ca)
+		windowsShowSettingsUI(ca, false)
 		os.Exit(0)
 	}
 }
@@ -270,10 +270,17 @@ func handleFlagServiceUninstall(ca *cagent.Cagent, serviceUninstallPtr bool) {
 		log.Fatalf("Failed to get system service: %s", err.Error())
 	}
 
-	err = systemService.Stop()
+	status, err := systemService.Status()
 	if err != nil {
-		// don't return error here, just write a warning and try to uninstall
-		fmt.Println("Failed to stop the service: ", err.Error())
+		fmt.Println("Failed to get service status: ", err.Error())
+	}
+
+	if status == service.StatusRunning {
+		err = systemService.Stop()
+		if err != nil {
+			// don't exit here, just write a warning and try to uninstall
+			fmt.Println("Failed to stop the running service: ", err.Error())
+		}
 	}
 
 	err = systemService.Uninstall()
@@ -482,7 +489,7 @@ func (sw *serviceWrapper) Start(s service.Service) error {
 	sw.InterruptChan = make(chan struct{})
 	sw.DoneChan = make(chan struct{})
 	go func() {
-		sw.Cagent.Run(nil, sw.InterruptChan)
+		sw.Cagent.Run(nil, sw.InterruptChan, sw.Cagent.Config)
 		sw.DoneChan <- struct{}{}
 	}()
 

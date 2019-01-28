@@ -248,7 +248,7 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 		measurements = measurements.AddWithPrefix("windows_update.", wu)
 	}
 
-	servicesList, err := services.ListServices()
+	servicesList, err := services.ListServices(ca.Config.DiscoverAutostartingServicesOnly)
 	if err != nil && err != services.ErrorNotImplementedForOS {
 		// no need to log because already done inside ListServices()
 		errs = append(errs, err.Error())
@@ -317,7 +317,11 @@ func (ca *Cagent) RunOnce(outputFile *os.File) error {
 	return ca.ReportMeasurements(measurements, outputFile)
 }
 
-func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
+func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, cfg *Config) {
+	// Start process utilization monitoringi in the background
+	ca.processWatcher.Run()
+	defer ca.processWatcher.Stop()
+
 	for {
 		err := ca.RunOnce(outputFile)
 		if err != nil {

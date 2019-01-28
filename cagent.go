@@ -10,8 +10,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/top"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
-	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
+	vmstattypes "github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -32,6 +33,7 @@ type Cagent struct {
 	vmstatLazyInit       sync.Once
 	vmWatchers           map[string]vmstattypes.Provider
 	hwInventory          sync.Once
+	processWatcher       *top.Top
 
 	rootCAs *x509.CertPool
 
@@ -44,6 +46,7 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 		ConfigLocation: cfgPath,
 		version:        version,
 		vmWatchers:     make(map[string]vmstattypes.Provider),
+		processWatcher: top.New(),
 	}
 
 	if rootCertsPath != "" {
