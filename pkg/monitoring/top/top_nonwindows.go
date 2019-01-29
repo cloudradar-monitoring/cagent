@@ -54,14 +54,12 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 
 	lenTotal := len(ps)
 	result := make([]*ProcessInfo, 0, lenTotal)
-	count := 0
 	var pi *ProcessInfo
 	// Read loads collected in the background
 	for {
 		pi = <-results
 		result = append(result, pi)
-		count++
-		if count == lenTotal-skipped {
+		if len(result) == lenTotal-skipped {
 			break
 		}
 	}
