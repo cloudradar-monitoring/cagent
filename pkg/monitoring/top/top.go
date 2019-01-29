@@ -64,7 +64,7 @@ func New() *Top {
 	return t
 }
 
-func (t *Top) startMearueProcessLoad(interval time.Duration) {
+func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 	t.startCollect(interval)
 	for {
 		// Check if stop was requested
@@ -118,7 +118,7 @@ func (t *Top) Run() {
 	if !t.isRunning {
 		t.isRunning = true
 		// Start collecting process info every sec
-		go t.startMearueProcessLoad(time.Second * 1)
+		go t.startMeasureProcessLoad(time.Second * 1)
 	} else {
 		log.Debug("Skipped starting Top because it's already running")
 	}
@@ -138,7 +138,7 @@ func (t *Top) HighestNLoad(n int) []*ProcessInfo {
 	for _, v := range t.pList {
 		pl = append(pl, v)
 	}
-	sort.Sort(ProcessSlice(pl))
+	sort.Sort(sort.Reverse(ProcessSlice(pl)))
 	t.pListMtx.RUnlock()
 
 	result := make([]*ProcessInfo, 0, len(pl))
@@ -158,7 +158,7 @@ func (t *Top) HighestNLoad(n int) []*ProcessInfo {
 		return result[:n]
 	}
 
-	return nil
+	return result
 }
 
 // HighestLoad returns information about the process causing highest CPU load
