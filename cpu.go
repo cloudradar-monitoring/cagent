@@ -484,7 +484,7 @@ func (cw *CPUWatcher) AddThresholdNotifier(percentage float64, metric string, op
 		}
 	case "gte":
 		tn.Function = func(current, threshold float64) bool {
-			return current > threshold
+			return current >= threshold
 		}
 	default:
 		return fmt.Errorf("wrong operator: should be one of: lt, lte, gt, gte")

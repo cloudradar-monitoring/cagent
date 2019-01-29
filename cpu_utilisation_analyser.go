@@ -20,7 +20,6 @@ type CPUUtilisationAnalyser struct {
 }
 
 func (ca *Cagent) CPUUtilisationAnalyser() *CPUUtilisationAnalyser {
-
 	if ca.cpuUtilisationAnalyser != nil {
 		return ca.cpuUtilisationAnalyser
 	}
@@ -44,34 +43,35 @@ func (ca *Cagent) CPUUtilisationAnalyser() *CPUUtilisationAnalyser {
 	err := ca.cpuWatcher.AddThresholdNotifier(cfg.Threshold, cfg.Metric, cfg.Function, cfg.GatheringMode, thresholdChan)
 	if err != nil {
 		log.Error("[CPU_ANALYSIS] addThresholdNotifier error", err.Error())
-	} else {
-		go func() {
-			for {
-				select {
-				case <-thresholdChan:
-					log.Debugf("[CPU_ANALYTICS] CPU threshold signal received from chan")
-					if !cuan.topIsRunning {
-						go cuan.top.Run()
-						cuan.topIsRunning = true
-					}
-					break
-				case <-time.After(time.Duration(cfg.TrailingRecoveryMinutes) * time.Minute):
-					if cuan.topIsRunning {
-						log.Debugf("[CPU_ANALYTICS] TrailingRecoveryTime reached")
-						cuan.hasUnclaimedResults = true
-						cuan.topIsRunning = false
-						cuan.top.Stop()
-					}
-					break
-				case <-sigc:
-					log.Debugf("[CPU_ANALYTICS] got interrupt signal")
-					return
-				}
-			}
-		}()
+		return ca.cpuUtilisationAnalyser
 	}
-	return ca.cpuUtilisationAnalyser
 
+	go func() {
+		for {
+			select {
+			case <-thresholdChan:
+				log.Debugf("[CPU_ANALYTICS] CPU threshold signal received from chan")
+				if !cuan.topIsRunning {
+					go cuan.top.Run()
+					cuan.topIsRunning = true
+				}
+				break
+			case <-time.After(time.Duration(cfg.TrailingRecoveryMinutes) * time.Minute):
+				if cuan.topIsRunning {
+					log.Debugf("[CPU_ANALYTICS] TrailingRecoveryTime reached")
+					cuan.hasUnclaimedResults = true
+					cuan.topIsRunning = false
+					cuan.top.Stop()
+				}
+				break
+			case <-sigc:
+				log.Debugf("[CPU_ANALYTICS] got interrupt signal")
+				return
+			}
+		}
+	}()
+
+	return ca.cpuUtilisationAnalyser
 }
 
 func (cuan *CPUUtilisationAnalyser) Results() (MeasurementsMap, error) {
