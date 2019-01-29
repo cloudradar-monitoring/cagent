@@ -3,8 +3,8 @@
 package top
 
 import (
-	"log"
-	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
@@ -23,21 +23,29 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to get processes")
 	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(ps))
+	skipped := uint64(0)
 	// Fetch load percentage for every process
 	for _, p := range ps {
 		// Run in background because the call to Percent blocks for the duration
 		go func(p *process.Process) {
+			defer wg.Done()
 			load, err := p.Percent(time.Second * 1)
-			if err != nil && !strings.Contains(err.Error(), "no such file") {
-				// Ignore the file not not found case to avoid a lot of error messages for
-				// short lived processes
-				log.Printf("Err getting Percent: %s", err)
+			if err != nil {
+				// If we log the error in this place, we get _a lot of_ messages
+				atomic.AddUint64(&skipped, 1)
+				skipped++
+				return
 			}
 
 			name, _ := p.Name()
 			cmd, err := p.Cmdline()
 			if err != nil {
-				log.Printf("Failed to get cmdLine: %s", err)
+				// If we log the error in this place, we get _a lot of_ messages
+				atomic.AddUint64(&skipped, 1)
+				return
 			}
 
 			// Report result back to main goroutine
@@ -50,18 +58,17 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 		}(p)
 	}
 
-	lenTotal := len(ps)
-	result := make([]*ProcessInfo, 0, lenTotal)
-	count := 0
+	// Close channel after processing
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	result := make([]*ProcessInfo, 0, len(ps))
 	var pi *ProcessInfo
 	// Read loads collected in the background
-	for {
-		pi = <-results
+	for pi = range results {
 		result = append(result, pi)
-		count++
-		if count == lenTotal {
-			break
-		}
 	}
 
 	return result, nil
