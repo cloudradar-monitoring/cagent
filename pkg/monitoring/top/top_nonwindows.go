@@ -3,6 +3,7 @@
 package top
 
 import (
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -23,11 +24,14 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 		return nil, errors.Wrap(err, "Failed to get processes")
 	}
 
+	var wg sync.WaitGroup
+	wg.Add(len(ps))
 	skipped := uint64(0)
 	// Fetch load percentage for every process
 	for _, p := range ps {
 		// Run in background because the call to Percent blocks for the duration
 		go func(p *process.Process) {
+			defer wg.Done()
 			load, err := p.Percent(time.Second * 1)
 			if err != nil {
 				// If we log the error in this place, we get _a lot of_ messages
@@ -54,16 +58,17 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 		}(p)
 	}
 
-	lenTotal := len(ps)
-	result := make([]*ProcessInfo, 0, lenTotal)
+	// Close channel after processing
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	result := make([]*ProcessInfo, 0, len(ps))
 	var pi *ProcessInfo
 	// Read loads collected in the background
-	for {
-		pi = <-results
+	for pi = range results {
 		result = append(result, pi)
-		if len(result) == lenTotal-int(skipped) {
-			break
-		}
 	}
 
 	return result, nil
