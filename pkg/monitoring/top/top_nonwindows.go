@@ -3,6 +3,7 @@
 package top
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
@@ -22,7 +23,7 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 		return nil, errors.Wrap(err, "Failed to get processes")
 	}
 
-	skipped := 0
+	skipped := uint64(0)
 	// Fetch load percentage for every process
 	for _, p := range ps {
 		// Run in background because the call to Percent blocks for the duration
@@ -30,6 +31,7 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 			load, err := p.Percent(time.Second * 1)
 			if err != nil {
 				// If we log the error in this place, we get _a lot of_ messages
+				atomic.AddUint64(&skipped, 1)
 				skipped++
 				return
 			}
@@ -38,7 +40,7 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 			cmd, err := p.Cmdline()
 			if err != nil {
 				// If we log the error in this place, we get _a lot of_ messages
-				skipped++
+				atomic.AddUint64(&skipped, 1)
 				return
 			}
 
@@ -59,7 +61,7 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 	for {
 		pi = <-results
 		result = append(result, pi)
-		if len(result) == lenTotal-skipped {
+		if len(result) == lenTotal-int(skipped) {
 			break
 		}
 	}
