@@ -49,8 +49,8 @@ func (ca *Cagent) CPUUtilisationAnalyser() *CPUUtilisationAnalyser {
 	go func() {
 		for {
 			select {
-			case <-thresholdChan:
-				log.Debugf("[CPU_ANALYTICS] CPU threshold signal received from chan")
+			case x := <-thresholdChan:
+				log.Debugf("[CPU_ANALYTICS] CPU threshold signal(%.2f) received from chan", x)
 				if !cuan.topIsRunning {
 					go cuan.top.Run()
 					cuan.topIsRunning = true

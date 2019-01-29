@@ -378,7 +378,7 @@ func (cw *CPUWatcher) Once() error {
 				continue
 			}
 
-			if val, exists := values[tm.Metric+".%d.total"]; exists && tm.Function(val, tm.Percentage) {
+			if val, exists := values[tm.Metric+".%d.total"]; exists && val >= 0 && tm.Function(val, tm.Percentage) {
 				tm.Chan <- val
 			}
 		}
