@@ -158,7 +158,7 @@ func (t *Top) HighestNLoad(n int) []*ProcessInfo {
 		return result[:n]
 	}
 
-	return nil
+	return result
 }
 
 // HighestLoad returns information about the process causing highest CPU load
