@@ -458,6 +458,7 @@ func (cw *CPUWatcher) AddThresholdNotifier(percentage float64, metric string, op
 	if percentage <= 0 || percentage > 100 {
 		return fmt.Errorf("percentage should be more >0 and <=100")
 	}
+
 	tn := thresholdNotifier{Percentage: percentage, Chan: ch}
 
 	tn.Percentage = percentage
@@ -499,6 +500,18 @@ func (cw *CPUWatcher) AddThresholdNotifier(percentage float64, metric string, op
 		tn.GatheringModeMinutes = 15
 	default:
 		return fmt.Errorf("wrong gathering mode: should be one of: avg1, avg5, avg15")
+	}
+
+	hasGatheringMode := false
+	for _, min := range cw.UtilAvg._DurationInMinutes {
+		if min == tn.GatheringModeMinutes {
+			hasGatheringMode = true
+			break
+		}
+	}
+
+	if !hasGatheringMode {
+		return fmt.Errorf("gathering mode %s is not presented at cpu_utilisation_gathering_mode", gatheringMode)
 	}
 
 	cw.ThresholdNotifiers = append(cw.ThresholdNotifiers, tn)

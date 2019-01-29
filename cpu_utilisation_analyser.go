@@ -56,7 +56,7 @@ func (ca *Cagent) CPUUtilisationAnalyser() *CPUUtilisationAnalyser {
 					cuan.topIsRunning = true
 				}
 				break
-			case <-time.After(time.Duration(cfg.TrailingRecoveryMinutes) * time.Minute):
+			case <-time.After(time.Duration(cfg.TrailingProcessAnalysisMinutes) * time.Minute):
 				if cuan.topIsRunning {
 					log.Debugf("[CPU_ANALYTICS] TrailingRecoveryTime reached")
 					cuan.hasUnclaimedResults = true

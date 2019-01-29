@@ -40,3 +40,13 @@ windows_updates_watcher_interval = 3600 # default 3600
 
 hardware_inventory = true
 discover_autostarting_services_only = true
+
+# default
+[cpu_utilisation_analysis]
+  threshold = 10.0 # target value to start the analysis
+  function = "lt" # threshold compare function, possible values: 'lt', 'lte', 'gt', 'gte'
+  metric = "idle" # possible values: 'user','system','idle','iowait'
+  gathering_mode = "avg1" # should be one of values of cpu_utilisation_gathering_mode
+  report_processes = 5 # number of processes to return
+  trailing_process_analysis_minutes = 5 # how much time analysis will continue to perform after the CPU utilisation returns to the normal value
+
