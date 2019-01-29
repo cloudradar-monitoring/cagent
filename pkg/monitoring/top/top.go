@@ -138,7 +138,7 @@ func (t *Top) HighestNLoad(n int) []*ProcessInfo {
 	for _, v := range t.pList {
 		pl = append(pl, v)
 	}
-	sort.Sort(ProcessSlice(pl))
+	sort.Sort(sort.Reverse(ProcessSlice(pl)))
 	t.pListMtx.RUnlock()
 
 	result := make([]*ProcessInfo, 0, len(pl))
