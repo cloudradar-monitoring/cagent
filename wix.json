@@ -19,7 +19,7 @@
     ]
   },
   "hooks": [
-    {"when": "install", "command": "[INSTALLDIR]\\cagent.exe cagent:settings"}
+    {"when": "install", "command": "[INSTALLDIR]\\cagent.exe cagent:install"}
   ],
   "choco": {
     "description": "Monitoring proxy for agentless monitoring of subnets",
