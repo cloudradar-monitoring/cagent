@@ -212,9 +212,17 @@ func GenerateDefaultConfigFile(mvc *MinValuableConfig, configFilePath string) er
 		return fmt.Errorf("Config already exists at path: %s", configFilePath)
 	}
 
+	configPathDir := filepath.Dir(configFilePath)
+	if _, err := os.Stat(configPathDir); os.IsNotExist(err) {
+		err := os.MkdirAll(configPathDir, os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("failed to auto-create the default Config file directory '%s': %s", configPathDir, err.Error())
+		}
+	}
+
 	var f *os.File
 	if f, err = os.OpenFile(configFilePath, os.O_WRONLY|os.O_CREATE, 0666); err != nil {
-		return fmt.Errorf("failed to create the default Config file: '%s'", configFilePath)
+		return fmt.Errorf("failed to create the default Config file at '%s': %s", configFilePath, err.Error())
 	}
 
 	defer func() {
