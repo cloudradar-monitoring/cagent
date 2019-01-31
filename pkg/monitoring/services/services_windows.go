@@ -18,7 +18,7 @@ var ErrorNotImplementedForOS error
 type Win32_Service struct {
 	Name             string
 	DisplayName      string
-	Description      string
+	Description      *string
 	StartMode        string
 	State            string
 	Status           string
@@ -46,7 +46,7 @@ func ListServices(autostartOnly bool) (map[string]interface{}, error) {
 	defer cancel()
 
 	var wmiServices []Win32_Service
-	err := wmiQueryWithContext(ctx, "Select Name,DisplayName,Description,StartMode,State,State,DelayedAutoStart from Win32_Service", &wmiServices)
+	err := wmiQueryWithContext(ctx, "Select Name,DisplayName,Description,StartMode,State,Status,DelayedAutoStart from Win32_Service", &wmiServices)
 	if err != nil {
 		return nil, err
 	}
@@ -67,9 +67,14 @@ func ListServices(autostartOnly bool) (map[string]interface{}, error) {
 			wmiService.StartMode = wmiService.StartMode + "_delayed"
 		}
 
+		description := wmiService.DisplayName
+		if wmiService.Description != nil {
+			description += *wmiService.Description
+		}
+
 		servicesList = append(servicesList, map[string]interface{}{
 			"name":        wmiService.Name,
-			"description": wmiService.DisplayName + " " + wmiService.Description,
+			"description": description,
 			"start":       strings.ToLower(wmiService.StartMode),
 			"auto_start":  autoStart,
 			"state":       strings.ToLower(wmiService.State),
