@@ -56,13 +56,13 @@ func (ca *Cagent) initHubHTTPClient() {
 
 func (ca *Cagent) TestHub() error {
 	if ca.Config.HubURL == "" {
-		return fmt.Errorf("please set the hub_url config param")
+		return fmt.Errorf("please fill config with hub_url, hub_user and hub_password from your Cloudradar account")
 	}
 
 	var u *url.URL
 	var err error
 	if u, err = url.Parse(ca.Config.HubURL); err != nil {
-		return fmt.Errorf("can't parse hub_url: %s", err.Error())
+		return fmt.Errorf("can't parse hub_url: %s. Make sure to put the right params from your Cloudradar account", err.Error())
 	}
 
 	if u.Scheme != "http" && u.Scheme != "https" {
