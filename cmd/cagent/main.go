@@ -375,14 +375,7 @@ func handleFlagServiceInstall(ca *cagent.Cagent, systemManager service.System, s
 	}
 
 	fmt.Printf("Log file located at: %s\n", ca.Config.LogFile)
-	fmt.Printf("Config file located at: %s\n", cfgPath)
-
-	if ca.Config.HubURL == "" {
-		fmt.Printf(`*** Attention: 'hub_url' config param is empty.\n
-*** You need to put the right credentials from your Cloudradar account into the config and then restart the service\n\n`)
-	}
-
-	fmt.Printf("Run this command to restart the service: %s\n\n", getSystemMangerCommand(systemManager.String(), svcConfig.Name, "restart"))
+	fmt.Printf("Config file located at: %s\n\n", cfgPath)
 
 	os.Exit(0)
 }
@@ -433,14 +426,32 @@ func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 			_ = sendErrorNotification("Cagent connection test failed", err.Error())
 		}
 		fmt.Printf("Cagent HUB test failed: %s\n", err.Error())
+		systemService, err := getServiceFromFlags(ca, "", "")
+		if err != nil {
+			fmt.Printf("Failed to get system service: %s\n", err.Error())
+			os.Exit(1)
+		}
+
+		status, err := systemService.Status()
+		if err != nil {
+			// service seems not installed
+			// no need to show the tip on how to restart it
+			os.Exit(1)
+		}
+
+		systemManager := service.ChosenSystem()
+		if status == service.StatusRunning || status == service.StatusStopped {
+			fmt.Printf("Fix the config and then restart the service:\n%s\n\n", getSystemMangerCommand(systemManager.String(), svcConfig.Name, "restart"))
+		}
+
 		os.Exit(1)
 	}
 
 	if runtime.GOOS == "windows" {
-		_ = sendSuccessNotification("Cagent connection test succeed", "")
+		_ = sendSuccessNotification("Cagent connection test succeeded", "")
 	}
 
-	fmt.Printf("HUB connection test succeed and credentials are correct!\n")
+	fmt.Printf("HUB connection test succeeded and credentials are correct!\n")
 	os.Exit(0)
 }
 
