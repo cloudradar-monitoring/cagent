@@ -2,10 +2,12 @@
 
 package docker
 
-func ListContainers() (map[string]interface{}, error) {
+type DockerWatcher struct{}
+
+func (_ *DockerWatcher) ListContainers() (map[string]interface{}, error) {
 	return nil, ErrorNotImplementedForOS
 }
 
-func ContainerNameByID(_ string) (string, error) {
+func (_ *DockerWatcher) ContainerNameByID(_ string) (string, error) {
 	return "", ErrorNotImplementedForOS
 }

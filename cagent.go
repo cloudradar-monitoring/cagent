@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 	vmstattypes "github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
 
@@ -27,9 +28,11 @@ type Cagent struct {
 	fsWatcher            *FSWatcher
 	netWatcher           *NetWatcher
 	windowsUpdateWatcher *WindowsUpdateWatcher // nolint: structcheck,megacheck
-	vmstatLazyInit       sync.Once
-	vmWatchers           map[string]vmstattypes.Provider
-	hwInventory          sync.Once
+	docker               *docker.DockerWatcher
+
+	vmstatLazyInit sync.Once
+	vmWatchers     map[string]vmstattypes.Provider
+	hwInventory    sync.Once
 
 	rootCAs *x509.CertPool
 

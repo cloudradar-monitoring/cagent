@@ -12,25 +12,36 @@ import (
 
 const dockerEndpointAddress = "unix:///var/run/docker.sock"
 
-var client *docker.Client
-var connectionSucceedOnce bool
+type DockerWatcher struct {
+	client                *docker.Client
+	connectionSucceedOnce bool
+}
 
-func ListContainers() (map[string]interface{}, error) {
-	var err error
-	if client == nil {
-		client, err = docker.NewClient(dockerEndpointAddress)
+func (dw *DockerWatcher) initClient() error {
+	if dw.client == nil {
+		_, err := docker.NewClient(dockerEndpointAddress)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
+	return nil
+}
+
+func (dw *DockerWatcher) ListContainers() (map[string]interface{}, error) {
+	err := dw.initClient()
+	if err != nil {
+		return nil, err
+	}
+
 	var dockerExecExists bool
 	if _, err := exec.LookPath("docker"); err == nil {
 		dockerExecExists = true
 	}
 
-	containers, err := client.ListContainers(docker.ListContainersOptions{All: false})
+	containers, err := dw.client.ListContainers(docker.ListContainersOptions{All: false})
 	if err != nil &&
-		!dockerExecExists && !connectionSucceedOnce &&
+		!dockerExecExists && // docker executable not exists in the system
+		!dw.connectionSucceedOnce && // connection with Docker via UNIX socket was never succeed in this session
 		(strings.Contains(err.Error(), "no such file or directory") || err == docker.ErrConnectionRefused) {
 
 		// do not produce error if Docker executable is missing and wasn't successfully connected in this session before
@@ -41,7 +52,7 @@ func ListContainers() (map[string]interface{}, error) {
 	}
 
 	// store ths to handle 'connection refused' as error afterwards
-	connectionSucceedOnce = true
+	dw.connectionSucceedOnce = true
 
 	var containersResults []map[string]interface{}
 	for _, container := range containers {
@@ -57,16 +68,13 @@ func ListContainers() (map[string]interface{}, error) {
 	return map[string]interface{}{"containers": containersResults}, nil
 }
 
-func ContainerNameByID(id string) (string, error) {
-	var err error
-	if client == nil {
-		client, err = docker.NewClient(dockerEndpointAddress)
-		if err != nil {
-			return "", err
-		}
+func (dw *DockerWatcher) ContainerNameByID(id string) (string, error) {
+	err := dw.initClient()
+	if err != nil {
+		return "", err
 	}
 
-	container, err := client.InspectContainer(id)
+	container, err := dw.client.InspectContainer(id)
 	if err != nil {
 		return "", err
 	}
