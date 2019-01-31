@@ -108,7 +108,6 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 		}
 
 		t.pListMtx.Unlock()
-		time.Sleep(interval)
 	}
 }
 
