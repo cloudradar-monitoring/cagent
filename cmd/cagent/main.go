@@ -125,7 +125,7 @@ func main() {
 	handleFlagTest(*testConfigPtr, ca)
 	handleFlagSettings(settingsPtr, ca)
 
-	setDefaultLogFormatter(ca)
+	configureLogger(ca)
 
 	// log level set in flag has a precedence. If specified we need to set it ASAP
 	handleFlagLogLevel(ca, *logLevelPtr)
@@ -604,7 +604,8 @@ func getServiceFromFlags(ca *cagent.Cagent, configPath, userName string) (servic
 	return service.New(prg, svcConfig)
 }
 
-func setDefaultLogFormatter(ca *cagent.Cagent) {
+// configureLogger configure log format and hook output to file if required by config
+func configureLogger(ca *cagent.Cagent) {
 	tfmt := log.TextFormatter{FullTimestamp: true}
 	if runtime.GOOS == "windows" {
 		tfmt.DisableColors = true
