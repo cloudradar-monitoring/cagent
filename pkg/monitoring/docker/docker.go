@@ -3,6 +3,8 @@
 package docker
 
 import (
+	"fmt"
+	"os/exec"
 	"strings"
 
 	docker "github.com/fsouza/go-dockerclient"
@@ -22,10 +24,17 @@ func ListContainers() (map[string]interface{}, error) {
 			return nil, err
 		}
 	}
+	var dockerExecExists bool
+	if _, err := exec.LookPath("docker"); err == nil {
+		dockerExecExists = true
+	}
 
 	containers, err := client.ListContainers(docker.ListContainersOptions{All: false})
-	if err != nil && err == docker.ErrConnectionRefused && !connectionSucceedOnce {
-		// do not produce error if Docker is missing and wasn't successfully connected in this session before
+	if err != nil &&
+		!dockerExecExists && !connectionSucceedOnce &&
+		(strings.Contains(err.Error(), "no such file or directory") || err == docker.ErrConnectionRefused) {
+
+		// do not produce error if Docker executable is missing and wasn't successfully connected in this session before
 		return nil, nil
 	} else if err != nil {
 		log.Errorf("[Docker] Failed to list containers: %s", err.Error())
