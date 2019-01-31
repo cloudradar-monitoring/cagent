@@ -437,10 +437,10 @@ func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 	}
 
 	if runtime.GOOS == "windows" {
-		_ = sendSuccessNotification("Cagent connection test succeed", "")
+		_ = sendSuccessNotification("Cagent connection test succeeded", "")
 	}
 
-	fmt.Printf("HUB connection test succeed and credentials are correct!\n")
+	fmt.Printf("HUB connection test succeeded and credentials are correct!\n")
 	os.Exit(0)
 }
 
