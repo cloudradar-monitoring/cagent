@@ -379,10 +379,9 @@ func handleFlagServiceInstall(ca *cagent.Cagent, systemManager service.System, s
 
 	if ca.Config.HubURL == "" {
 		fmt.Printf(`*** Attention: 'hub_url' config param is empty.\n
-*** You need to put the right credentials from your Cloudradar account into the config and then restart the service\n\n`)
+*** You need to put the right credentials from your Cloudradar account into the config and then restart the service:\n\n`)
+		fmt.Printf("%s\n\n", getSystemMangerCommand(systemManager.String(), svcConfig.Name, "restart"))
 	}
-
-	fmt.Printf("Run this command to restart the service: %s\n\n", getSystemMangerCommand(systemManager.String(), svcConfig.Name, "restart"))
 
 	os.Exit(0)
 }
