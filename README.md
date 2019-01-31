@@ -37,3 +37,6 @@ Should be done on Windows machine
 - Go to cagent directory `cd path_to_directory`
 - Run `goreleaser --snapshot` to build binaries
 - Run `build-win.bat`
+
+## S.M.A.R.T monitoring documentation
+**S.M.A.R.T** [how to](https://github.com/cloudradar-monitoring/cagent/blob/master/SMART.md)
