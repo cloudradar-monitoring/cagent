@@ -77,7 +77,7 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 		}
 
 		// Call to os agnostic implementation to fetch processes
-		processes, err := t.GetProcesses()
+		processes, err := t.GetProcesses(interval)
 		if err != nil {
 			log.Printf("Failed to get process list: %s", err)
 			time.Sleep(interval)
@@ -123,7 +123,7 @@ func (t *Top) Run() {
 	if !t.isRunning {
 		t.isRunning = true
 		// Start collecting process info every sec
-		go t.startMeasureProcessLoad(time.Second * 1)
+		go t.startMeasureProcessLoad(time.Second * 5)
 	} else {
 		log.Debug("Skipped starting Top because it's already running")
 	}

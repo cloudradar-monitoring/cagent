@@ -21,10 +21,10 @@ func (t *Top) startCollect(interval time.Duration) {
 	}
 }
 
-func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
-	// The non-windows implementation needs 1s to return the results.
+func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfo, error) {
+	// The non-windows implementation needs 5s to return the results.
 	// To keep things in sync the windows implementation should do the same.
-	time.Sleep(time.Second * 1)
+	time.Sleep(interval)
 
 	res, err := monitoring.GetWatcher().GetFormattedQueryData(counterPath)
 	if err != nil {

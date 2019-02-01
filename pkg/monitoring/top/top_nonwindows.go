@@ -15,7 +15,7 @@ func (t *Top) startCollect(interval time.Duration) {
 	// No implementation needed
 }
 
-func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
+func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfo, error) {
 	results := make(chan *ProcessInfo)
 
 	// Get all currently active processes
@@ -32,7 +32,7 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 		// Run in background because the call to Percent blocks for the duration
 		go func(p *process.Process) {
 			defer wg.Done()
-			load, err := p.Percent(time.Second * 1)
+			load, err := p.Percent(interval)
 			if err != nil {
 				// If we log the error in this place, we get _a lot of_ messages
 				atomic.AddUint64(&skipped, 1)
