@@ -15,9 +15,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/cloudradar-monitoring/cagent"
 	"github.com/kardianos/service"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent"
 )
 
 var (
@@ -64,11 +65,15 @@ func main() {
 	outputFilePtr := flag.String("o", "", "file to write the results (default ./results.out)")
 	cfgPathPtr := flag.String("c", cagent.DefaultCfgPath, "config file path")
 	logLevelPtr := flag.String("v", "", "log level – overrides the level in config file (values \"error\",\"info\",\"debug\")")
-	daemonizeModePtr := flag.Bool("d", false, "daemonize – run the proccess in background")
+	daemonizeModePtr := flag.Bool("d", false, "daemonize – run the process in background")
 	oneRunOnlyModePtr := flag.Bool("r", false, "one run only – perform checks once and exit. Overwrites output file")
 	serviceUninstallPtr := flag.Bool("u", false, fmt.Sprintf("stop and uninstall the system service(%s)", systemManager.String()))
 	printConfigPtr := flag.Bool("p", false, "print the active config")
 	testConfigPtr := flag.Bool("t", false, "test the HUB config")
+	flagServiceStatusPtr := flag.Bool("service_status", false, "check status of cagent within system service")
+	flagServiceStartPtr := flag.Bool("service_start", false, "start cagent as system service")
+	flagServiceStopPtr := flag.Bool("service_stop", false, "stop cagent if running as system service")
+	flagServiceRestartPtr := flag.Bool("service_restart", false, "restart cagent within system service")
 
 	if runtime.GOOS == "windows" {
 		settingsPtr = flag.Bool("x", false, "open the settings UI")
@@ -111,9 +116,16 @@ func main() {
 
 	handleFlagPrintConfig(*printConfigPtr, cfg)
 
+	if ((serviceInstallPtr == nil) || ((serviceInstallPtr != nil) && (!*serviceInstallPtr))) &&
+		((serviceInstallUserPtr == nil) || ((serviceInstallUserPtr != nil) && (*serviceInstallUserPtr == ""))) &&
+		!*serviceUninstallPtr {
+		handleServiceCommand(ca, *flagServiceStatusPtr, *flagServiceStartPtr, *flagServiceStopPtr, *flagServiceRestartPtr)
+	}
+
+	handleFlagTest(*testConfigPtr, ca)
 	handleFlagSettings(settingsPtr, ca)
 
-	setDefaultLogFormatter()
+	configureLogger(ca)
 
 	// log level set in flag has a precedence. If specified we need to set it ASAP
 	handleFlagLogLevel(ca, *logLevelPtr)
@@ -122,7 +134,6 @@ func main() {
 	defer removePidFileIfNeeded(ca, oneRunOnlyModePtr)
 
 	handleToastFeedback(ca, *cfgPathPtr)
-	handleFlagTest(*testConfigPtr, ca)
 
 	if !service.Interactive() {
 		runUnderOsServiceManager(ca)
@@ -168,6 +179,73 @@ func main() {
 func handleFlagVersion(versionFlag bool) {
 	if versionFlag {
 		fmt.Printf("cagent v%s released under MIT license. https://github.com/cloudradar-monitoring/cagent/\n", version)
+		os.Exit(0)
+	}
+}
+
+func handleServiceCommand(ca *cagent.Cagent, check, start, stop, restart bool) {
+	if !check && !start && !stop && !restart {
+		return
+	}
+
+	svc, err := getServiceFromFlags(ca, "", "")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	var status service.Status
+
+	if status, err = svc.Status(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	if check {
+		switch status {
+		case service.StatusRunning:
+			fmt.Println("running")
+		case service.StatusStopped:
+			fmt.Println("stopped")
+		case service.StatusUnknown:
+			fmt.Println("unknown")
+		}
+
+		os.Exit(0)
+	}
+
+	if stop && (status == service.StatusRunning) {
+		if err = svc.Stop(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		fmt.Println("stopped")
+		os.Exit(0)
+	}
+
+	if start {
+		if status == service.StatusRunning {
+			fmt.Println("already")
+			os.Exit(1)
+		}
+
+		if err = svc.Start(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		fmt.Println("started")
+		os.Exit(0)
+	}
+
+	if restart {
+		if err = svc.Restart(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		fmt.Println("restarted")
 		os.Exit(0)
 	}
 }
@@ -535,13 +613,21 @@ func getServiceFromFlags(ca *cagent.Cagent, configPath, userName string) (servic
 	return service.New(prg, svcConfig)
 }
 
-func setDefaultLogFormatter() {
+// configureLogger configure log format and hook output to file if required by config
+func configureLogger(ca *cagent.Cagent) {
 	tfmt := log.TextFormatter{FullTimestamp: true}
 	if runtime.GOOS == "windows" {
 		tfmt.DisableColors = true
 	}
 
 	log.SetFormatter(&tfmt)
+
+	if ca.Config.LogFile != "" {
+		if err := cagent.AddLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644); err != nil {
+			log.Errorf("Failed to setup log file: %s: %s", ca.Config.PidFile, err.Error())
+		}
+	}
+
 }
 
 func getSystemMangerCommand(manager string, service string, command string) string {

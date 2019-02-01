@@ -47,7 +47,7 @@ type logrusFileHook struct {
 	formatter *log.TextFormatter
 }
 
-func addLogFileHook(file string, flag int, chmod os.FileMode) error {
+func AddLogFileHook(file string, flag int, chmod os.FileMode) error {
 	dir := filepath.Dir(file)
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
