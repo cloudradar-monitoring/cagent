@@ -204,7 +204,7 @@ func (t *Top) HighestLoad() (string, float64, float64, float64, float64) {
 			avg5 = Avg5(pi)
 		}()
 		go func() {
-			avg1 = Avg15(pi)
+			avg15 = Avg15(pi)
 		}()
 		wg.Wait()
 	}
