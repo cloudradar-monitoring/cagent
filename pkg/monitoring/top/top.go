@@ -94,9 +94,9 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 					PID:        p.PID,
 					Command:    p.Command,
 					Identifier: p.Name,
-					Load1:      ring.New(60),
-					Load5:      ring.New(5 * 60),
-					Load15:     ring.New(15 * 60),
+					Load1:      ring.New(60 / int(interval.Seconds())),
+					Load5:      ring.New(5 * 60 / int(interval.Seconds())),
+					Load15:     ring.New(15 * 60 / int(interval.Seconds())),
 				}
 				t.pList[p.Name] = pr
 			} else {
