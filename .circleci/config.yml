@@ -15,13 +15,15 @@ jobs:
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       # Setup our ssh key from env var to be able to connect to Windows VM
-      - run: echo $WIN_SSH_KEY | base64 -d > /tmp/id_win_ssh
-      - run: chmod 0600 /tmp/id_win_ssh
-      - checkout
-      # Build binaries
-      # All windows related build/singning stuff
-      - run: make ci
       - run:
+          name: Setup ssh key to access windows signing machine
+          command: echo $WIN_SSH_KEY | base64 -d > /tmp/id_win_ssh && chmod 0600 /tmp/id_win_ssh
+      - checkout
+      - run:
+          name: Build binaries, sign msi files and create GitHub release
+          command: make ci
+      - run:
+          name: Publish release
           shell: /bin/bash
           command: |
             if [[ ${CIRCLE_TAG} =~ -{1}((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$ ]] ; then
@@ -29,8 +31,9 @@ jobs:
             else
               github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG}
             fi
+          when: on_success
       - run:
-          name: Delete GitHub release in case somethign went wrong
+          name: Delete GitHub release in case something went wrong
           command: github-release delete --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG}
           when: on_failure
 
