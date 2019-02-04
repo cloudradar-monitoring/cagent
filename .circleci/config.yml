@@ -29,6 +29,11 @@ jobs:
             else
               github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG}
             fi
+      - run:
+          name: Delete GitHub release in case somethign went wrong
+          command: github-release delete --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG}
+          when: on_failure
+
 
   goreleasse-test:
     docker:
