@@ -12,12 +12,12 @@ import (
 
 const dockerEndpointAddress = "unix:///var/run/docker.sock"
 
-type DockerWatcher struct {
+type Watcher struct {
 	client                *docker.Client
 	connectionSucceedOnce bool
 }
 
-func (dw *DockerWatcher) initClient() error {
+func (dw *Watcher) initClient() error {
 	if dw.client == nil {
 		_, err := docker.NewClient(dockerEndpointAddress)
 		if err != nil {
@@ -27,7 +27,7 @@ func (dw *DockerWatcher) initClient() error {
 	return nil
 }
 
-func (dw *DockerWatcher) ListContainers() (map[string]interface{}, error) {
+func (dw *Watcher) ListContainers() (map[string]interface{}, error) {
 	err := dw.initClient()
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (dw *DockerWatcher) ListContainers() (map[string]interface{}, error) {
 	return map[string]interface{}{"containers": containersResults}, nil
 }
 
-func (dw *DockerWatcher) ContainerNameByID(id string) (string, error) {
+func (dw *Watcher) ContainerNameByID(id string) (string, error) {
 	err := dw.initClient()
 	if err != nil {
 		return "", err

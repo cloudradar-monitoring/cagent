@@ -45,7 +45,7 @@ func (ca *Cagent) ProcessesResult() (m MeasurementsMap, err error) {
 	states := getPossibleProcStates()
 	var procs []ProcStat
 
-	procs, err = processes(ca.docker)
+	procs, err = processes(ca.dockerWatcher)
 	if err != nil {
 		log.Error("[PROC] error: ", err.Error())
 		return nil, err

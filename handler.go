@@ -256,13 +256,13 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 
 	measurements = measurements.AddWithPrefix("services.", servicesList)
 
-	containersList, err := ca.docker.ListContainers()
+	containersList, err := ca.dockerWatcher.ListContainers()
 	if err != nil && err != docker.ErrorNotImplementedForOS {
 		// no need to log because already done inside ListContainers()
 		errs = append(errs, err.Error())
 	}
 
-	measurements = measurements.AddWithPrefix("docker.", containersList)
+	measurements = measurements.AddWithPrefix("dockerWatcher.", containersList)
 
 	if len(errs) == 0 {
 		measurements["cagent.success"] = 1

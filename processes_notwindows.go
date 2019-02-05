@@ -30,7 +30,7 @@ type procStatus struct {
 
 var dockerContainerIDRE = regexp.MustCompile(`(?m)/docker/([a-f0-9]*)$`)
 
-func processes(dockerWatcher *docker.DockerWatcher) ([]ProcStat, error) {
+func processes(dockerWatcher *docker.Watcher) ([]ProcStat, error) {
 	if runtime.GOOS == "linux" {
 		return processesFromProc(dockerWatcher)
 	}
@@ -69,7 +69,7 @@ func getProcLongState(shortState byte) string {
 }
 
 // get process states from /proc/(pid)/stat
-func processesFromProc(dockerWatcher *docker.DockerWatcher) ([]ProcStat, error) {
+func processesFromProc(dockerWatcher *docker.Watcher) ([]ProcStat, error) {
 	filepaths, err := filepath.Glob(getHostProc() + "/[0-9]*/status")
 	if err != nil {
 		return nil, err

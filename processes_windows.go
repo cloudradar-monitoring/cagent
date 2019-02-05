@@ -36,7 +36,7 @@ func WMIQueryWithContext(ctx context.Context, query string, dst interface{}, con
 	}
 }
 
-func processes(_ *docker.DockerWatcher) ([]ProcStat, error) {
+func processes(_ *docker.Watcher) ([]ProcStat, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), processListTimeout)
 	defer cancel()
 
