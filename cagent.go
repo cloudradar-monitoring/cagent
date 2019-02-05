@@ -28,7 +28,7 @@ type Cagent struct {
 	fsWatcher            *FSWatcher
 	netWatcher           *NetWatcher
 	windowsUpdateWatcher *WindowsUpdateWatcher // nolint: structcheck,megacheck
-	docker               *docker.DockerWatcher
+	dockerWatcher        *docker.Watcher
 
 	vmstatLazyInit sync.Once
 	vmWatchers     map[string]vmstattypes.Provider
@@ -45,7 +45,7 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 		ConfigLocation: cfgPath,
 		version:        version,
 		vmWatchers:     make(map[string]vmstattypes.Provider),
-		docker:         &docker.DockerWatcher{},
+		dockerWatcher:  &docker.Watcher{},
 	}
 
 	if rootCertsPath != "" {
