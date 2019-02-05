@@ -2,6 +2,7 @@ package top
 
 import (
 	"container/ring"
+	"math"
 	"sort"
 	"sync"
 	"time"
@@ -13,22 +14,24 @@ import (
 type Process struct {
 	PID        uint32
 	Load       float64
+	Load1      *ring.Ring
 	Load5      *ring.Ring
 	Load15     *ring.Ring
 	Command    string
 	Identifier string
 }
 
-type ProcessSlice []*Process
+// ProcessInfoSlice is used for sorting
+type ProcessInfoSlice []*ProcessInfo
 
-func (s ProcessSlice) Len() int {
+func (s ProcessInfoSlice) Len() int {
 	return len(s)
 }
-func (s ProcessSlice) Swap(i, j int) {
+func (s ProcessInfoSlice) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
-func (s ProcessSlice) Less(i, j int) bool {
-	return s[i].Load < s[j].Load
+func (s ProcessInfoSlice) Less(i, j int) bool {
+	return s[i].Load1 < s[j].Load1
 }
 
 // ProcessInfo is used to store a snapshot of load data about an OS process
@@ -37,6 +40,7 @@ type ProcessInfo struct {
 	PID     uint32  `json:"pid"`
 	Command string  `json:"command"`
 	Load    float64 `json:"load"`
+	Load1   float64 `json:"load1"`
 	Load5   float64 `json:"load5"`
 	Load15  float64 `json:"load15"`
 }
@@ -74,7 +78,7 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 		}
 
 		// Call to os agnostic implementation to fetch processes
-		processes, err := t.GetProcesses()
+		processes, err := t.GetProcesses(interval)
 		if err != nil {
 			log.Printf("Failed to get process list: %s", err)
 			time.Sleep(interval)
@@ -91,8 +95,9 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 					PID:        p.PID,
 					Command:    p.Command,
 					Identifier: p.Name,
-					Load5:      ring.New(5 * 60),
-					Load15:     ring.New(15 * 60),
+					Load1:      ring.New(60 / int(interval.Seconds())),
+					Load5:      ring.New(5 * 60 / int(interval.Seconds())),
+					Load15:     ring.New(15 * 60 / int(interval.Seconds())),
 				}
 				t.pList[p.Name] = pr
 			} else {
@@ -101,6 +106,8 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 
 			// Add load value to rings for later calculation of load load5 and load15
 			pr.Load = p.Load
+			pr.Load1.Value = p.Load
+			pr.Load1 = pr.Load1.Next()
 			pr.Load5.Value = p.Load
 			pr.Load5 = pr.Load5.Next()
 			pr.Load15.Value = p.Load
@@ -108,7 +115,6 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 		}
 
 		t.pListMtx.Unlock()
-		time.Sleep(interval)
 	}
 }
 
@@ -118,7 +124,7 @@ func (t *Top) Run() {
 	if !t.isRunning {
 		t.isRunning = true
 		// Start collecting process info every sec
-		go t.startMeasureProcessLoad(time.Second * 1)
+		go t.startMeasureProcessLoad(time.Second * 5)
 	} else {
 		log.Debug("Skipped starting Top because it's already running")
 	}
@@ -138,7 +144,6 @@ func (t *Top) HighestNLoad(n int) []*ProcessInfo {
 	for _, v := range t.pList {
 		pl = append(pl, v)
 	}
-	sort.Sort(sort.Reverse(ProcessSlice(pl)))
 	t.pListMtx.RUnlock()
 
 	result := make([]*ProcessInfo, 0, len(pl))
@@ -148,11 +153,14 @@ func (t *Top) HighestNLoad(n int) []*ProcessInfo {
 			Command: p.Command,
 			PID:     p.PID,
 			Load:    p.Load,
+			Load1:   Avg1(p),
 			Load5:   Avg5(p),
 			Load15:  Avg15(p),
 		}
 		result = append(result, pi)
 	}
+
+	sort.Sort(sort.Reverse(ProcessInfoSlice(result)))
 
 	if n <= len(result) {
 		return result[:n]
@@ -162,7 +170,7 @@ func (t *Top) HighestNLoad(n int) []*ProcessInfo {
 }
 
 // HighestLoad returns information about the process causing highest CPU load
-func (t *Top) HighestLoad() (string, float64, float64, float64) {
+func (t *Top) HighestLoad() (string, float64, float64, float64, float64) {
 	var pi *Process
 	var identifier string
 
@@ -179,56 +187,48 @@ func (t *Top) HighestLoad() (string, float64, float64, float64) {
 	}
 	t.pListMtx.RUnlock()
 
-	var avg5, avg15 float64
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	// Func to calculate 5min average
-	avg5f := func() {
-		total := float64(0)
-		count := 0
-		pi.Load5.Do(func(p interface{}) {
-			if p == nil {
-				return
-			}
-			count++
-			total += p.(float64)
-		})
-		avg5 = total / float64(count)
-		wg.Done()
-	}
-
-	// Func to calculate 15min average
-	avg15f := func() {
-		total := float64(0)
-		count := 0
-		pi.Load15.Do(func(p interface{}) {
-			if p == nil {
-				return
-			}
-			count++
-			total += p.(float64)
-		})
-		avg15 = total / float64(count)
-		wg.Done()
-	}
-
 	// pi can be nil on first run until thigs are set up
 	if pi == nil {
-		return "", 0, 0, 0
+		return "", 0, 0, 0, 0
 	}
 
+	var avg1, avg5, avg15 float64
+	var wg sync.WaitGroup
+	wg.Add(3)
+
 	// Sanity check in case the Rings aren't initialised yet
-	if pi.Load5 != nil && pi.Load15 != nil {
-		go avg5f()
-		go avg15f()
+	if pi.Load1 != nil && pi.Load5 != nil && pi.Load15 != nil {
+		go func() {
+			avg1 = Avg1(pi)
+		}()
+		go func() {
+			avg5 = Avg5(pi)
+		}()
+		go func() {
+			avg15 = Avg15(pi)
+		}()
 		wg.Wait()
 	}
 
-	return identifier, pi.Load, avg5, avg15
+	return identifier, pi.Load, avg1, avg5, avg15
 }
 
-// Func to calculate 5min average
+// Avg1 calculates 1min average
+func Avg1(pi *Process) float64 {
+	total := float64(0)
+	count := 0
+	pi.Load1.Do(func(p interface{}) {
+		if p == nil {
+			return
+		}
+		count++
+		total += p.(float64)
+	})
+
+	return math.Round(total/float64(count)*100) / 100
+}
+
+// Avg5 calculates 5min average
 func Avg5(pi *Process) float64 {
 	total := float64(0)
 	count := 0
@@ -239,10 +239,10 @@ func Avg5(pi *Process) float64 {
 		count++
 		total += p.(float64)
 	})
-	return total / float64(count)
+	return math.Round(total/float64(count)*100) / 100
 }
 
-// Func to calculate 15min average
+// Avg15 calculates 15min average
 func Avg15(pi *Process) float64 {
 	total := float64(0)
 	count := 0
@@ -253,7 +253,7 @@ func Avg15(pi *Process) float64 {
 		count++
 		total += p.(float64)
 	})
-	return total / float64(count)
+	return math.Round(total/float64(count)*100) / 100
 }
 
 func LowerThan(value, threshold float64) bool {

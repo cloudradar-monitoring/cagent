@@ -21,7 +21,11 @@ func (t *Top) startCollect(interval time.Duration) {
 	}
 }
 
-func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
+func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfo, error) {
+	// The non-windows implementation needs 5s to return the results.
+	// To keep things in sync the windows implementation should do the same.
+	time.Sleep(interval)
+
 	res, err := monitoring.GetWatcher().GetFormattedQueryData(counterPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to call GetFormattedQueryData")
@@ -38,15 +42,12 @@ func (t *Top) GetProcesses() ([]*ProcessInfo, error) {
 			continue
 		}
 
-		// Only pay attention to processes that do something
-		// if c.Value != 0 {
 		pi := &ProcessInfo{
 			Name:    c.InstanceName,
 			Command: c.InstanceName,
 			Load:    c.Value,
 		}
 		result = append(result, pi)
-		// }
 	}
 
 	return result, nil
