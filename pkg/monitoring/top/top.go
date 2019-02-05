@@ -2,6 +2,7 @@ package top
 
 import (
 	"container/ring"
+	"math"
 	"sort"
 	"sync"
 	"time"
@@ -223,7 +224,8 @@ func Avg1(pi *Process) float64 {
 		count++
 		total += p.(float64)
 	})
-	return total / float64(count)
+
+	return math.Round(total/float64(count)*100) / 100
 }
 
 // Avg5 calculates 5min average
@@ -237,7 +239,7 @@ func Avg5(pi *Process) float64 {
 		count++
 		total += p.(float64)
 	})
-	return total / float64(count)
+	return math.Round(total/float64(count)*100) / 100
 }
 
 // Avg15 calculates 15min average
@@ -251,7 +253,7 @@ func Avg15(pi *Process) float64 {
 		count++
 		total += p.(float64)
 	})
-	return total / float64(count)
+	return math.Round(total/float64(count)*100) / 100
 }
 
 func LowerThan(value, threshold float64) bool {
