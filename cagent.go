@@ -45,6 +45,7 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 		ConfigLocation: cfgPath,
 		version:        version,
 		vmWatchers:     make(map[string]vmstattypes.Provider),
+		docker:         &docker.DockerWatcher{},
 	}
 
 	if rootCertsPath != "" {
