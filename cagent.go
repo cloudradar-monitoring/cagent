@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 	vmstattypes "github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
 
@@ -27,9 +28,11 @@ type Cagent struct {
 	fsWatcher            *FSWatcher
 	netWatcher           *NetWatcher
 	windowsUpdateWatcher *WindowsUpdateWatcher // nolint: structcheck,megacheck
-	vmstatLazyInit       sync.Once
-	vmWatchers           map[string]vmstattypes.Provider
-	hwInventory          sync.Once
+	dockerWatcher        *docker.Watcher
+
+	vmstatLazyInit sync.Once
+	vmWatchers     map[string]vmstattypes.Provider
+	hwInventory    sync.Once
 
 	rootCAs *x509.CertPool
 
@@ -42,6 +45,14 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 		ConfigLocation: cfgPath,
 		version:        version,
 		vmWatchers:     make(map[string]vmstattypes.Provider),
+	}
+
+	if dw, err := docker.New(); err != nil {
+		if err != docker.ErrorNotImplementedForOS {
+			log.Errorf("[docker] init error: %s", err)
+		}
+	} else {
+		ca.dockerWatcher = dw
 	}
 
 	if rootCertsPath != "" {

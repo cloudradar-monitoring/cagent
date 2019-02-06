@@ -17,7 +17,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/hwinfo"
-	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 )
@@ -256,13 +255,15 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 
 	measurements = measurements.AddWithPrefix("services.", servicesList)
 
-	containersList, err := docker.ListContainers()
-	if err != nil && err != docker.ErrorNotImplementedForOS {
-		// no need to log because already done inside ListContainers()
-		errs = append(errs, err.Error())
-	}
+	if ca.dockerWatcher != nil {
+		containersList, err := ca.dockerWatcher.ListContainers()
+		if err != nil {
+			// no need to log because already done inside ListContainers()
+			errs = append(errs, err.Error())
+		}
 
-	measurements = measurements.AddWithPrefix("docker.", containersList)
+		measurements = measurements.AddWithPrefix("dockerWatcher.", containersList)
+	}
 
 	if len(errs) == 0 {
 		measurements["cagent.success"] = 1

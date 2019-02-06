@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/StackExchange/wmi"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 )
 
 const processListTimeout = time.Second * 10
@@ -34,7 +36,7 @@ func WMIQueryWithContext(ctx context.Context, query string, dst interface{}, con
 	}
 }
 
-func processes() ([]ProcStat, error) {
+func processes(_ *docker.Watcher) ([]ProcStat, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), processListTimeout)
 	defer cancel()
 

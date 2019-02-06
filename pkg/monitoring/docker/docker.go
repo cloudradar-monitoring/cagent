@@ -3,6 +3,7 @@
 package docker
 
 import (
+	"os/exec"
 	"strings"
 
 	docker "github.com/fsouza/go-dockerclient"
@@ -11,29 +12,44 @@ import (
 
 const dockerEndpointAddress = "unix:///var/run/docker.sock"
 
-var client *docker.Client
-var connectionSucceedOnce bool
+// Don't use this struct directly.
+// Use New() instead
+type Watcher struct {
+	client                *docker.Client
+	connectionSucceedOnce bool
+}
 
-func ListContainers() (map[string]interface{}, error) {
-	var err error
-	if client == nil {
-		client, err = docker.NewClient(dockerEndpointAddress)
-		if err != nil {
-			return nil, err
-		}
+func New() (*Watcher, error) {
+	client, err := docker.NewClient(dockerEndpointAddress)
+	if err != nil {
+		return nil, err
 	}
 
-	containers, err := client.ListContainers(docker.ListContainersOptions{All: false})
-	if err != nil && err == docker.ErrConnectionRefused && !connectionSucceedOnce {
-		// do not produce error if Docker is missing and wasn't successfully connected in this session before
-		return nil, nil
-	} else if err != nil {
+	return &Watcher{client: client}, nil
+}
+
+func (dw *Watcher) ListContainers() (map[string]interface{}, error) {
+	var dockerExecExists bool
+	if _, err := exec.LookPath("docker"); err == nil {
+		dockerExecExists = true
+	}
+
+	containers, err := dw.client.ListContainers(docker.ListContainersOptions{All: false})
+	if err != nil {
+		if !dockerExecExists && // docker executable not exists in the system
+			!dw.connectionSucceedOnce && // connection with Docker via UNIX socket was never succeed in this session
+			(strings.Contains(err.Error(), "no such file or directory") || err == docker.ErrConnectionRefused) {
+
+			// do not produce error if Docker executable is missing and wasn't successfully connected in this session before
+			return nil, nil
+		}
+
 		log.Errorf("[Docker] Failed to list containers: %s", err.Error())
 		return nil, err
 	}
 
 	// store ths to handle 'connection refused' as error afterwards
-	connectionSucceedOnce = true
+	dw.connectionSucceedOnce = true
 
 	var containersResults []map[string]interface{}
 	for _, container := range containers {
@@ -49,16 +65,8 @@ func ListContainers() (map[string]interface{}, error) {
 	return map[string]interface{}{"containers": containersResults}, nil
 }
 
-func ContainerNameByID(id string) (string, error) {
-	var err error
-	if client == nil {
-		client, err = docker.NewClient(dockerEndpointAddress)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	container, err := client.InspectContainer(id)
+func (dw *Watcher) ContainerNameByID(id string) (string, error) {
+	container, err := dw.client.InspectContainer(id)
 	if err != nil {
 		return "", err
 	}
