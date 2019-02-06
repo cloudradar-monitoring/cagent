@@ -24,7 +24,9 @@ type Cagent struct {
 	// internal use
 	hubHTTPClient *http.Client
 
-	cpuWatcher           *CPUWatcher
+	cpuWatcher             *CPUWatcher
+	cpuUtilisationAnalyser *CPUUtilisationAnalyser
+
 	fsWatcher            *FSWatcher
 	netWatcher           *NetWatcher
 	windowsUpdateWatcher *WindowsUpdateWatcher // nolint: structcheck,megacheck

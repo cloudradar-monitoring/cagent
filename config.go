@@ -69,6 +69,17 @@ type Config struct {
 	HardwareInventory bool `toml:"hardware_inventory" comment:"default true"`
 
 	DiscoverAutostartingServicesOnly bool `toml:"discover_autostarting_services_only" comment:"default true"`
+
+	CPUUtilisationAnalysis CPUUtilisationAnalysis `toml:"cpu_utilisation_analysis"`
+}
+
+type CPUUtilisationAnalysis struct {
+	Threshold                      float64 `toml:"threshold" comment:"target value to start the analysis"`
+	Function                       string  `toml:"function" comment:"threshold compare function, possible values: 'lt', 'lte', 'gt', 'gte'"`
+	Metric                         string  `toml:"metric" commend:"possible values: 'user','system','idle','iowait'"`
+	GatheringMode                  string  `toml:"gathering_mode" comment:"should be one of values of cpu_utilisation_gathering_mode"`
+	ReportProcesses                int     `toml:"report_processes" comment:"number of processes to return"`
+	TrailingProcessAnalysisMinutes int     `toml:"trailing_process_analysis_minutes" comment:"how much time analysis will continue to perform after the CPU utilisation returns to the normal value"`
 }
 
 func init() {
@@ -109,6 +120,14 @@ func NewConfig() *Config {
 		SystemFields:                     []string{"uname", "os_kernel", "os_family", "os_arch", "cpu_model", "fqdn", "memory_total_B"},
 		HardwareInventory:                true,
 		DiscoverAutostartingServicesOnly: true,
+		CPUUtilisationAnalysis: CPUUtilisationAnalysis{
+			Threshold:                      10,
+			Function:                       "lt",
+			Metric:                         "idle",
+			GatheringMode:                  "avg1",
+			ReportProcesses:                5,
+			TrailingProcessAnalysisMinutes: 5,
+		},
 	}
 
 	if runtime.GOOS == "windows" {
