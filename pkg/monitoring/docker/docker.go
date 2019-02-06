@@ -35,14 +35,15 @@ func (dw *Watcher) ListContainers() (map[string]interface{}, error) {
 	}
 
 	containers, err := dw.client.ListContainers(docker.ListContainersOptions{All: false})
-	if err != nil &&
-		!dockerExecExists && // docker executable not exists in the system
-		!dw.connectionSucceedOnce && // connection with Docker via UNIX socket was never succeed in this session
-		(strings.Contains(err.Error(), "no such file or directory") || err == docker.ErrConnectionRefused) {
+	if err != nil {
+		if !dockerExecExists && // docker executable not exists in the system
+			!dw.connectionSucceedOnce && // connection with Docker via UNIX socket was never succeed in this session
+			(strings.Contains(err.Error(), "no such file or directory") || err == docker.ErrConnectionRefused) {
 
-		// do not produce error if Docker executable is missing and wasn't successfully connected in this session before
-		return nil, nil
-	} else if err != nil {
+			// do not produce error if Docker executable is missing and wasn't successfully connected in this session before
+			return nil, nil
+		}
+
 		log.Errorf("[Docker] Failed to list containers: %s", err.Error())
 		return nil, err
 	}
