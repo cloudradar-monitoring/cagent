@@ -12,27 +12,23 @@ import (
 
 const dockerEndpointAddress = "unix:///var/run/docker.sock"
 
+// Don't use this struct directly.
+// Use New() instead
 type Watcher struct {
 	client                *docker.Client
 	connectionSucceedOnce bool
 }
 
-func (dw *Watcher) initClient() error {
-	if dw.client == nil {
-		_, err := docker.NewClient(dockerEndpointAddress)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (dw *Watcher) ListContainers() (map[string]interface{}, error) {
-	err := dw.initClient()
+func New() (*Watcher, error) {
+	client, err := docker.NewClient(dockerEndpointAddress)
 	if err != nil {
 		return nil, err
 	}
 
+	return &Watcher{client: client}, nil
+}
+
+func (dw *Watcher) ListContainers() (map[string]interface{}, error) {
 	var dockerExecExists bool
 	if _, err := exec.LookPath("docker"); err == nil {
 		dockerExecExists = true
@@ -69,11 +65,6 @@ func (dw *Watcher) ListContainers() (map[string]interface{}, error) {
 }
 
 func (dw *Watcher) ContainerNameByID(id string) (string, error) {
-	err := dw.initClient()
-	if err != nil {
-		return "", err
-	}
-
 	container, err := dw.client.InspectContainer(id)
 	if err != nil {
 		return "", err
