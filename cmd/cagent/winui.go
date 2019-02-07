@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/lxn/walk"
@@ -88,13 +89,18 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 	saveButtonText := ui.SaveButton.Text()
 	ui.SaveButton.SetEnabled(false)
 	ui.SaveButton.SetText("Testing...")
-	err := ui.ca.TestHub()
+	err := ui.ca.TestHubWinUI()
 	defer func() {
 		ui.SaveButton.SetText(saveButtonText)
 		ui.SaveButton.SetEnabled(true)
 	}()
 
 	if err != nil {
+		// do not set the error in the status bar by default
+		if err == cagent.ErrorTestWinUISettingsAreEmpty && testOnly {
+			return
+		}
+
 		ui.StatusBar.SetText("Status: failed to connect to the HUB ")
 		ui.StatusBar.SetIcon(ui.ErrorIcon)
 
@@ -116,7 +122,7 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 		return
 	}
 
-	message := "Test connection succeed.\n"
+	message := "Test connection succeeded.\n"
 
 	ui.SaveButton.SetText("Saving...")
 	err = cagent.SaveConfigFile(ui.ca.Config, ui.ca.ConfigLocation)
@@ -125,7 +131,7 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 		return
 	}
 
-	message += "Changes saved to config file.\n"
+	message += "Your settings are saved.\n"
 
 	m, err := mgr.Connect()
 	if err != nil {
@@ -143,7 +149,7 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 
 	ui.SaveButton.SetText("Stopping the service...")
 	err = stopService(s)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "has not been started") {
 		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to stop 'cagent' service: "+err.Error(), nil)
 		return
 	}
@@ -163,7 +169,7 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 		}
 	}
 
-	RunDialog(ui.MainWindow, ui.SuccessIcon, "Success", message+"Service restarted and all changes applied!", callback)
+	RunDialog(ui.MainWindow, ui.SuccessIcon, "Success", message+"Services restarted and you are all set up!", callback)
 	ui.StatusBar.SetText("Status: successfully connected to the HUB")
 	ui.StatusBar.SetIcon(ui.SuccessIcon)
 }
@@ -210,7 +216,7 @@ func windowsShowSettingsUI(ca *cagent.Cagent, installationMode bool) {
 				Layout: Grid{Columns: 2},
 				Children: []Widget{
 					Label{
-						Text: "Hub URL",
+						Text: "HUB URL",
 						Font: labelFont,
 					},
 					LineEdit{
@@ -219,7 +225,7 @@ func windowsShowSettingsUI(ca *cagent.Cagent, installationMode bool) {
 					},
 
 					Label{
-						Text: "Hub User",
+						Text: "HUB USER",
 						Font: labelFont,
 					},
 					LineEdit{
@@ -228,7 +234,7 @@ func windowsShowSettingsUI(ca *cagent.Cagent, installationMode bool) {
 					},
 
 					Label{
-						Text: "Hub Password",
+						Text: "HUB PASSWORD",
 						Font: labelFont,
 					},
 					LineEdit{

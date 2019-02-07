@@ -59,7 +59,7 @@
                          </ServiceControl>
                          <File Id="ApplicationFile{{$i}}" Source="{{$e}}" KeyPath="yes">
                              <Shortcut Id="CagentShortcut"
-                                     Name="Cagent"
+                                     Name="Cagent Settings"
                                      Arguments="cagent:settings"
                                      Description="Opens the settings UI"
                                      Directory="ApplicationProgramsFolder" />

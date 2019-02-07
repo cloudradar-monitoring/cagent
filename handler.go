@@ -22,6 +22,8 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 )
 
+var ErrorTestWinUISettingsAreEmpty = errors.New("Please fill 'HUB URL', 'HUB USER' and 'HUB PASSWORD' from your Cloudradar account")
+
 func (ca *Cagent) initHubHTTPClient() {
 	if ca.hubHTTPClient == nil {
 		tr := *(http.DefaultTransport.(*http.Transport))
@@ -91,6 +93,48 @@ func (ca *Cagent) TestHub() error {
 		return fmt.Errorf("unable to authorise with the provided credentials. Please correct the hub_user & hub_password in the Config")
 	} else if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		return fmt.Errorf("got bad response status: %d, %s. If you have a proxy or firewall it may be blocking the connection", resp.StatusCode, resp.Status)
+	}
+
+	return nil
+}
+
+func (ca *Cagent) TestHubWinUI() error {
+	if ca.Config.HubURL == "" {
+		return ErrorTestWinUISettingsAreEmpty
+	}
+
+	var u *url.URL
+	var err error
+	if u, err = url.Parse(ca.Config.HubURL); err != nil {
+		return fmt.Errorf("Can't parse 'HUB URL': %s. Make sure to put the right params from your Cloudradar account", err.Error())
+	}
+
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("'HUB URL' must start with 'https://' or 'http://'")
+	}
+
+	ca.initHubHTTPClient()
+	req, err := http.NewRequest("HEAD", ca.Config.HubURL, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Add("User-Agent", ca.userAgent())
+	if ca.Config.HubUser != "" {
+		req.SetBasicAuth(ca.Config.HubUser, ca.Config.HubPassword)
+	}
+
+	resp, err := ca.hubHTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("Unable to connect. %s. If you have a proxy or firewall, it may be blocking the connection", err.Error())
+	}
+
+	if resp.StatusCode == 401 && ca.Config.HubUser == "" {
+		return fmt.Errorf("Unable to authorise without credentials. Please set 'HUB USER' and 'HUB PASSWORD' from your Cloudradar account")
+	} else if resp.StatusCode == 401 && ca.Config.HubUser != "" {
+		return fmt.Errorf("Unable to authorise with the provided credentials. Please correct 'HUB USER' and 'HUB PASSWORD' according to your Cloudradar account")
+	} else if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		return fmt.Errorf("Got bad response status: %d, %s. If you have a proxy or firewall it may be blocking the connection", resp.StatusCode, resp.Status)
 	}
 
 	return nil
