@@ -50,7 +50,8 @@ windows-sign:
 	# Trigger msi creating
 	ssh -i /tmp/id_win_ssh -p 24481 -oStrictHostKeyChecking=no hero@144.76.9.139 /cygdrive/C/Users/hero/ci/cagent_ci/build_msi/${CIRCLE_BUILD_NUM}/build-win.bat ${CIRCLE_BUILD_NUM} ${CIRCLE_TAG}
 	# Trigger signing
-	ssh -i /tmp/id_win_ssh -p 24481 -oStrictHostKeyChecking=no hero@144.76.9.139 curl http://localhost:8080/?file=cagent_32.msi
+	ssh -i /tmp/id_win_ssh -p 24481 -oStrictHostKeyChecking=no hero@144.76.9.139 curl http://localhost:8088/?file=cagent_32.msi
+	echo $$?
 	sleep 10
 	ssh -i /tmp/id_win_ssh -p 24481 -oStrictHostKeyChecking=no hero@144.76.9.139 curl http://localhost:8080/?file=cagent_64.msi
 	# Copy msi files back to build machine
