@@ -55,6 +55,7 @@ const (
 	TypePowerSupply
 	TypeAdditionalInformation
 	TypeOnBoardDevice
+	TypeEndOfTable       = 127
 	TypeVendorRangeBegin = 128
 )
 
@@ -263,7 +264,7 @@ type ReqMemoryDevice struct {
 	Type                   string   `dmidecode:"Type"`
 	TypeDetail             string   `dmidecode:"Type Detail"`
 	Speed                  string   `dmidecode:"Speed"`
-	Manufacturer           uint16   `dmidecode:"Manufacturer"`
+	Manufacturer           string   `dmidecode:"Manufacturer"`
 	SerialNumber           string   `dmidecode:"Serial Number"`
 	AssetTag               string   `dmidecode:"Asset Tag"`
 	PartNumber             string   `dmidecode:"Part Number"`
@@ -376,6 +377,10 @@ type ReqOemSpecificType struct {
 	Strings       []string `dmidecode:"Strings"`
 }
 
+// ReqOnBoardDevice DMI type 127
+type ReqEndOfTable struct {
+}
+
 // not that much time spent on this part actually. Multiline selection is the trick
 
 var _ objType = (*ReqBiosInfo)(nil)
@@ -421,6 +426,7 @@ var _ objType = (*ReqPowerSupply)(nil)
 var _ objType = (*ReqAdditionalInformation)(nil)
 var _ objType = (*ReqOnBoardDevice)(nil)
 var _ objType = (*ReqOemSpecificType)(nil)
+var _ objType = (*ReqEndOfTable)(nil)
 
 func newReqBiosInfo() interface{}                      { return &ReqBiosInfo{} }
 func newReqSystem() interface{}                        { return &ReqSystem{} }
@@ -465,6 +471,7 @@ func newReqPowerSupply() interface{}                   { return &ReqPowerSupply{
 func newReqAdditionalInformation() interface{}         { return &ReqAdditionalInformation{} }
 func newReqOnBoardDevice() interface{}                 { return &ReqOnBoardDevice{} }
 func newReqOemSpecificType() interface{}               { return &ReqOemSpecificType{} }
+func newReqEndOfTable() interface{}                    { return &ReqEndOfTable{} }
 
 func (req *ReqBiosInfo) ObjectType() ReqType                   { return TypeBIOSInfo }
 func (req *ReqSystem) ObjectType() ReqType                     { return TypeSystem }
@@ -511,6 +518,7 @@ func (req *ReqPowerSupply) ObjectType() ReqType           { return TypePowerSupp
 func (req *ReqAdditionalInformation) ObjectType() ReqType { return TypeAdditionalInformation }
 func (req *ReqOnBoardDevice) ObjectType() ReqType         { return TypeOnBoardDevice }
 func (req *ReqOemSpecificType) ObjectType() ReqType       { return TypeVendorRangeBegin }
+func (req *ReqEndOfTable) ObjectType() ReqType            { return TypeEndOfTable }
 
 func (un *CPUSignature) unmarshal(data string) error {
 	un.raw = data
