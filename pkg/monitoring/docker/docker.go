@@ -11,8 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Don't use this struct directly.
-// Use New() instead
 type Watcher struct {
 	connectionSucceedOnce bool
 }
@@ -72,7 +70,7 @@ func (dw *Watcher) ListContainers() (map[string]interface{}, error) {
 		log.Errorf("[docker] docker executable exists but failed to list containers: %s", err.Error())
 
 		// looks like docker daemon is down
-		// don not pass the error in case we never succeed with docker command within a session
+		// do not pass the error in case we never succeed with docker command within a session
 		if !dw.connectionSucceedOnce {
 			return nil, nil
 		}
@@ -119,7 +117,7 @@ func (dw *Watcher) ContainerNameByID(id string) (string, error) {
 	out, err := exec.Command("/bin/sh", "-c", "sudo docker inspect --format \"{{ .Name }}\"").Output()
 	if err != nil {
 		// looks like docker daemon is down
-		// don not pass the error in case we never succeed with docker command within a session
+		// do not pass the error in case we never succeed with docker command within a session
 		if !dw.connectionSucceedOnce {
 			return "", nil
 		}
