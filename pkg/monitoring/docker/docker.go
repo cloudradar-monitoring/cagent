@@ -25,7 +25,7 @@ func isDockerAvailable() bool {
 	return true
 }
 
-type DockerPSOutput struct {
+type dockerPsOutput struct {
 	ID     string
 	Image  string
 	Status string
@@ -92,7 +92,7 @@ func (dw *Watcher) ListContainers() (map[string]interface{}, error) {
 			continue
 		}
 
-		var container DockerPSOutput
+		var container dockerPsOutput
 		err := json.Unmarshal([]byte(line), &container)
 		if err != nil {
 			log.Errorf("[docker] container list error: error decoding json output: %s", err.Error())

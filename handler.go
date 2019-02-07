@@ -14,10 +14,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/hwinfo"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 )
