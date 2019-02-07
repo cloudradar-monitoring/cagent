@@ -64,6 +64,7 @@ var decoders = typeDecoders{
 	TypePowerSupply:                   newReqPowerSupply,
 	TypeAdditionalInformation:         newReqAdditionalInformation,
 	TypeOnBoardDevice:                 newReqOnBoardDevice,
+	TypeEndOfTable:                    newReqEndOfTable,
 	TypeVendorRangeBegin:              newReqOemSpecificType,
 }
 
@@ -218,7 +219,6 @@ func (dmi *DMI) parse(data []byte) error {
 
 		for i := 0; i < len(dataElements); i++ {
 			recordData := recordRegex.FindStringSubmatch(dataElements[i])
-
 			// Is this the line containing handle identifier, type, size?
 			if len(recordData) > 0 {
 				keys[recordData[1]] = recordData[2]
@@ -359,12 +359,15 @@ func (dmi *DMI) decode() (err error) {
 				case []string:
 					data, rv1, e := unifySlice(val, fieldValue)
 					if e != nil {
-						return fmt.Errorf("dmidecode: unify string slice: %s", e.Error())
-					}
-					for i := 0; i < data.Len(); i++ {
-						v := data.Index(i).Interface()
-						sliceVal := indirect(rv1.Index(i))
-						sliceVal.SetString(v.(string))
+						if empty, ok := val.(string); !ok || ((empty != "None") && (empty != "Not Specified")) {
+							return fmt.Errorf("dmidecode: unify string slice: %s", err.Error())
+						}
+					} else {
+						for i := 0; i < data.Len(); i++ {
+							v := data.Index(i).Interface()
+							sliceVal := indirect(rv1.Index(i))
+							sliceVal.SetString(v.(string))
+						}
 					}
 				}
 			default:
