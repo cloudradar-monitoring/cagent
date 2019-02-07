@@ -83,6 +83,7 @@ nfpm:
     "example.config.toml": "/etc/cagent/example.config.toml"
     "cacert.pem": "/etc/cagent/cacert.pem"
     "pkg-scripts/cagent-dmidecode": "/etc/sudoers.d/cagent-dmidecode"
+    "pkg-scripts/cagent-docker": "/etc/sudoers.d/cagent-docker"
 
   scripts:
     preinstall: "pkg-scripts/preinstall.sh"

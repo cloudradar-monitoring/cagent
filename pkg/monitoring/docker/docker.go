@@ -3,61 +3,107 @@
 package docker
 
 import (
+	"encoding/json"
+	"errors"
 	"os/exec"
 	"strings"
 
-	docker "github.com/fsouza/go-dockerclient"
 	log "github.com/sirupsen/logrus"
 )
-
-const dockerEndpointAddress = "unix:///var/run/docker.sock"
 
 // Don't use this struct directly.
 // Use New() instead
 type Watcher struct {
-	client                *docker.Client
 	connectionSucceedOnce bool
 }
 
-func New() (*Watcher, error) {
-	client, err := docker.NewClient(dockerEndpointAddress)
-	if err != nil {
-		return nil, err
+func isDockerAvailable() bool {
+	if _, err := exec.LookPath("docker"); err != nil {
+		return false
 	}
 
-	return &Watcher{client: client}, nil
+	return true
+}
+
+type DockerPSOutput struct {
+	ID     string
+	Image  string
+	Status string
+	Names  string
+}
+
+func containerStatusToState(status string) string {
+	status = strings.ToLower(status)
+
+	if strings.HasPrefix(status, "up") {
+		if strings.HasSuffix(status, "(paused)") {
+			return "paused"
+		}
+
+		return "running"
+	}
+
+	if strings.HasPrefix(status, "exited") {
+		return "stopped"
+	}
+
+	// in other cases just use the first word
+	// As of docker 18.09 it can be one of: created, restarting, dead, removing
+	p := strings.Split(status, " ")
+	if len(p) > 0 {
+		return p[0]
+	}
+
+	// just in case we got empty status somehow
+	return "unknown"
 }
 
 func (dw *Watcher) ListContainers() (map[string]interface{}, error) {
-	var dockerExecExists bool
-	if _, err := exec.LookPath("docker"); err == nil {
-		dockerExecExists = true
+	if !isDockerAvailable() {
+		return nil, ErrorDockerNotFound
 	}
 
-	containers, err := dw.client.ListContainers(docker.ListContainersOptions{All: false})
+	out, err := exec.Command("/bin/sh", "-c", "docker ps -a --format \"{{ json . }}\"").Output()
 	if err != nil {
-		if !dockerExecExists && // docker executable not exists in the system
-			!dw.connectionSucceedOnce && // connection with Docker via UNIX socket was never succeed in this session
-			(strings.Contains(err.Error(), "no such file or directory") || err == docker.ErrConnectionRefused) {
+		if ee, ok := err.(*exec.ExitError); ok {
+			err = errors.New(ee.Error() + ": " + string(ee.Stderr))
+		}
 
-			// do not produce error if Docker executable is missing and wasn't successfully connected in this session before
+		log.Errorf("[docker] docker executable exists but failed to list containers: %s", err.Error())
+
+		// looks like docker daemon is down
+		// don not pass the error in case we never succeed with docker command within a session
+		if !dw.connectionSucceedOnce {
 			return nil, nil
 		}
 
-		log.Errorf("[Docker] Failed to list containers: %s", err.Error())
 		return nil, err
 	}
 
-	// store ths to handle 'connection refused' as error afterwards
 	dw.connectionSucceedOnce = true
 
+	lines := strings.Split(string(out), "\n")
 	var containersResults []map[string]interface{}
-	for _, container := range containers {
+
+	for _, line := range lines {
+		// skip empty lines
+		line = strings.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
+
+		var container DockerPSOutput
+		err := json.Unmarshal([]byte(line), &container)
+		if err != nil {
+			log.Errorf("[docker] container list error: error decoding json output: %s", err.Error())
+			continue
+		}
+
 		containersResults = append(containersResults, map[string]interface{}{
-			"id":     container.ID[0:12], // use short ID only as it enough to identify container
+			"id":     container.ID,
 			"image":  container.Image,
-			"name":   strings.Join(container.Names, ","),
-			"state":  container.State,
+			"name":   container.Names,
+			"state":  containerStatusToState(container.Status),
 			"status": container.Status,
 		})
 	}
@@ -66,10 +112,32 @@ func (dw *Watcher) ListContainers() (map[string]interface{}, error) {
 }
 
 func (dw *Watcher) ContainerNameByID(id string) (string, error) {
-	container, err := dw.client.InspectContainer(id)
+	if !isDockerAvailable() {
+		return "", ErrorDockerNotFound
+	}
+
+	out, err := exec.Command("docker", "inspect", "--format", "{{ .Name }}", id).Output()
 	if err != nil {
+		// looks like docker daemon is down
+		// don not pass the error in case we never succeed with docker command within a session
+		if !dw.connectionSucceedOnce {
+			return "", nil
+		}
+
+		if ee, ok := err.(*exec.ExitError); ok {
+			err = errors.New(ee.Error() + ": " + string(ee.Stderr))
+		}
+
 		return "", err
 	}
 
-	return container.Name, nil
+	dw.connectionSucceedOnce = true
+
+	// remove \n and possible spaces around
+	name := strings.TrimSpace(string(out))
+
+	// remove leading slash from the name
+	name = strings.TrimPrefix(name, "/")
+
+	return name, nil
 }
