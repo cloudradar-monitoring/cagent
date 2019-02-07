@@ -47,14 +47,7 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 		ConfigLocation: cfgPath,
 		version:        version,
 		vmWatchers:     make(map[string]vmstattypes.Provider),
-	}
-
-	if dw, err := docker.New(); err != nil {
-		if err != docker.ErrorNotImplementedForOS {
-			log.Errorf("[docker] init error: %s", err)
-		}
-	} else {
-		ca.dockerWatcher = dw
+		dockerWatcher:  &docker.Watcher{},
 	}
 
 	if rootCertsPath != "" {

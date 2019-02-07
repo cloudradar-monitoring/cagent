@@ -1,0 +1,3 @@
+# configuration to allow cagent run docker ps command
+
+cagent ALL= NOPASSWD: /usr/bin/docker

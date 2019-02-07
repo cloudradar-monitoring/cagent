@@ -17,6 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/hwinfo"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 )
@@ -255,15 +256,13 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 
 	measurements = measurements.AddWithPrefix("services.", servicesList)
 
-	if ca.dockerWatcher != nil {
-		containersList, err := ca.dockerWatcher.ListContainers()
-		if err != nil {
-			// no need to log because already done inside ListContainers()
-			errs = append(errs, err.Error())
-		}
-
-		measurements = measurements.AddWithPrefix("dockerWatcher.", containersList)
+	containersList, err := ca.dockerWatcher.ListContainers()
+	if err != nil && err != docker.ErrorNotImplementedForOS && err != docker.ErrorDockerNotFound {
+		// no need to log because already done inside ListContainers()
+		errs = append(errs, err.Error())
 	}
+
+	measurements = measurements.AddWithPrefix("docker.", containersList)
 
 	cpuUtilisationAnalyser, err := ca.CPUUtilisationAnalyser().Results()
 	if err != nil {
