@@ -24,7 +24,7 @@ jobs:
           command: make ci
       - run:
           name: Fetch release changelog so we can preserve it when releasing
-          command: "CHANGELOG=$(curl -H \"Authorization: token ${GITHUB_TOKEN}\"  https://api.github.com/repos/cloudradar-monitoring/cagent/releases | jq \".[0].body\") && echo "$CHANGELOG" && echo "export CHANGELOG=$CHANGELOG" >> $BASH_ENV
+          command: "CHANGELOG=$(curl -H \"Authorization: token ${GITHUB_TOKEN}\"  https://api.github.com/repos/cloudradar-monitoring/cagent/releases | jq \".[0].body\") && echo \"$CHANGELOG\" && echo \"export CHANGELOG=$CHANGELOG\" >> $BASH_ENV"
       - run:
           name: print changelog
           command: echo $CHANGELOG
