@@ -24,7 +24,10 @@ jobs:
           command: make ci
       - run:
           name: Fetch release changelog so we can preserve it when releasing
-          command: "CHANGELOG=$(curl -H \"Authorization: token ${GITHUB_TOKEN}\"  https://api.github.com/repos/cloudradar-monitoring/cagent/releases | jq \".[0].body\") && echo \"$CHANGELOG\" && echo \"export CHANGELOG=$CHANGELOG\" >> $BASH_ENV"
+          command: "CHANGELOGRAW=$(curl -H \"Authorization: token ${GITHUB_TOKEN}\"  https://api.github.com/repos/cloudradar-monitoring/cagent/releases | jq \".[0].body\") && echo \"$CHANGELOGRAW\" && echo \"export CHANGELOGRAW=$CHANGELOGRAW\" >> $BASH_ENV"
+      - run:
+          name: convert changelog
+          command: "printf -v CHANGELOG \"%s\" \"$CHANGELOGRAW\" && echo \"export CHANGELOG=$CHANGELOG\" >> $BASH_ENV"
       - run:
           name: print changelog
           command: echo $CHANGELOG
@@ -32,7 +35,6 @@ jobs:
           name: Publish release
           shell: /bin/bash
           command: |
-          printf -v CHANGELOG "%s" "$CHANGELOG"
             if [[ ${CIRCLE_TAG} =~ -{1}((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$ ]] ; then
               github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --pre-release --description ${CHANGELOG}
             else
