@@ -88,9 +88,9 @@ func (ca *Cagent) TestHub() error {
 	}
 
 	if resp.StatusCode == 401 && ca.Config.HubUser == "" {
-		return fmt.Errorf("unable to authorise without credentials. Please set hub_user & hub_password in the Config according to your Cloudradar account")
+		return fmt.Errorf("unable to authorise without credentials. Please set hub_user & hub_password in the сonfig according to your Cloudradar account")
 	} else if resp.StatusCode == 401 && ca.Config.HubUser != "" {
-		return fmt.Errorf("unable to authorise with provided credentials. Please correct the hub_user & hub_password in the Config according to your Cloudradar account")
+		return fmt.Errorf("unable to authorise with provided credentials. Please correct the hub_user & hub_password in the сonfig according to your Cloudradar account")
 	} else if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		return fmt.Errorf("got bad response status: %d, %s. If you have a proxy or firewall it may be blocking the connection", resp.StatusCode, resp.Status)
 	}
