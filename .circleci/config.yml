@@ -11,7 +11,7 @@ jobs:
 
   gorelease:
     docker:
-      - image: cloudradario/go-build:0.0.8
+      - image: cloudradario/go-build:0.0.9
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       # Setup our ssh key from env var to be able to connect to Windows VM
@@ -43,7 +43,7 @@ jobs:
 
   goreleasse-test:
     docker:
-      - image: cloudradario/go-build:0.0.8
+      - image: cloudradario/go-build:0.0.9
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       - checkout
