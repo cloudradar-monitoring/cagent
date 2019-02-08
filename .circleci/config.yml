@@ -3,7 +3,7 @@ version: 2
 jobs:
   test:
     docker:
-      - image: cloudradario/go-build:0.0.8
+      - image: cloudradario/go-build:0.0.9
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       - checkout
