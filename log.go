@@ -49,7 +49,7 @@ type logrusFileHook struct {
 
 func AddLogFileHook(file string, flag int, chmod os.FileMode) error {
 	dir := filepath.Dir(file)
-	err := os.MkdirAll(dir, 0755)
+	err := os.MkdirAll(dir, 0777)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to create the logs dir: '%s'", dir)
 	}
