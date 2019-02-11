@@ -56,14 +56,21 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 		results["free_percent"] = floatToIntPercentRoundUP(free / float64(memStat.Total))
 	}
 
-	cached, err := monitoring.GetWatcher().Query(`\Memory\Cache Bytes`, "*")
-	if err != nil {
-		errs = append(errs, err.Error())
-		log.Errorf("[MEM] Failed to get cached memory: %s", err.Error())
-	} else {
-		results["cached_B"] = int(cached)
-		results["cached_percent"] = floatToIntPercentRoundUP(float64(cached) / float64(memStat.Total))
+	cachedMemoryMetric := []string{`\Memory\Standby Cache Normal Priority Bytes`, `\Memory\Standby Cache Reserve Bytes`, `\Memory\Cache Bytes`, `\Memory\Modified Page List Bytes`}
+	cachedBytes := 0
+	for _, metric := range cachedMemoryMetric {
+		cached, err := monitoring.GetWatcher().Query(metric, "*")
+		if err != nil {
+			errs = append(errs, err.Error())
+			log.Errorf("[MEM] Failed to get cached memory(%s): %s", metric, err.Error())
+			continue
+		}
+
+		cachedBytes += int(cached)
 	}
+
+	results["cached_B"] = cachedBytes
+	results["cached_percent"] = floatToIntPercentRoundUP(float64(cachedBytes) / float64(memStat.Total))
 
 	if len(errs) == 0 {
 		return results, nil
