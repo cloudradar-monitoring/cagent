@@ -44,7 +44,7 @@ func fetchInventory() (map[string]interface{}, error) {
 	res := make(map[string]interface{})
 
 	// all below requests are based on parsed data returned by dmidecode.Unmarshal
-	// refer to doc dmidecode.Get to get description of function behaviour
+	// refer to doc dmidecode.Get to get description of function behavior
 	var reqSys []dmidecode.ReqBaseBoard
 	if err = dmi.Get(&reqSys); err == nil {
 		res["baseboard.manufacturer"] = reqSys[0].Manufacturer
