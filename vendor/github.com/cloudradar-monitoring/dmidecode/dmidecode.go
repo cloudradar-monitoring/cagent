@@ -153,7 +153,10 @@ func (dmi *DMI) Unmarshal(r io.Reader) error {
 }
 
 // Get by DMI key.
-// dst must be in form of *[]S where S is struct Req* from types.go
+// Unmarshal must be called prior to calling this function
+// dst must be in form of *[]S where S is struct Req* from types.go otherwise ErrPtrToSlice is returned
+// When function returns nil then dst contains slice with at least one valid entry
+// If key is not present in parse data ErrNotFound is returned
 func (dmi *DMI) Get(dst interface{}) error {
 	dv := reflect.ValueOf(dst)
 	if dv.Kind() != reflect.Ptr || dv.IsNil() {
@@ -168,7 +171,7 @@ func (dmi *DMI) Get(dst interface{}) error {
 
 	rec, present := dmi.decoded[reqType]
 	if !present {
-		return ErrNotFount
+		return ErrNotFound
 	}
 
 	// Initialize a slice with Count capacity

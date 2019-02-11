@@ -9,6 +9,7 @@ import (
 	"os/exec"
 
 	"github.com/cloudradar-monitoring/dmidecode"
+	"github.com/sirupsen/logrus"
 )
 
 func isCommandAvailable(name string) bool {
@@ -42,16 +43,22 @@ func fetchInventory() (map[string]interface{}, error) {
 
 	res := make(map[string]interface{})
 
+	// all below requests are based on parsed data returned by dmidecode.Unmarshal
+	// refer to doc dmidecode.Get to get description of function behaviour
 	var reqSys []dmidecode.ReqBaseBoard
 	if err = dmi.Get(&reqSys); err == nil {
 		res["baseboard.manufacturer"] = reqSys[0].Manufacturer
 		res["baseboard.model"] = reqSys[0].Version
 		res["baseboard.serial_number"] = reqSys[0].SerialNumber
+	} else if err != dmidecode.ErrNotFound {
+		logrus.Errorf("hwinfo: failed fetching baseboard info, %s", err.Error())
 	}
 
 	var reqMem []dmidecode.ReqPhysicalMemoryArray
 	if err = dmi.Get(&reqMem); err == nil {
 		res["ram.number_of_modules"] = reqMem[0].NumberOfDevices
+	} else if err != dmidecode.ErrNotFound {
+		logrus.Errorf("hwinfo: failed fetching memory array info, %s", err.Error())
 	}
 
 	var reqMemDevs []dmidecode.ReqMemoryDevice
@@ -63,6 +70,8 @@ func fetchInventory() (map[string]interface{}, error) {
 			res[fmt.Sprintf("ram.%d.size_B", i)] = reqMemDevs[i].Size
 			res[fmt.Sprintf("ram.%d.type", i)] = reqMemDevs[i].Type
 		}
+	} else if err != dmidecode.ErrNotFound {
+		logrus.Errorf("hwinfo: failed fetching memory device info, %s", err.Error())
 	}
 
 	var reqCPU []dmidecode.ReqProcessor
@@ -75,6 +84,8 @@ func fetchInventory() (map[string]interface{}, error) {
 			res[fmt.Sprintf("cpu.%d.core_enabled", i)] = reqCPU[i].CoreEnabled
 			res[fmt.Sprintf("cpu.%d.thread_count", i)] = reqCPU[i].ThreadCount
 		}
+	} else if err != dmidecode.ErrNotFound {
+		logrus.Errorf("hwinfo: failed fetching cpu info, %s", err.Error())
 	}
 
 	return res, nil

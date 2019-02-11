@@ -62,7 +62,7 @@ const (
 var (
 	ErrPtrToSlice        = errors.New("dmidecode: parameter must be pointer to slice")
 	ErrInvalidEntityType = errors.New("dmidecode: invalid entity type")
-	ErrNotFount          = errors.New("dmidecode: not found")
+	ErrNotFound          = errors.New("dmidecode: DMI type not found")
 )
 
 type objType interface {
