@@ -273,9 +273,10 @@ func (ca *Cagent) CPUWatcher() *CPUWatcher {
 	// optimization to prevent CPU watcher to run in case CPU util metrics not are not needed
 	if len(ca.Config.CPUUtilTypes) > 0 && len(ca.Config.CPUUtilDataGather) > 0 || len(ca.Config.CPULoadDataGather) > 0 {
 		err := cw.Once()
+		_, isTimeoutError := err.(TimeoutError)
 		// if err is nil or we got timeout error - we should run the CPU Watcher continuously
 		// in case we go some other kind of error we shouldn't start the CPU watcher because WMI appears disabled on the system
-		if _, timeoutError := err.(TimeoutError); err == nil || timeoutError {
+		if err == nil || isTimeoutError {
 			go cw.Run()
 		}
 
