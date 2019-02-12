@@ -623,7 +623,7 @@ func configureLogger(ca *cagent.Cagent) {
 	log.SetFormatter(&tfmt)
 
 	if ca.Config.LogFile != "" {
-		if err := cagent.AddLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644); err != nil {
+		if err := cagent.AddLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666); err != nil {
 			log.Errorf("Failed to setup log file: %s: %s", ca.Config.PidFile, err.Error())
 		}
 	}
