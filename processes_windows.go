@@ -44,6 +44,9 @@ func processes(_ *docker.Watcher) ([]ProcStat, error) {
 
 	err := WMIQueryWithContext(ctx, `SELECT Name, CommandLine, ProcessID, ParentProcessId FROM Win32_Process`, &wmiProcs)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return nil, TimeoutError{"WMI query", processListTimeout}
+		}
 		return nil, errors.New("WMI query error: " + err.Error())
 	}
 

@@ -273,10 +273,15 @@ func (ca *Cagent) CPUWatcher() *CPUWatcher {
 	// optimization to prevent CPU watcher to run in case CPU util metrics not are not needed
 	if len(ca.Config.CPUUtilTypes) > 0 && len(ca.Config.CPUUtilDataGather) > 0 || len(ca.Config.CPULoadDataGather) > 0 {
 		err := cw.Once()
+		_, isTimeoutError := err.(TimeoutError)
+		// if err is nil or we got timeout error - we should run the CPU Watcher continuously
+		// in case we go some other kind of error we shouldn't start the CPU watcher because WMI appears disabled on the system
+		if err == nil || isTimeoutError {
+			go cw.Run()
+		}
+
 		if err != nil {
 			log.Error("[CPU] Failed to read utilisation metrics: " + err.Error())
-		} else {
-			go cw.Run()
 		}
 	}
 
@@ -284,15 +289,21 @@ func (ca *Cagent) CPUWatcher() *CPUWatcher {
 }
 
 func (cw *CPUWatcher) Once() error {
+	startedAt := time.Now()
+	defer func() {
+		log.Debugf("[CPU] WMI query took %.2fs", time.Since(startedAt).Seconds())
+	}()
 
 	cw.UtilAvg.mu.Lock()
 
 	ctx, cancel := context.WithTimeout(context.Background(), cpuGetUtilisationTimeout)
 	defer cancel()
 	times, err := cpu.TimesWithContext(ctx, true)
-
 	if err != nil {
 		cw.UtilAvg.mu.Unlock()
+		if err == context.DeadlineExceeded {
+			return TimeoutError{"WMI query", cpuGetUtilisationTimeout}
+		}
 		return err
 	}
 

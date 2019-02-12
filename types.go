@@ -1,5 +1,10 @@
 package cagent
 
+import (
+	"fmt"
+	"time"
+)
+
 type MeasurementsMap map[string]interface{}
 
 func (mm MeasurementsMap) AddWithPrefix(prefix string, m MeasurementsMap) MeasurementsMap {
@@ -27,4 +32,13 @@ func floatToIntPercentRoundUP(f float64) int {
 
 func floatToIntRoundUP(f float64) int {
 	return int(f + 0.5)
+}
+
+type TimeoutError struct {
+	Origin  string
+	Timeout time.Duration
+}
+
+func (err TimeoutError) Error() string {
+	return fmt.Sprintf("%s timeout after %.1fs", err.Origin, err.Timeout.Seconds())
 }
