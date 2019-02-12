@@ -39,6 +39,6 @@ type TimeoutError struct {
 	Timeout time.Duration
 }
 
-func (terr TimeoutError) Error() string {
-	return fmt.Sprintf("%s timeout after %.1fs", terr.Origin, terr.Timeout.Seconds())
+func (err TimeoutError) Error() string {
+	return fmt.Sprintf("%s timeout after %.1fs", err.Origin, err.Timeout.Seconds())
 }
