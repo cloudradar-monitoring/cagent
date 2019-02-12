@@ -17,8 +17,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const measureInterval = time.Second * 20
-const cpuGetUtilisationTimeout = time.Second * 20
+const measureInterval = time.Second * 10
+const cpuGetUtilisationTimeout = time.Second * 10
 
 var errMetricsAreNotCollectedYet = errors.New("metrics are not collected yet")
 var utilisationMetricsByOS = map[string][]string{
@@ -273,6 +273,8 @@ func (ca *Cagent) CPUWatcher() *CPUWatcher {
 	// optimization to prevent CPU watcher to run in case CPU util metrics not are not needed
 	if len(ca.Config.CPUUtilTypes) > 0 && len(ca.Config.CPUUtilDataGather) > 0 || len(ca.Config.CPULoadDataGather) > 0 {
 		err := cw.Once()
+		// if err is nil or we got timeout error - we should run the CPU Watcher continuously
+		// in case we go some other kind of error we shouldn't start the CPU watcher because WMI appears disabled on the system
 		if _, timeoutError := err.(TimeoutError); err == nil || timeoutError {
 			go cw.Run()
 		}
@@ -296,7 +298,6 @@ func (cw *CPUWatcher) Once() error {
 	ctx, cancel := context.WithTimeout(context.Background(), cpuGetUtilisationTimeout)
 	defer cancel()
 	times, err := cpu.TimesWithContext(ctx, true)
-
 	if err != nil {
 		cw.UtilAvg.mu.Unlock()
 		if err == context.DeadlineExceeded {
