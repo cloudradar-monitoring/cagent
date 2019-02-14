@@ -45,7 +45,6 @@ func (im *impl) Name() string {
 
 func (im *impl) IsAvailable() error {
 	st, err := wmiutil.CheckOptionalFeatureStatus(wmiutil.FeatureMicrosoftHyperV)
-
 	if err != nil {
 		return fmt.Errorf("%s %s", vmstattypes.ErrCheck.Error(), err.Error())
 	}

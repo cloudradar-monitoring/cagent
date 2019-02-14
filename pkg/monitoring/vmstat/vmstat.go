@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
 )
 
@@ -45,13 +43,17 @@ func Acquire(name string) (vmstattypes.Provider, error) {
 	providers.lock.Lock()
 	defer providers.lock.Unlock()
 
-	var err error
-
 	if entry, ok := providers.pr[name]; ok {
-		entry.wg.Add(1)
+		var err error
+
 		entry.run.Do(func() {
+			if err = entry.prov.IsAvailable(); err != nil {
+				err = vmstattypes.ErrNotAvailable
+				return
+			}
+
 			if err = entry.prov.Run(); err != nil {
-				logrus.Errorf("[vmstat] unable to start \"%s\" provider: %s", name, err.Error())
+				err = fmt.Errorf("vmstat: start vm provider \"%s\": %s", name, err.Error())
 			}
 		})
 
@@ -59,6 +61,7 @@ func Acquire(name string) (vmstattypes.Provider, error) {
 			entry.run = sync.Once{}
 			return nil, err
 		}
+		entry.wg.Add(1)
 		return entry.prov, nil
 	}
 
