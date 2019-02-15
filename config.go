@@ -199,7 +199,7 @@ func TryUpdateConfigFromFile(cfg *Config, configFilePath string) error {
 	return nil
 }
 
-func SaveConfigFile(cfg *Config, configFilePath string) error {
+func SaveConfigFile(cfg interface{}, configFilePath string) error {
 	var f *os.File
 	var err error
 	if f, err = os.OpenFile(configFilePath, os.O_WRONLY|os.O_CREATE, 0666); err != nil {
