@@ -2,33 +2,33 @@ package cagent
 
 import (
 	"fmt"
+	"syscall"
+
 	"github.com/shirou/gopsutil/net"
 	log "github.com/sirupsen/logrus"
-	"syscall"
 )
 
 type PortStat struct {
 	Protocol     string `json:"proto"`
 	LocalAddress string `json:"addr"`
-	State        string `json:"state,omitempty"`
 	PID          int32  `json:"pid,omitempty"`
 	ProgramName  string `json:"program,omitempty"`
 }
 
-func (ca *Cagent) PortsResult(processList []ProcStat) (m MeasurementsMap, err error) {
+// PortsResult lists all active connections
+func (ca *Cagent) PortsResult(processList []ProcStat) (MeasurementsMap, error) {
 	connections, err := net.Connections("inet")
 	if err != nil {
-		log.Error("[PORTS] error: ", err.Error())
+		log.Error("[PORTS] could not list connections: ", err.Error())
 		return nil, err
 	}
 
 	var ports []PortStat
 	for _, conn := range connections {
 		state := conn.Status
-		if state == "NONE" {
-			state = ""
-		}
-		if state != "LISTEN" && state != "" {
+		// some connection types do not have 'state'. They are active by default.
+		isActiveConnection := state == "LISTEN" || state == "NONE" || state == ""
+		if !isActiveConnection {
 			continue
 		}
 
@@ -45,16 +45,14 @@ func (ca *Cagent) PortsResult(processList []ProcStat) (m MeasurementsMap, err er
 		ports = append(ports, PortStat{
 			Protocol:     formatConnectionProtocol(conn.Family, conn.Type),
 			LocalAddress: formatNetAddr(&conn.Laddr),
-			State:        state,
 			PID:          conn.Pid,
 			ProgramName:  programName,
 		})
 	}
 
-	log.Info("[PORTS] results: ", len(ports))
+	log.Debugf("[PORTS] results: %d", len(ports))
 
-	m = MeasurementsMap{"list": ports}
-	return
+	return MeasurementsMap{"list": ports}, nil
 }
 
 func formatNetAddr(addr *net.Addr) string {
