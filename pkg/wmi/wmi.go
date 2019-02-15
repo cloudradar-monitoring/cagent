@@ -23,6 +23,8 @@ const (
 	FeatureInstallStateUnknown
 )
 
+const queryTimeout = 10 * time.Second
+
 type win32_optionalfeature struct {
 	InstallState FeatureInstallState
 }
@@ -43,13 +45,13 @@ func (st FeatureInstallState) String() string {
 func CheckOptionalFeatureStatus(feature string) (FeatureInstallState, error) {
 	var dst []win32_optionalfeature
 	q := wmi.CreateQuery(&dst, "WHERE name = \""+feature+"\"")
-	err := wmi.Query(q, &dst)
+	err := QueryWithTimeout(queryTimeout, q, &dst)
 	if err != nil {
 		return FeatureInstallStateUnknown, fmt.Errorf("wmiutil: check feature status %s", err.Error())
 	}
 
 	if len(dst) == 0 {
-		return FeatureInstallStateUnknown, fmt.Errorf("wmiutil: feature request returned empty response %s", err.Error())
+		return FeatureInstallStateUnknown, fmt.Errorf("wmiutil: couldn't check feature install status")
 	}
 
 	return dst[0].InstallState, nil

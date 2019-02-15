@@ -20,6 +20,7 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
+	vmstattypes "github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
 )
 
 var ErrorTestWinUISettingsAreEmpty = errors.New("Please fill 'HUB URL', 'HUB USER' and 'HUB PASSWORD' from your Cloudradar account")
@@ -380,19 +381,17 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, cfg *Config)
 func (ca *Cagent) getVMStatMeasurements(f func(string, MeasurementsMap, error)) {
 	ca.vmstatLazyInit.Do(func() {
 		if err := vmstat.Init(); err != nil {
-			log.Error("cannot instantiate virtual machines API: ", err.Error())
+			log.Error("vmstat: cannot instantiate virtual machines API: ", err.Error())
 			return
 		}
 
 		for _, name := range ca.Config.VirtualMachinesStat {
 			vm, err := vmstat.Acquire(name)
 			if err != nil {
-				log.Warnf("acquire vm provider \"%s\": %s", name, err.Error())
-			} else {
-				if err = vm.IsAvailable(); err != nil {
-					log.Warnf("vm provider \"%s\" either not available or not enabled for host system %s: %s", name, runtime.GOOS, err.Error())
+				if err != vmstattypes.ErrNotAvailable {
+					log.Warnf("vmstat: Error while acquiring vm provider \"%s\": %s", name, err.Error())
 				}
-
+			} else {
 				ca.vmWatchers[name] = vm
 			}
 		}
