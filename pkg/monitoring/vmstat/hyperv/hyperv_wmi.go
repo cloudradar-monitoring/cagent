@@ -131,7 +131,7 @@ func (im *impl) GetMeasurements() (map[string]interface{}, error) {
 	q = wmi.CreateQuery(&dst, "")
 
 	if err := wmi.QueryNamespace(q, &dst, `root\virtualization\v2`); err != nil {
-		logrus.Errorf("[vmstat:hyperv] couldn't query vms: %s", countersErr.Error())
+		logrus.Errorf("[vmstat:hyperv] couldn't query vms: %s", err.Error())
 	} else {
 		for i := range dst {
 			vmEntry := make(map[string]interface{})
