@@ -40,7 +40,7 @@ jobs:
           command: github-release delete --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG}
           when: on_fail
 
-  goreleasse-test:
+  gorelease-test:
     docker:
       - image: cloudradario/go-build:0.0.10
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
@@ -56,7 +56,7 @@ workflows:
           filters:
             tags:
               ignore: /.*/
-      - goreleasse-test:
+      - gorelease-test:
           filters:
             tags:
               ignore: /.*/
