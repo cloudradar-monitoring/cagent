@@ -171,6 +171,11 @@ func (tsa *TimeSeriesAverage) Percentage() (map[int]ValuesMap, error) {
 					count++
 				}
 
+				if count == 0 { // no metrics collected for last d minutes
+					sum[d][key] = -1
+					continue
+				}
+
 				// found the average for all collected measurements for the last d minutes
 				sum[d][key] = roundUpWithPrecision(valSum/float64(count), 2)
 			} else {
