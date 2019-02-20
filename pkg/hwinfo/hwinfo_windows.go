@@ -17,7 +17,7 @@ const reqTimeout = time.Second * 10
 
 type win32_PhysicalMemory struct {
 	Capacity   *uint64
-	MemoryType winMemoryType
+	MemoryType *winMemoryType
 
 	/*
 		Possible fields so we could use them later if we will need
@@ -165,7 +165,13 @@ func fetchInventory() (map[string]interface{}, error) {
 	res["ram.number_of_modules"] = len(ram)
 	for i := range ram {
 		res[fmt.Sprintf("ram.%d.size_B", i)] = ram[i].Capacity
-		res[fmt.Sprintf("ram.%d.type", i)] = ram[i].MemoryType.String()
+		memoryType := ram[i].MemoryType
+
+		if memoryType == nil {
+			res[fmt.Sprintf("ram.%d.type", i)] = nil
+		} else {
+			res[fmt.Sprintf("ram.%d.type", i)] = (*memoryType).String()
+		}
 	}
 
 	return res, nil
