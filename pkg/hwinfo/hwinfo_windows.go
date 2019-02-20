@@ -52,6 +52,7 @@ type win32_Processor struct {
 	NumberOfCores             *uint32
 	NumberOfEnabledCore       *uint32
 	NumberOfLogicalProcessors *uint32
+
 	/*
 		Possible fields so we could use them later if we will need
 
@@ -166,7 +167,6 @@ func fetchInventory() (map[string]interface{}, error) {
 	for i := range ram {
 		res[fmt.Sprintf("ram.%d.size_B", i)] = ram[i].Capacity
 		memoryType := ram[i].MemoryType
-
 		if memoryType == nil {
 			res[fmt.Sprintf("ram.%d.type", i)] = nil
 		} else {
