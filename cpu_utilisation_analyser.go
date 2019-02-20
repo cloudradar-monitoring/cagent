@@ -50,7 +50,7 @@ func (ca *Cagent) CPUUtilisationAnalyser() *CPUUtilisationAnalyser {
 		for {
 			select {
 			case x := <-thresholdChan:
-				log.Debugf("[CPU_ANALYTICS] CPU threshold signal(%.2f) received from chan", x)
+				log.Debugf("[CPU_ANALYSIS] CPU threshold signal(%.2f) received from chan", x)
 				if !cuan.topIsRunning {
 					go cuan.top.Run()
 					cuan.topIsRunning = true
@@ -58,14 +58,14 @@ func (ca *Cagent) CPUUtilisationAnalyser() *CPUUtilisationAnalyser {
 				break
 			case <-time.After(time.Duration(cfg.TrailingProcessAnalysisMinutes) * time.Minute):
 				if cuan.topIsRunning {
-					log.Debugf("[CPU_ANALYTICS] TrailingRecoveryTime reached")
+					log.Debugf("[CPU_ANALYSIS] TrailingRecoveryTime reached")
 					cuan.hasUnclaimedResults = true
 					cuan.topIsRunning = false
 					cuan.top.Stop()
 				}
 				break
 			case <-sigc:
-				log.Debugf("[CPU_ANALYTICS] got interrupt signal")
+				log.Debugf("[CPU_ANALYSIS] got interrupt signal")
 				return
 			}
 		}
