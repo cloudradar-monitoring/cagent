@@ -2,101 +2,78 @@
 
 
 [[projects]]
-  digest = "1:e92f5581902c345eb4ceffdcd4a854fb8f73cf436d47d837d1ec98ef1fe0a214"
   name = "github.com/StackExchange/wmi"
   packages = ["."]
-  pruneopts = "UT"
   revision = "5d049714c4a64225c3c79a7cf7d02f7fb5b96338"
   version = "1.0.0"
 
 [[projects]]
-  digest = "1:3bed87a01c26940613570f2dbff778269df543755069d3dc65544bcdbd31002d"
   name = "github.com/cloudradar-monitoring/dmidecode"
   packages = ["."]
-  pruneopts = "UT"
   revision = "395107264116edf108cb35b42e1584412d37bf54"
   version = "0.0.4"
 
 [[projects]]
-  digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
-  pruneopts = "UT"
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:c96d16a4451e48e2c44b2c3531fd8ec9248d822637f1911a88959ca0bcae4a64"
   name = "github.com/go-ole/go-ole"
   packages = [
     ".",
-    "oleutil",
+    "oleutil"
   ]
-  pruneopts = "UT"
   revision = "39dc8486bd0952279431257138bc428275b86797"
   version = "v1.2.2"
 
 [[projects]]
   branch = "master"
-  digest = "1:caf6db28595425c0e0f2301a00257d11712f65c1878e12cffc42f6b9a9cf3f23"
   name = "github.com/kardianos/osext"
   packages = ["."]
-  pruneopts = "UT"
   revision = "ae77be60afb1dcacde03767a8c37337fad28ac14"
 
 [[projects]]
   branch = "master"
-  digest = "1:291ac1338e8f57e48e217c86865308799d9d0331001f9743bb39c63083a16304"
   name = "github.com/kardianos/service"
   packages = ["."]
-  pruneopts = "UT"
   revision = "8f267d80f2eb68998661a325c0e53fca4485e626"
 
 [[projects]]
   branch = "master"
-  digest = "1:fca53945eb13b37a6b4fe26be569c634985be1dc55734c6f0e508c76daa40941"
   name = "github.com/lxn/walk"
   packages = [
     ".",
-    "declarative",
+    "declarative"
   ]
-  pruneopts = "UT"
   revision = "6d09625fb5d5f545a76a726c7eb85a1303806c85"
 
 [[projects]]
   branch = "master"
-  digest = "1:a65caa49a129fb2fc74981bfcd815cba09ea1e67cabe8130fe14be2751b93c81"
   name = "github.com/lxn/win"
   packages = ["."]
-  pruneopts = "UT"
   revision = "a7f87360b10eafe73bd3ff01db16976fe7560fbf"
 
 [[projects]]
   branch = "master"
-  digest = "1:0e1e5f960c58fdc677212fcc70e55042a0084d367623e51afbdb568963832f5d"
   name = "github.com/nu7hatch/gouuid"
   packages = ["."]
-  pruneopts = "UT"
   revision = "179d4d0c4d8d407a32af483c2354df1d2c91e6c3"
 
 [[projects]]
-  digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
   name = "github.com/pkg/errors"
   packages = ["."]
-  pruneopts = "UT"
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
 
 [[projects]]
-  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
-  pruneopts = "UT"
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:c141af7568952e76dc527aa64f5337417015f1feb9497f867d52093b085d7f5b"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
@@ -106,54 +83,43 @@
     "load",
     "mem",
     "net",
-    "process",
+    "process"
   ]
-  pruneopts = "UT"
-  revision = "4254ce2081c0d7994dae589a4550a4ca659ebf94"
+  revision = "071446942108a03a13cf0717275ad3bdbcb691b4"
+  version = "v2.19.01"
 
 [[projects]]
   branch = "master"
-  digest = "1:99c6a6dab47067c9b898e8c8b13d130c6ab4ffbcc4b7cc6236c2cd0b1e344f5b"
   name = "github.com/shirou/w32"
   packages = ["."]
-  pruneopts = "UT"
   revision = "bb4de0191aa41b5507caa14b0650cdbddcd9280b"
 
 [[projects]]
-  digest = "1:d867dfa6751c8d7a435821ad3b736310c2ed68945d05b50fb9d23aee0540c8cc"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
-  pruneopts = "UT"
   revision = "3e01752db0189b9157070a0e1668a620f9a85da2"
   version = "v1.0.6"
 
 [[projects]]
-  digest = "1:18752d0b95816a1b777505a97f71c7467a8445b8ffb55631a7bf779f6ba4fa83"
   name = "github.com/stretchr/testify"
   packages = ["assert"]
-  pruneopts = "UT"
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
 
 [[projects]]
-  digest = "1:269cca5d1f0528e8aea51a26e96f02c37a024e8075b556d34609d6fcf9baccdc"
   name = "github.com/troian/toml"
   packages = ["."]
-  pruneopts = "UT"
   revision = "36f3abc2dfd96cec81d4a89819878f6ad9919910"
   version = "v0.4.2"
 
 [[projects]]
   branch = "master"
-  digest = "1:3f3a05ae0b95893d90b9b3b5afdb79a9b3d96e4e36e099d841ae602e4aca0da8"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  pruneopts = "UT"
   revision = "614d502a4dac94afa3a6ce146bd1736da82514c6"
 
 [[projects]]
   branch = "master"
-  digest = "1:26ec164e84642d9eed64552050ce8b66f09dc48f03103cd2e58e92e754c725be"
   name = "golang.org/x/sys"
   packages = [
     "unix",
@@ -161,55 +127,25 @@
     "windows/registry",
     "windows/svc",
     "windows/svc/eventlog",
-    "windows/svc/mgr",
+    "windows/svc/mgr"
   ]
-  pruneopts = "UT"
   revision = "4910a1d54f876d7b22162a85f4d066d3ee649450"
 
 [[projects]]
-  digest = "1:5d3e23515e7916c152cc665eda0f7eaf6fdf8fdfe7c3dbac97049bcbd649b33f"
   name = "gopkg.in/Knetic/govaluate.v3"
   packages = ["."]
-  pruneopts = "UT"
   revision = "d216395917cc49052c7c7094cf57f09657ca08a8"
   version = "v3.0.0"
 
 [[projects]]
   branch = "v1"
-  digest = "1:b71ccd8615521db4ea2f9381f55780a1312654f5d8431d2e58eca51c74110de2"
   name = "gopkg.in/toast.v1"
   packages = ["."]
-  pruneopts = "UT"
   revision = "0a84660828b24d25b35525c9a1f1f51267f8da91"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = [
-    "github.com/StackExchange/wmi",
-    "github.com/cloudradar-monitoring/dmidecode",
-    "github.com/go-ole/go-ole",
-    "github.com/go-ole/go-ole/oleutil",
-    "github.com/kardianos/service",
-    "github.com/lxn/walk",
-    "github.com/lxn/walk/declarative",
-    "github.com/lxn/win",
-    "github.com/pkg/errors",
-    "github.com/shirou/gopsutil/cpu",
-    "github.com/shirou/gopsutil/disk",
-    "github.com/shirou/gopsutil/host",
-    "github.com/shirou/gopsutil/load",
-    "github.com/shirou/gopsutil/mem",
-    "github.com/shirou/gopsutil/net",
-    "github.com/shirou/gopsutil/process",
-    "github.com/shirou/w32",
-    "github.com/sirupsen/logrus",
-    "github.com/stretchr/testify/assert",
-    "github.com/troian/toml",
-    "golang.org/x/sys/windows",
-    "golang.org/x/sys/windows/svc",
-    "golang.org/x/sys/windows/svc/mgr",
-    "gopkg.in/toast.v1",
-  ]
+  inputs-digest = "457dc3bedf83542e053307e89ff88848662ee52497b85b9b6a59963cffcfdf1e"
   solver-name = "gps-cdcl"
   solver-version = 1
