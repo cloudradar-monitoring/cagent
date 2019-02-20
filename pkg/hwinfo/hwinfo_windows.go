@@ -16,42 +16,51 @@ type winMemoryType uint16
 const reqTimeout = time.Second * 10
 
 type win32_PhysicalMemory struct {
-	BankLabel     string
-	Capacity      uint64
-	DataWidth     uint16
-	DeviceLocator string
-	InstallDate   *time.Time
-	Manufacturer  *string
-	MaxVoltage    *uint32
-	MinVoltage    *uint32
-	MemoryType    winMemoryType
-	Model         *string
-	PartNumber    *string
-	SerialNumber  *string
-	Speed         uint32
-	Status        *string
-	TotalWidth    *uint16
+	Capacity   *uint64
+	MemoryType winMemoryType
+
+	/*
+		Possible fields so we could use them later if we will need
+
+		BankLabel     *string
+		DataWidth     *uint16
+		DeviceLocator *string
+		InstallDate   *time.Time
+		Manufacturer  *string
+		MaxVoltage    *uint32
+		MinVoltage    *uint32
+		Model         *string
+		PartNumber    *string
+		SerialNumber  *string
+		Speed         *uint32
+		Status        *string
+		TotalWidth    *uint16
+	*/
 }
 
 type win32_BaseBoard struct {
-	Manufacturer string
+	Manufacturer *string
 	Product      *string
 	Model        *string
-	SerialNumber string
+	SerialNumber *string
 }
 
 type win32_Processor struct {
-	DeviceID                  *string
-	Description               string
-	Name                      string
-	Manufacturer              string
-	SerialNumber              string
-	SocketDesignation         string
-	MaxClockSpeed             uint32
-	NumberOfCores             uint32
-	NumberOfEnabledCore       uint32
-	NumberOfLogicalProcessors uint32
-	ProcessorType             uint16
+	Description               *string
+	Name                      *string
+	Manufacturer              *string
+	NumberOfCores             *uint32
+	NumberOfEnabledCore       *uint32
+	NumberOfLogicalProcessors *uint32
+	/*
+		Possible fields so we could use them later if we will need
+
+		DeviceID                  *string
+		SerialNumber              *string
+		SocketDesignation         *string
+		MaxClockSpeed             *uint32
+		ProcessorType             *uint16
+	*/
 }
 
 func (w winMemoryType) String() string {
@@ -139,6 +148,7 @@ func fetchInventory() (map[string]interface{}, error) {
 	res["baseboard.manufacturer"] = baseBoard[0].Manufacturer
 	res["baseboard.serial_number"] = baseBoard[0].SerialNumber
 	if baseBoard[0].Product != nil {
+		res["baseboard.model"] = baseBoard[0].Product
 		res["baseboard.model"] = baseBoard[0].Product
 	}
 
