@@ -148,10 +148,7 @@ func fetchInventory() (map[string]interface{}, error) {
 
 	res["baseboard.manufacturer"] = baseBoard[0].Manufacturer
 	res["baseboard.serial_number"] = baseBoard[0].SerialNumber
-	if baseBoard[0].Product != nil {
-		res["baseboard.model"] = baseBoard[0].Product
-		res["baseboard.model"] = baseBoard[0].Product
-	}
+	res["baseboard.model"] = baseBoard[0].Product
 
 	var ram []win32_PhysicalMemory
 	query = wmi.CreateQuery(&ram, "")
