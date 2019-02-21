@@ -16,13 +16,13 @@ const serviceListTimeout = time.Second * 5
 var ErrorNotImplementedForOS error
 
 type Win32_Service struct {
-	Name             string
-	DisplayName      string
+	Name             *string
+	DisplayName      *string
 	Description      *string
-	StartMode        string
-	State            string
-	Status           string
-	DelayedAutoStart bool
+	StartMode        *string
+	State            *string
+	Status           *string
+	DelayedAutoStart *bool
 }
 
 // todo: move to the separate package when we will also move processes.go to the separate package
@@ -53,9 +53,12 @@ func ListServices(autostartOnly bool) (map[string]interface{}, error) {
 
 	var servicesList []map[string]interface{}
 	for _, wmiService := range wmiServices {
-		var autoStart bool
+		if wmiService.Name == nil {
+			continue
+		}
 
-		if strings.HasPrefix(strings.ToLower(wmiService.StartMode), "auto") {
+		var autoStart bool
+		if wmiService.StartMode != nil && strings.HasPrefix(strings.ToLower(*wmiService.StartMode), "auto") {
 			autoStart = true
 		}
 
@@ -63,22 +66,34 @@ func ListServices(autostartOnly bool) (map[string]interface{}, error) {
 			continue
 		}
 
-		if wmiService.DelayedAutoStart {
-			wmiService.StartMode = wmiService.StartMode + "_delayed"
+		if wmiService.StartMode != nil && wmiService.DelayedAutoStart != nil && *wmiService.DelayedAutoStart {
+			*wmiService.StartMode = *wmiService.StartMode + "_delayed"
 		}
 
-		description := wmiService.DisplayName
+		description := *wmiService.DisplayName
 		if wmiService.Description != nil {
 			description += *wmiService.Description
+		}
+
+		if wmiService.StartMode != nil {
+			*wmiService.StartMode = strings.ToLower(*wmiService.StartMode)
+		}
+
+		if wmiService.State != nil {
+			*wmiService.State = strings.ToLower(*wmiService.State)
+		}
+
+		if wmiService.Status != nil {
+			*wmiService.Status = strings.ToLower(*wmiService.Status)
 		}
 
 		servicesList = append(servicesList, map[string]interface{}{
 			"name":        wmiService.Name,
 			"description": description,
-			"start":       strings.ToLower(wmiService.StartMode),
+			"start":       wmiService.StartMode,
 			"auto_start":  autoStart,
-			"state":       strings.ToLower(wmiService.State),
-			"status":      strings.ToLower(wmiService.Status),
+			"state":       wmiService.State,
+			"status":      wmiService.Status,
 			"manager":     "windows",
 		})
 	}

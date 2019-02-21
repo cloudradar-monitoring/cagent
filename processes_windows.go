@@ -15,10 +15,10 @@ import (
 const processListTimeout = time.Second * 10
 
 type Win32_Process struct {
-	Name            string
+	Name            *string
 	CommandLine     *string
-	ProcessID       uint32
-	ParentProcessId uint32
+	ProcessID       *uint32
+	ParentProcessId *uint32
 	ExecutionState  *uint16
 }
 
@@ -52,14 +52,28 @@ func processes(_ *docker.Watcher) ([]ProcStat, error) {
 
 	var procs []ProcStat
 	for _, proc := range wmiProcs {
-		procs = append(procs,
-			ProcStat{
-				PID:       int(proc.ProcessID),
-				ParentPID: int(proc.ParentProcessId),
-				Name:      proc.Name,
-				Cmdline:   *proc.CommandLine,
-				State:     "running"},
-		)
+		if proc.ProcessID == nil {
+			continue
+		}
+
+		ps := ProcStat{
+			PID:   int(*proc.ProcessID),
+			State: "running",
+		}
+
+		if proc.Name != nil {
+			ps.Name = *proc.Name
+		}
+
+		if proc.ParentProcessId != nil {
+			ps.ParentPID = int(*proc.ParentProcessId)
+		}
+
+		if proc.CommandLine != nil {
+			ps.Cmdline = *proc.CommandLine
+		}
+
+		procs = append(procs, ps)
 	}
 
 	return procs, nil
