@@ -1,7 +1,6 @@
 package cagent
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -12,13 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/load"
 	log "github.com/sirupsen/logrus"
 )
 
 const measureInterval = time.Second * 10
-const cpuGetUtilisationTimeout = time.Second * 10
 
 var errMetricsAreNotCollectedYet = errors.New("metrics are not collected yet")
 var utilisationMetricsByOS = map[string][]string{
@@ -269,28 +266,15 @@ func (ca *Cagent) CPUWatcher() *CPUWatcher {
 }
 
 func (cw *CPUWatcher) Once() error {
-	startedAt := time.Now()
-	defer func() {
-		log.Debugf("[CPU] WMI query took %.2fs", time.Since(startedAt).Seconds())
-	}()
-
 	cw.UtilAvg.mu.Lock()
 
-	ctx, cancel := context.WithTimeout(context.Background(), cpuGetUtilisationTimeout)
-	defer cancel()
-	times, err := cpu.TimesWithContext(ctx, true)
+	times, err := getCPUTimes()
 	if err != nil {
 		cw.UtilAvg.mu.Unlock()
-		if err == context.DeadlineExceeded {
-			return TimeoutError{"WMI query", cpuGetUtilisationTimeout}
-		}
 		return err
 	}
 
 	values := ValuesMap{}
-
-	cpuStatPerCPUPerCorePerType := make(map[int]map[int]map[string]float64)
-
 	for _, cputime := range times {
 		for _, utype := range cw.UtilTypes {
 			utype = strings.ToLower(utype)
@@ -316,44 +300,8 @@ func (cw *CPUWatcher) Once() error {
 				continue
 			}
 
-			if runtime.GOOS == "windows" {
-				// calculate the logical CPU index from "cpuIndex,coreIndex" format
-				cpuIndexParts := strings.Split(cputime.CPU, ",")
-
-				cpuIndex, _ := strconv.Atoi(cpuIndexParts[0])
-				coreIndex, _ := strconv.Atoi(cpuIndexParts[1])
-
-				if _, exists := cpuStatPerCPUPerCorePerType[cpuIndex]; !exists {
-					cpuStatPerCPUPerCorePerType[cpuIndex] = make(map[int]map[string]float64)
-				}
-
-				if _, exists := cpuStatPerCPUPerCorePerType[cpuIndex][coreIndex]; !exists {
-					cpuStatPerCPUPerCorePerType[cpuIndex][coreIndex] = make(map[string]float64)
-				}
-
-				// store by indexes to iterate in the right order later
-				cpuStatPerCPUPerCorePerType[cpuIndex][coreIndex][utype] = value
-				values[fmt.Sprintf("%s.%%d.total", utype)] += value / float64(len(times))
-
-			} else {
-				values[fmt.Sprintf("%s.%%d.%s", utype, cputime.CPU)] = value
-				values[fmt.Sprintf("%s.%%d.total", utype)] += value / float64(len(times))
-			}
-		}
-	}
-
-	if runtime.GOOS == "windows" {
-		// calculate persistent CPU logical indexes from the "cpuIndex,coreIndex" on Windows
-		// iterate on CPUs then on their cores
-		// Result will be like this: 0,0 -> 0; 1,1 -> 3
-		logicalCPUIndex := 0
-		for cpuIndex := 0; cpuIndex < len(cpuStatPerCPUPerCorePerType); cpuIndex++ {
-			for coreIndex := 0; coreIndex < len(cpuStatPerCPUPerCorePerType[cpuIndex]); coreIndex++ {
-				for utype, value := range cpuStatPerCPUPerCorePerType[cpuIndex][coreIndex] {
-					values[fmt.Sprintf("%s.%%d.cpu%d", utype, logicalCPUIndex)] = value
-				}
-				logicalCPUIndex++
-			}
+			values[fmt.Sprintf("%s.%%d.%s", utype, cputime.CPU)] = value
+			values[fmt.Sprintf("%s.%%d.total", utype)] += value / float64(len(times))
 		}
 	}
 
