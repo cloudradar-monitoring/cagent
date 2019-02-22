@@ -74,7 +74,6 @@ func main() {
 	flagServiceStartPtr := flag.Bool("service_start", false, "start cagent as system service")
 	flagServiceStopPtr := flag.Bool("service_stop", false, "stop cagent if running as system service")
 	flagServiceRestartPtr := flag.Bool("service_restart", false, "restart cagent within system service")
-	flagFallbackQuietPtr := flag.Bool("fallback_quiet", false, "do not stop cagent if it started without hub_url or output file")
 
 	if runtime.GOOS == "windows" {
 		settingsPtr = flag.Bool("x", false, "open the settings UI")
@@ -128,13 +127,8 @@ func main() {
 
 	configureLogger(ca)
 
-	if *flagFallbackQuietPtr && *outputFilePtr == "" && cfg.HubURL == "" {
-		log.Warnf("hub_url is empty, starting in file mode")
-		if runtime.GOOS == "windows" {
-			*outputFilePtr = string("NUL")
-		} else {
-			*outputFilePtr = string("/dev/null")
-		}
+	if *outputFilePtr == "" && cfg.IoMode == "file" {
+		*outputFilePtr = cfg.OutFile
 	}
 
 	// log level set in flag has a precedence. If specified we need to set it ASAP
