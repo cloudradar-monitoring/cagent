@@ -11,10 +11,6 @@ import (
 	"github.com/shirou/gopsutil/process"
 )
 
-func (t *Top) startCollect(interval time.Duration) {
-	// No implementation needed
-}
-
 func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfo, error) {
 	results := make(chan *ProcessInfo)
 
@@ -36,7 +32,6 @@ func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfo, error) {
 			if err != nil {
 				// If we log the error in this place, we get _a lot of_ messages
 				atomic.AddUint64(&skipped, 1)
-				skipped++
 				return
 			}
 

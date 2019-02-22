@@ -3,52 +3,53 @@
 package top
 
 import (
-	"log"
+	"github.com/cloudradar-monitoring/cagent/pkg/winapi"
+	"runtime"
 	"time"
-
-	"github.com/cloudradar-monitoring/cagent/pkg/monitoring"
-
-	"github.com/pkg/errors"
 )
 
-var counterPath = "\\Process(*)\\% Processor Time"
-
-func (t *Top) startCollect(interval time.Duration) {
-	err := monitoring.GetWatcher().StartContinuousQuery(counterPath, interval)
-	if err != nil {
-		log.Printf("Failed to StartQuery: %s", err)
-		return
-	}
-}
-
 func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfo, error) {
-	// The non-windows implementation needs 5s to return the results.
-	// To keep things in sync the windows implementation should do the same.
+	processesOld, err := winapi.GetSystemProcessInformation()
+	if err != nil {
+		return nil, err
+	}
+	startTime := time.Now()
+
 	time.Sleep(interval)
 
-	res, err := monitoring.GetWatcher().GetFormattedQueryData(counterPath)
+	processesNew, err := winapi.GetSystemProcessInformation()
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to call GetFormattedQueryData")
+		return nil, err
+	}
+	finishTime := time.Now()
+
+	timeElapsedReal := (finishTime.Sub(startTime).Seconds()) * float64(t.logicalCPUCount)
+
+	result := make([]*ProcessInfo, 0, len(processesOld))
+	for pid, newProcessInfo := range processesNew {
+		if oldProcessInfo, exists := processesOld[pid]; exists {
+			info := &ProcessInfo{
+				Name:    newProcessInfo.ImageName.String(),
+				PID:     pid,
+				Command: "",
+				Load:    calculateUsagePercent(oldProcessInfo, newProcessInfo, timeElapsedReal, t.logicalCPUCount),
+			}
+			result = append(result, info)
+		}
 	}
 
-	// Iterate over the reported counter values
-	result := make([]*ProcessInfo, 0, len(res))
-	for _, c := range res {
-		// Some filtering...
-		switch c.InstanceName {
-		case "Idle":
-			continue
-		case "_Total":
-			continue
-		}
-
-		pi := &ProcessInfo{
-			Name:    c.InstanceName,
-			Command: c.InstanceName,
-			Load:    c.Value,
-		}
-		result = append(result, pi)
-	}
+	// calling to winapi functions can consume a lot of memory, so we trigger GC to clean things up
+	runtime.GC()
 
 	return result, nil
+}
+
+func calculateUsagePercent(p1, p2 *winapi.SystemProcessInformation, delta float64, numcpu uint8) float64 {
+	if delta == 0 {
+		return 0
+	}
+
+	deltaProc := float64((p2.UserTime+p2.KernelTime)-(p1.UserTime+p1.KernelTime)) * winapi.HundredNSToTick
+	overallPercent := ((deltaProc / delta) * 100) * float64(numcpu)
+	return overallPercent
 }
