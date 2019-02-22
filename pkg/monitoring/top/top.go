@@ -3,6 +3,7 @@ package top
 import (
 	"container/ring"
 	"math"
+	"runtime"
 	"sort"
 	"sync"
 	"time"
@@ -47,29 +48,34 @@ type ProcessInfo struct {
 
 // Top holds a map with information about process loads
 type Top struct {
-	pList        map[string]*Process
-	pListMtx     sync.RWMutex
-	LoadTotal1   float64
-	LoadTotal5   float64
-	LoadTotal15  float64
-	isRunning    bool
-	isRunningMtx sync.Mutex
-	stop         bool
+	pList           map[string]*Process
+	pListMtx        sync.RWMutex
+	LoadTotal1      float64
+	LoadTotal5      float64
+	LoadTotal15     float64
+	isRunning       bool
+	isRunningMtx    sync.Mutex
+	stop            bool
+	logicalCPUCount uint8
 }
 
 // New returns a new instance of Top struct
 func New() *Top {
 	t := &Top{
-		pList:     make(map[string]*Process),
-		isRunning: false,
-		stop:      false,
+		pList:           make(map[string]*Process),
+		isRunning:       false,
+		stop:            false,
+		logicalCPUCount: uint8(runtime.NumCPU()),
 	}
 
 	return t
 }
 
 func (t *Top) startMeasureProcessLoad(interval time.Duration) {
-	t.startCollect(interval)
+	var len1 = 60 / int(interval.Seconds())
+	var len5 = 5 * 60 / int(interval.Seconds())
+	var len15 = 15 * 60 / int(interval.Seconds())
+
 	for {
 		// Check if stop was requested
 		if t.stop {
@@ -77,10 +83,9 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 			return
 		}
 
-		// Call to os agnostic implementation to fetch processes
 		processes, err := t.GetProcesses(interval)
 		if err != nil {
-			log.Printf("Failed to get process list: %s", err)
+			log.Errorf("Failed to get process list: %s", err)
 			time.Sleep(interval)
 			continue
 		}
@@ -95,9 +100,9 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 					PID:        p.PID,
 					Command:    p.Command,
 					Identifier: p.Name,
-					Load1:      ring.New(60 / int(interval.Seconds())),
-					Load5:      ring.New(5 * 60 / int(interval.Seconds())),
-					Load15:     ring.New(15 * 60 / int(interval.Seconds())),
+					Load1:      ring.New(len1),
+					Load5:      ring.New(len5),
+					Load15:     ring.New(len15),
 				}
 				t.pList[p.Name] = pr
 			} else {
@@ -169,50 +174,6 @@ func (t *Top) HighestNLoad(n int) []*ProcessInfo {
 	return result
 }
 
-// HighestLoad returns information about the process causing highest CPU load
-func (t *Top) HighestLoad() (string, float64, float64, float64, float64) {
-	var pi *Process
-	var identifier string
-
-	// Find process with highest load
-	t.pListMtx.RLock()
-	for k, v := range t.pList {
-		if pi == nil {
-			pi = v
-		}
-		if v.Load > pi.Load {
-			pi = v
-			identifier = k
-		}
-	}
-	t.pListMtx.RUnlock()
-
-	// pi can be nil on first run until thigs are set up
-	if pi == nil {
-		return "", 0, 0, 0, 0
-	}
-
-	var avg1, avg5, avg15 float64
-	var wg sync.WaitGroup
-	wg.Add(3)
-
-	// Sanity check in case the Rings aren't initialised yet
-	if pi.Load1 != nil && pi.Load5 != nil && pi.Load15 != nil {
-		go func() {
-			avg1 = Avg1(pi)
-		}()
-		go func() {
-			avg5 = Avg5(pi)
-		}()
-		go func() {
-			avg15 = Avg15(pi)
-		}()
-		wg.Wait()
-	}
-
-	return identifier, pi.Load, avg1, avg5, avg15
-}
-
 // Avg1 calculates 1min average
 func Avg1(pi *Process) float64 {
 	total := float64(0)
@@ -254,8 +215,4 @@ func Avg15(pi *Process) float64 {
 		total += p.(float64)
 	})
 	return math.Round(total/float64(count)*100) / 100
-}
-
-func LowerThan(value, threshold float64) bool {
-	return value < threshold
 }
