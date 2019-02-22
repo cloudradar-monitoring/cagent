@@ -58,6 +58,10 @@ func (ca *Cagent) initHubHTTPClient() {
 }
 
 func (ca *Cagent) TestHub() error {
+	if ca.Config.IoMode != "http" {
+		return nil
+	}
+
 	if ca.Config.HubURL == "" {
 		return fmt.Errorf("please fill config with hub_url, hub_user and hub_password from your Cloudradar account")
 	}

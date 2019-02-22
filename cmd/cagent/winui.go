@@ -125,6 +125,9 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 	message := "Test connection succeeded.\n"
 
 	ui.SaveButton.SetText("Saving...")
+
+	ui.ca.Config.MinValuableConfig.IoMode = "http"
+
 	err = cagent.SaveConfigFile(&ui.ca.Config.MinValuableConfig, ui.ca.ConfigLocation)
 	if err != nil {
 		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to save config: "+err.Error(), nil)
