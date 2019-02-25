@@ -4,8 +4,9 @@ package cagent
 
 import (
 	"context"
-	"github.com/shirou/gopsutil/cpu"
 	"time"
+
+	"github.com/shirou/gopsutil/cpu"
 )
 
 const cpuGetUtilisationTimeout = time.Second * 10

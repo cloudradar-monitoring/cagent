@@ -39,8 +39,8 @@ func (s ProcessInfoSlice) Less(i, j int) bool {
 type ProcessInfo struct {
 	Name    string  `json:"name"`
 	PID     uint32  `json:"pid"`
-	Command string  `json:"command"`
-	Load    float64 `json:"load"`
+	Command string  `json:"command,omitempty"`
+	Load    float64 `json:"-"`
 	Load1   float64 `json:"load1"`
 	Load5   float64 `json:"load5"`
 	Load15  float64 `json:"load15"`
