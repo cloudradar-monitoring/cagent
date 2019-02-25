@@ -48,7 +48,7 @@ func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfo, error) {
 				Name:    name,
 				PID:     uint32(p.Pid),
 				Command: cmd,
-				Load:    load,
+				Load:    load / float64(t.logicalCPUCount),
 			}
 		}(p)
 	}

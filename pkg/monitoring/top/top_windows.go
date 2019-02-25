@@ -32,7 +32,7 @@ func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfo, error) {
 				Name:    newProcessInfo.ImageName.String(),
 				PID:     pid,
 				Command: "",
-				Load:    calculateUsagePercent(oldProcessInfo, newProcessInfo, timeElapsedReal, t.logicalCPUCount),
+				Load:    calculateUsagePercent(oldProcessInfo, newProcessInfo, timeElapsedReal),
 			}
 			result = append(result, info)
 		}
@@ -44,12 +44,12 @@ func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfo, error) {
 	return result, nil
 }
 
-func calculateUsagePercent(p1, p2 *winapi.SystemProcessInformation, delta float64, numcpu uint8) float64 {
+func calculateUsagePercent(p1, p2 *winapi.SystemProcessInformation, delta float64) float64 {
 	if delta == 0 {
 		return 0
 	}
 
 	deltaProc := float64((p2.UserTime+p2.KernelTime)-(p1.UserTime+p1.KernelTime)) * winapi.HundredNSToTick
-	overallPercent := ((deltaProc / delta) * 100) * float64(numcpu)
+	overallPercent := (deltaProc / delta) * 100
 	return overallPercent
 }
