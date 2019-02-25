@@ -500,6 +500,21 @@ func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 		return
 	}
 
+	if ca.Config.IoMode == "file" {
+		file, err := os.OpenFile(ca.Config.OutFile, os.O_WRONLY, 0666)
+		if err != nil {
+			fmt.Printf("Failed to validate config in local file mode. Access error to file \"%s\": %s", ca.Config.OutFile, err.Error())
+			os.Exit(1)
+		}
+
+		if err := file.Close(); err != nil {
+			fmt.Printf("could close output file \"%s\": %s\n", ca.Config.OutFile, err.Error())
+		}
+
+		fmt.Printf("Config verified in local file mode. output file: %s\n", ca.Config.OutFile)
+		os.Exit(0)
+	}
+
 	err := ca.TestHub()
 	if err != nil {
 		if runtime.GOOS == "windows" {
