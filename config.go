@@ -131,6 +131,8 @@ func NewConfig() *Config {
 		},
 	}
 
+	cfg.MinValuableConfig.IoMode = "http"
+
 	if runtime.GOOS == "windows" {
 		cfg.WindowsUpdatesWatcherInterval = 3600
 		cfg.NetInterfaceExcludeRegex = []string{"Pseudo-Interface"}
@@ -145,6 +147,7 @@ func NewConfig() *Config {
 func NewMinimumConfig() *MinValuableConfig {
 	cfg := &MinValuableConfig{
 		LogLevel: "error",
+		IoMode:   "http",
 	}
 
 	cfg.applyEnv(false)
