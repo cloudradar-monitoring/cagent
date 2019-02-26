@@ -28,6 +28,9 @@ func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfo, error) {
 	result := make([]*ProcessInfo, 0, len(processesOld))
 	for pid, newProcessInfo := range processesNew {
 		if oldProcessInfo, exists := processesOld[pid]; exists {
+			if pid == 0 {
+				continue
+			}
 			info := &ProcessInfo{
 				Name:    newProcessInfo.ImageName.String(),
 				PID:     pid,
