@@ -18,9 +18,7 @@
     "vars": [
     ]
   },
-  "hooks": [
-    {"when": "install", "command": "[INSTALLDIR]\\cagent.exe cagent:install"}
-  ],
+  "hooks": [],
   "choco": {
     "description": "Monitoring proxy for agentless monitoring of subnets",
     "project-url": "https://github.com/cloudradar-monitoring/cagent",

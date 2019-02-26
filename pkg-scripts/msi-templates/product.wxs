@@ -107,17 +107,27 @@
 
       </Directory>
 
+      <SetProperty Id="CustomInstallExecInstall" Value='"[INSTALLDIR]\cagent.exe" "cagent:install"' Before="CustomInstallExecInstall" Sequence="execute"/>
+      <CustomAction Id="CustomInstallExecInstall" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="ignore" Impersonate="no"/>
+
+      <SetProperty Id="CustomInstallExecQuietInstall" Value='"[INSTALLDIR]\cagent.exe" "cagent:test"' Before="CustomInstallExecQuietInstall" Sequence="execute"/>
+      <CustomAction Id="CustomInstallExecQuietInstall" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="ignore" Impersonate="no"/>
+
       {{range $i, $e := .InstallHooks}}
       <SetProperty Id="CustomInstallExec{{$i}}" Value="{{$e.CookedCommand}}" Before="CustomInstallExec{{$i}}" Sequence="execute"/>
       <CustomAction Id="CustomInstallExec{{$i}}" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="ignore" Impersonate="no"/>
       {{end}}
+
       {{range $i, $e := .UninstallHooks}}
       <SetProperty Id="CustomUninstallExec{{$i}}" Value="{{$e.CookedCommand}}" Before="CustomUninstallExec{{$i}}" Sequence="execute"/>
       <CustomAction Id="CustomUninstallExec{{$i}}" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="check" Impersonate="no"/>
       {{end}}
+
       <SetProperty Id="ARPNOMODIFY" Value="1" After="InstallValidate" Sequence="execute"/>
       <InstallExecuteSequence>
          <RemoveExistingProducts After="InstallValidate"/>
+         <Custom Action="CustomInstallExecInstall" Before="InstallFinalize">NOT Installed AND NOT REMOVE AND UILevel &gt; 2</Custom>
+         <Custom Action="CustomInstallExecQuietInstall" Before="InstallFinalize">NOT Installed AND NOT REMOVE AND UILevel &lt; 3</Custom>
          {{range $i, $e := .InstallHooks}}
          <Custom Action="CustomInstallExec{{$i}}" {{if eq $i 0}}Before="InstallFinalize{{else}}After="CustomInstallExec{{dec $i}}{{end}}">NOT Installed AND NOT REMOVE</Custom>
          {{end}}
