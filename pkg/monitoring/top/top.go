@@ -41,9 +41,9 @@ type ProcessInfo struct {
 	PID     uint32  `json:"pid"`
 	Command string  `json:"command,omitempty"`
 	Load    float64 `json:"-"`
-	Load1   float64 `json:"load1"`
-	Load5   float64 `json:"load5"`
-	Load15  float64 `json:"load15"`
+	Load1   float64 `json:"load1_percent"`
+	Load5   float64 `json:"load5_percent"`
+	Load15  float64 `json:"load15_percent"`
 }
 
 // Top holds a map with information about process loads
