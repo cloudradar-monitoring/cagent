@@ -127,6 +127,10 @@ func main() {
 
 	configureLogger(ca)
 
+	if *outputFilePtr == "" && cfg.IOMode == cagent.IOModeFile {
+		*outputFilePtr = cfg.OutFile
+	}
+
 	// log level set in flag has a precedence. If specified we need to set it ASAP
 	handleFlagLogLevel(ca, *logLevelPtr)
 
@@ -494,6 +498,21 @@ func removePidFileIfNeeded(ca *cagent.Cagent, oneRunOnlyModePtr *bool) {
 func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 	if !testConfig {
 		return
+	}
+
+	if ca.Config.IOMode == cagent.IOModeFile {
+		file, err := os.OpenFile(ca.Config.OutFile, os.O_WRONLY, 0666)
+		if err != nil {
+			fmt.Printf("Failed to validate config in local file mode. Access error to file \"%s\": %s", ca.Config.OutFile, err.Error())
+			os.Exit(1)
+		}
+
+		if err := file.Close(); err != nil {
+			fmt.Printf("couldn't close output file \"%s\": %s\n", ca.Config.OutFile, err.Error())
+		}
+
+		fmt.Printf("Config verified in local file mode. output file: %s\n", ca.Config.OutFile)
+		os.Exit(0)
 	}
 
 	err := ca.TestHub()
