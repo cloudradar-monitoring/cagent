@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/StackExchange/wmi"
+	"github.com/pkg/errors"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/wmi"
 )
@@ -120,6 +121,8 @@ func (w winMemoryType) String() string {
 func fetchInventory() (map[string]interface{}, error) {
 	res := make(map[string]interface{})
 
+	var errs []error
+
 	var cpus []win32_Processor
 	query := wmi.CreateQuery(&cpus, "")
 	err := wmiutil.QueryWithTimeout(reqTimeout, query, &cpus)
@@ -139,25 +142,19 @@ func fetchInventory() (map[string]interface{}, error) {
 	var baseBoard []win32_BaseBoard
 	query = wmi.CreateQuery(&baseBoard, "")
 	if err = wmiutil.QueryWithTimeout(reqTimeout, query, &baseBoard); err != nil {
-		return res, fmt.Errorf("hwinfo: request baseboard info %s", err.Error())
+		errs = append(errs, errors.Wrap(err, "request baseboard info"))
 	}
 
-	if len(baseBoard) == 0 {
-		return res, fmt.Errorf("hwinfo: request baseboard info %s", err.Error())
+	if len(baseBoard) > 0 {
+		res["baseboard.manufacturer"] = baseBoard[0].Manufacturer
+		res["baseboard.serial_number"] = baseBoard[0].SerialNumber
+		res["baseboard.model"] = baseBoard[0].Product
 	}
-
-	res["baseboard.manufacturer"] = baseBoard[0].Manufacturer
-	res["baseboard.serial_number"] = baseBoard[0].SerialNumber
-	res["baseboard.model"] = baseBoard[0].Product
 
 	var ram []win32_PhysicalMemory
 	query = wmi.CreateQuery(&ram, "")
 	if err = wmi.Query(query, &ram); err != nil {
-		return res, fmt.Errorf("hwinfo: request ram info %s", err.Error())
-	}
-
-	if len(ram) == 0 {
-		return res, fmt.Errorf("hwinfo: request ram info %s", err.Error())
+		errs = append(errs, errors.Wrap(err, "request ram info"))
 	}
 
 	res["ram.number_of_modules"] = len(ram)
@@ -169,6 +166,14 @@ func fetchInventory() (map[string]interface{}, error) {
 		} else {
 			res[fmt.Sprintf("ram.%d.type", i)] = (*memoryType).String()
 		}
+	}
+
+	if len(errs) > 0 {
+		errString := "hwinfo: "
+		for _, err := range errs {
+			errString += err.Error() + ";"
+		}
+		return res, errors.New(errString)
 	}
 
 	return res, nil
