@@ -127,7 +127,7 @@ func main() {
 
 	configureLogger(ca)
 
-	if *outputFilePtr == "" && cfg.IoMode == "file" {
+	if *outputFilePtr == "" && cfg.IOMode == cagent.IOModeFile {
 		*outputFilePtr = cfg.OutFile
 	}
 
@@ -500,7 +500,7 @@ func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 		return
 	}
 
-	if ca.Config.IoMode == "file" {
+	if ca.Config.IOMode == cagent.IOModeFile {
 		file, err := os.OpenFile(ca.Config.OutFile, os.O_WRONLY, 0666)
 		if err != nil {
 			fmt.Printf("Failed to validate config in local file mode. Access error to file \"%s\": %s", ca.Config.OutFile, err.Error())
@@ -508,7 +508,7 @@ func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 		}
 
 		if err := file.Close(); err != nil {
-			fmt.Printf("could close output file \"%s\": %s\n", ca.Config.OutFile, err.Error())
+			fmt.Printf("couldn't close output file \"%s\": %s\n", ca.Config.OutFile, err.Error())
 		}
 
 		fmt.Printf("Config verified in local file mode. output file: %s\n", ca.Config.OutFile)

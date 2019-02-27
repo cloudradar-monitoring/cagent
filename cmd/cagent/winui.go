@@ -126,7 +126,7 @@ func (ui *UI) TestSaveReload(testOnly bool) {
 
 	ui.SaveButton.SetText("Saving...")
 
-	ui.ca.Config.MinValuableConfig.IoMode = "http"
+	ui.ca.Config.MinValuableConfig.IOMode = cagent.IOModeHTTP
 
 	err = cagent.SaveConfigFile(&ui.ca.Config.MinValuableConfig, ui.ca.ConfigLocation)
 	if err != nil {
