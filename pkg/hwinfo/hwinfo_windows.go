@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/StackExchange/wmi"
+	"github.com/pkg/errors"
 
-	wmiutil "github.com/cloudradar-monitoring/cagent/pkg/wmi"
+	"github.com/cloudradar-monitoring/cagent/pkg/wmi"
 )
 
 type winMemoryType uint16
@@ -120,7 +121,7 @@ func (w winMemoryType) String() string {
 func fetchInventory() (map[string]interface{}, error) {
 	res := make(map[string]interface{})
 
-	var errs []string
+	var errs []error
 
 	var cpus []win32_Processor
 	query := wmi.CreateQuery(&cpus, "")
@@ -141,7 +142,7 @@ func fetchInventory() (map[string]interface{}, error) {
 	var baseBoard []win32_BaseBoard
 	query = wmi.CreateQuery(&baseBoard, "")
 	if err = wmiutil.QueryWithTimeout(reqTimeout, query, &baseBoard); err != nil {
-		errs = append(errs, "request baseboard info: ", err.Error())
+		errs = append(errs, errors.Wrap(err, "request baseboard info"))
 	}
 
 	if len(baseBoard) > 0 {
@@ -153,7 +154,7 @@ func fetchInventory() (map[string]interface{}, error) {
 	var ram []win32_PhysicalMemory
 	query = wmi.CreateQuery(&ram, "")
 	if err = wmi.Query(query, &ram); err != nil {
-		errs = append(errs, "request ram info: ", err.Error())
+		errs = append(errs, errors.Wrap(err, "request ram info"))
 	}
 
 	res["ram.number_of_modules"] = len(ram)
@@ -169,12 +170,10 @@ func fetchInventory() (map[string]interface{}, error) {
 
 	if len(errs) > 0 {
 		errString := "hwinfo: "
-
-		for _, s := range errs {
-			errString += s + ";"
+		for _, err := range errs {
+			errString += err.Error() + ";"
 		}
-
-		return res, err
+		return res, errors.New(errString)
 	}
 
 	return res, nil
