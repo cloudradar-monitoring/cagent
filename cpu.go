@@ -1,7 +1,6 @@
 package cagent
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -12,13 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/load"
 	log "github.com/sirupsen/logrus"
 )
 
 const measureInterval = time.Second * 10
-const cpuGetUtilisationTimeout = time.Second * 10
 
 var errMetricsAreNotCollectedYet = errors.New("metrics are not collected yet")
 var utilisationMetricsByOS = map[string][]string{
@@ -155,54 +152,29 @@ func (tsa *TimeSeriesAverage) Percentage() (map[int]ValuesMap, error) {
 				sum[d][key] = -1
 				continue
 			}
-			// On windows perCPU measurements returned as Percentage, not CPU time
-			// see https://github.com/shirou/gopsutil/issues/600
-			if runtime.GOOS == "windows" {
-				var valSum float64
-				var count int
-				for i := keyInt; i < len(tsa.TimeSeries); i++ {
-					t := tsa.TimeSeries[i]
-					// skip measurements collected more than d minutes ago (e.g. 5 minutes for avg5)
-					if time.Since(t.Time).Minutes() > float64(d) {
-						continue
-					}
 
-					valSum += t.Values[key]
-					count++
+			var hasMetrics bool
+			// filter out measurements collected more than d minutes ago (e.g. in case some of them were timeouted)
+			for i := keyInt; i < len(tsa.TimeSeries); i++ {
+				// allow 3 seconds(0.05min) outage to include metrics query time
+				if time.Since(tsa.TimeSeries[i].Time).Minutes() <= float64(d)+0.05 {
+					keyInt = i
+					hasMetrics = true
+					break
 				}
-
-				if count == 0 { // no metrics collected for last d minutes
-					sum[d][key] = -1
-					continue
-				}
-
-				// found the average for all collected measurements for the last d minutes
-				sum[d][key] = roundUpWithPrecision(valSum/float64(count), 2)
-			} else {
-
-				var hasMetrics bool
-				// filter out measurements collected more than d minutes ago (e.g. in case some of them were timeouted)
-				for i := keyInt; i < len(tsa.TimeSeries); i++ {
-					// allow 3 seconds(0.05min) outage to include metrics query time
-					if time.Since(tsa.TimeSeries[i].Time).Minutes() <= float64(d)+0.05 {
-						keyInt = i
-						hasMetrics = true
-						break
-					}
-				}
-				if !hasMetrics || keyInt == len(tsa.TimeSeries)-1 {
-					// looks like some problem happen and we don't have enough(more than 1) measurements
-					// this could happen if all CPU queries for the last d minutes were timeouted
-					sum[d][key] = -1
-					continue
-				}
-
-				secondsSpentOnThisTypeOfLoad := lastVal - tsa.TimeSeries[keyInt].Values[key]
-				secondsBetweenFirstAndLastMeasurementInTheRange := last.Time.Sub(tsa.TimeSeries[keyInt].Time).Seconds()
-
-				// divide CPU times with seconds to found the percentage
-				sum[d][key] = roundUpWithPrecision((secondsSpentOnThisTypeOfLoad/secondsBetweenFirstAndLastMeasurementInTheRange)*100, 2)
 			}
+			if !hasMetrics || keyInt == len(tsa.TimeSeries)-1 {
+				// looks like some problem happen and we don't have enough(more than 1) measurements
+				// this could happen if all CPU queries for the last d minutes were timeouted
+				sum[d][key] = -1
+				continue
+			}
+
+			secondsSpentOnThisTypeOfLoad := lastVal - tsa.TimeSeries[keyInt].Values[key]
+			secondsBetweenFirstAndLastMeasurementInTheRange := last.Time.Sub(tsa.TimeSeries[keyInt].Time).Seconds()
+
+			// divide CPU times with seconds to found the percentage
+			sum[d][key] = roundUpWithPrecision((secondsSpentOnThisTypeOfLoad/secondsBetweenFirstAndLastMeasurementInTheRange)*100, 2)
 		}
 	}
 
@@ -294,28 +266,15 @@ func (ca *Cagent) CPUWatcher() *CPUWatcher {
 }
 
 func (cw *CPUWatcher) Once() error {
-	startedAt := time.Now()
-	defer func() {
-		log.Debugf("[CPU] WMI query took %.2fs", time.Since(startedAt).Seconds())
-	}()
-
 	cw.UtilAvg.mu.Lock()
 
-	ctx, cancel := context.WithTimeout(context.Background(), cpuGetUtilisationTimeout)
-	defer cancel()
-	times, err := cpu.TimesWithContext(ctx, true)
+	times, err := getCPUTimes()
 	if err != nil {
 		cw.UtilAvg.mu.Unlock()
-		if err == context.DeadlineExceeded {
-			return TimeoutError{"WMI query", cpuGetUtilisationTimeout}
-		}
 		return err
 	}
 
 	values := ValuesMap{}
-
-	cpuStatPerCPUPerCorePerType := make(map[int]map[int]map[string]float64)
-
 	for _, cputime := range times {
 		for _, utype := range cw.UtilTypes {
 			utype = strings.ToLower(utype)
@@ -341,44 +300,8 @@ func (cw *CPUWatcher) Once() error {
 				continue
 			}
 
-			if runtime.GOOS == "windows" {
-				// calculate the logical CPU index from "cpuIndex,coreIndex" format
-				cpuIndexParts := strings.Split(cputime.CPU, ",")
-
-				cpuIndex, _ := strconv.Atoi(cpuIndexParts[0])
-				coreIndex, _ := strconv.Atoi(cpuIndexParts[1])
-
-				if _, exists := cpuStatPerCPUPerCorePerType[cpuIndex]; !exists {
-					cpuStatPerCPUPerCorePerType[cpuIndex] = make(map[int]map[string]float64)
-				}
-
-				if _, exists := cpuStatPerCPUPerCorePerType[cpuIndex][coreIndex]; !exists {
-					cpuStatPerCPUPerCorePerType[cpuIndex][coreIndex] = make(map[string]float64)
-				}
-
-				// store by indexes to iterate in the right order later
-				cpuStatPerCPUPerCorePerType[cpuIndex][coreIndex][utype] = value
-				values[fmt.Sprintf("%s.%%d.total", utype)] += value / float64(len(times))
-
-			} else {
-				values[fmt.Sprintf("%s.%%d.%s", utype, cputime.CPU)] = value
-				values[fmt.Sprintf("%s.%%d.total", utype)] += value / float64(len(times))
-			}
-		}
-	}
-
-	if runtime.GOOS == "windows" {
-		// calculate persistent CPU logical indexes from the "cpuIndex,coreIndex" on Windows
-		// iterate on CPUs then on their cores
-		// Result will be like this: 0,0 -> 0; 1,1 -> 3
-		logicalCPUIndex := 0
-		for cpuIndex := 0; cpuIndex < len(cpuStatPerCPUPerCorePerType); cpuIndex++ {
-			for coreIndex := 0; coreIndex < len(cpuStatPerCPUPerCorePerType[cpuIndex]); coreIndex++ {
-				for utype, value := range cpuStatPerCPUPerCorePerType[cpuIndex][coreIndex] {
-					values[fmt.Sprintf("%s.%%d.cpu%d", utype, logicalCPUIndex)] = value
-				}
-				logicalCPUIndex++
-			}
+			values[fmt.Sprintf("%s.%%d.%s", utype, cputime.CPU)] = value
+			values[fmt.Sprintf("%s.%%d.total", utype)] += value / float64(len(times))
 		}
 	}
 
