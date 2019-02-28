@@ -392,7 +392,7 @@ func (ca *Cagent) getVMStatMeasurements(f func(string, MeasurementsMap, error)) 
 		for _, name := range ca.Config.VirtualMachinesStat {
 			vm, err := vmstat.Acquire(name)
 			if err != nil {
-				if err != vmstattypes.ErrNotAvailable {
+				if err != types.ErrNotAvailable {
 					log.Warnf("vmstat: Error while acquiring vm provider \"%s\": %s", name, err.Error())
 				}
 			} else {
