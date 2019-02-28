@@ -74,13 +74,13 @@ func (ca *Cagent) CPUUtilisationAnalyser() *CPUUtilisationAnalyser {
 	return ca.cpuUtilisationAnalyser
 }
 
-func (cuan *CPUUtilisationAnalyser) Results() (MeasurementsMap, error) {
+func (cuan *CPUUtilisationAnalyser) Results() (MeasurementsMap, bool, error) {
 	if cuan.top == nil || !cuan.hasUnclaimedResults && !cuan.topIsRunning {
-		return nil, nil
+		return nil, false, nil
 	}
 
 	cuan.hasUnclaimedResults = false
 	topProcs := cuan.top.HighestNLoad(cuan.NumberOfProcesses)
 
-	return MeasurementsMap{"top": topProcs}, nil
+	return MeasurementsMap{"top": topProcs}, true, nil
 }

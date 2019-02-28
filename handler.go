@@ -309,16 +309,18 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 
 	measurements = measurements.AddWithPrefix("docker.", containersList)
 
-	cpuUtilisationAnalyser, err := ca.CPUUtilisationAnalyser().Results()
+	cpuUtilisationAnalysisResult, cpuUtilisationAnalysisIsActive, err := ca.CPUUtilisationAnalyser().Results()
 	if err != nil {
 		// no need to log because already done inside
 		errs = append(errs, err.Error())
 	}
-	measurements = measurements.AddWithPrefix("cpu_utilisation_analysis.", cpuUtilisationAnalyser)
-	measurements = measurements.AddWithPrefix(
-		"cpu_utilisation_analysis.",
-		MeasurementsMap{"settings": ca.Config.CPUUtilisationAnalysis},
-	)
+	measurements = measurements.AddWithPrefix("cpu_utilisation_analysis.", cpuUtilisationAnalysisResult)
+	if cpuUtilisationAnalysisIsActive {
+		measurements = measurements.AddWithPrefix(
+			"cpu_utilisation_analysis.",
+			MeasurementsMap{"settings": ca.Config.CPUUtilisationAnalysis},
+		)
+	}
 
 	if len(errs) == 0 {
 		measurements["cagent.success"] = 1
