@@ -20,7 +20,7 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
-	vmstattypes "github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
 )
 
 var ErrorTestWinUISettingsAreEmpty = errors.New("Please fill 'HUB URL', 'HUB USER' and 'HUB PASSWORD' from your Cloudradar account")
@@ -388,7 +388,7 @@ func (ca *Cagent) getVMStatMeasurements(f func(string, MeasurementsMap, error)) 
 		for _, name := range ca.Config.VirtualMachinesStat {
 			vm, err := vmstat.Acquire(name)
 			if err != nil {
-				if err != vmstattypes.ErrNotAvailable {
+				if err != types.ErrNotAvailable {
 					log.Warnf("vmstat: Error while acquiring vm provider \"%s\": %s", name, err.Error())
 				}
 			} else {
