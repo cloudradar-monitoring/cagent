@@ -48,7 +48,7 @@ type ProcessInfo struct {
 
 // Top holds a map with information about process loads
 type Top struct {
-	pList           map[string]*Process
+	pList           map[uint32]*Process
 	pListMtx        sync.RWMutex
 	LoadTotal1      float64
 	LoadTotal5      float64
@@ -62,7 +62,7 @@ type Top struct {
 // New returns a new instance of Top struct
 func New() *Top {
 	t := &Top{
-		pList:           make(map[string]*Process),
+		pList:           make(map[uint32]*Process),
 		isRunning:       false,
 		stop:            false,
 		logicalCPUCount: uint8(runtime.NumCPU()),
@@ -95,7 +95,7 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 		var pr *Process
 		for _, p := range processes {
 			// Check if we already track the process ad if not start tracking it
-			if _, ok := t.pList[p.Name]; !ok {
+			if _, ok := t.pList[p.PID]; !ok {
 				pr = &Process{
 					PID:        p.PID,
 					Command:    p.Command,
@@ -104,9 +104,9 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 					Load5:      ring.New(len5),
 					Load15:     ring.New(len15),
 				}
-				t.pList[p.Name] = pr
+				t.pList[p.PID] = pr
 			} else {
-				pr = t.pList[p.Name]
+				pr = t.pList[p.PID]
 			}
 
 			// Add load value to rings for later calculation of load load5 and load15
