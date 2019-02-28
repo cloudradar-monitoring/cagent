@@ -74,12 +74,12 @@ type Config struct {
 }
 
 type CPUUtilisationAnalysis struct {
-	Threshold                      float64 `toml:"threshold" comment:"target value to start the analysis"`
-	Function                       string  `toml:"function" comment:"threshold compare function, possible values: 'lt', 'lte', 'gt', 'gte'"`
-	Metric                         string  `toml:"metric" commend:"possible values: 'user','system','idle','iowait'"`
-	GatheringMode                  string  `toml:"gathering_mode" comment:"should be one of values of cpu_utilisation_gathering_mode"`
-	ReportProcesses                int     `toml:"report_processes" comment:"number of processes to return"`
-	TrailingProcessAnalysisMinutes int     `toml:"trailing_process_analysis_minutes" comment:"how much time analysis will continue to perform after the CPU utilisation returns to the normal value"`
+	Threshold                      float64 `toml:"threshold" comment:"target value to start the analysis" json:"threshold"`
+	Function                       string  `toml:"function" comment:"threshold compare function, possible values: 'lt', 'lte', 'gt', 'gte'" json:"function"`
+	Metric                         string  `toml:"metric" commend:"possible values: 'user','system','idle','iowait'" json:"metric"`
+	GatheringMode                  string  `toml:"gathering_mode" comment:"should be one of values of cpu_utilisation_gathering_mode" json:"gathering_mode"`
+	ReportProcesses                int     `toml:"report_processes" comment:"number of processes to return" json:"report_processes"`
+	TrailingProcessAnalysisMinutes int     `toml:"trailing_process_analysis_minutes" comment:"how much time analysis will continue to perform after the CPU utilisation returns to the normal value" json:"trailing_process_analysis_minutes"`
 }
 
 func init() {

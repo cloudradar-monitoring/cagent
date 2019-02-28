@@ -20,7 +20,7 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
-	vmstattypes "github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
 )
 
 var ErrorTestWinUISettingsAreEmpty = errors.New("Please fill 'HUB URL', 'HUB USER' and 'HUB PASSWORD' from your Cloudradar account")
@@ -314,7 +314,11 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 		// no need to log because already done inside
 		errs = append(errs, err.Error())
 	}
-	measurements = measurements.AddWithPrefix("cpu_analyser.", cpuUtilisationAnalyser)
+	measurements = measurements.AddWithPrefix("cpu_utilisation_analysis.", cpuUtilisationAnalyser)
+	measurements = measurements.AddWithPrefix(
+		"cpu_utilisation_analysis.",
+		MeasurementsMap{"settings": ca.Config.CPUUtilisationAnalysis},
+	)
 
 	if len(errs) == 0 {
 		measurements["cagent.success"] = 1
