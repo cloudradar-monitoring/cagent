@@ -314,7 +314,11 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 		// no need to log because already done inside
 		errs = append(errs, err.Error())
 	}
-	measurements = measurements.AddWithPrefix("cpu_analyser.", cpuUtilisationAnalyser)
+	measurements = measurements.AddWithPrefix("cpu_utilisation_analysis.", cpuUtilisationAnalyser)
+	measurements = measurements.AddWithPrefix(
+		"cpu_utilisation_analysis.",
+		MeasurementsMap{"settings": ca.Config.CPUUtilisationAnalysis},
+	)
 
 	if len(errs) == 0 {
 		measurements["cagent.success"] = 1
