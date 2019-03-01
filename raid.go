@@ -121,8 +121,7 @@ func (ar RaidArrays) Measurements() MeasurementsMap {
 
 func (ca *Cagent) RaidState() (MeasurementsMap, error) {
 	if _, err := os.Stat("/proc/mdstat"); os.IsNotExist(err) {
-		log.Error("[RAID] /proc/mdstat is missing")
-		// do not return error if mdstat is missing
+		log.Debugf("[RAID] /proc/mdstat is missing. Raid inspection disabled.")
 		return nil, nil
 	}
 
