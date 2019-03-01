@@ -50,12 +50,9 @@ type ProcessInfo struct {
 type Top struct {
 	pList           map[uint32]*Process
 	pListMtx        sync.RWMutex
-	LoadTotal1      float64
-	LoadTotal5      float64
-	LoadTotal15     float64
+	interruptChan   chan struct{}
 	isRunning       bool
 	isRunningMtx    sync.Mutex
-	stop            bool
 	logicalCPUCount uint8
 }
 
@@ -64,10 +61,9 @@ func New() *Top {
 	t := &Top{
 		pList:           make(map[uint32]*Process),
 		isRunning:       false,
-		stop:            false,
+		interruptChan:   make(chan struct{}),
 		logicalCPUCount: uint8(runtime.NumCPU()),
 	}
-
 	return t
 }
 
@@ -77,10 +73,11 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 	var len15 = 15 * 60 / int(interval.Seconds())
 
 	for {
-		// Check if stop was requested
-		if t.stop {
+		select {
+		case <-t.interruptChan:
 			t.isRunning = false
 			return
+		default:
 		}
 
 		processes, err := t.GetProcesses(interval)
@@ -90,11 +87,13 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 			continue
 		}
 
-		// Lock because the map can be accesses from other goroutines as well
+		// Lock because the map can be accessed from other goroutines as well
 		t.pListMtx.Lock()
+
+		newProcList := make(map[uint32]*Process, len(processes))
 		var pr *Process
 		for _, p := range processes {
-			// Check if we already track the process ad if not start tracking it
+			// Check if we already track the process and if not start tracking it
 			if _, ok := t.pList[p.PID]; !ok {
 				pr = &Process{
 					PID:        p.PID,
@@ -109,7 +108,7 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 				pr = t.pList[p.PID]
 			}
 
-			// Add load value to rings for later calculation of load load5 and load15
+			// Add load value to rings for later calculation of load1, load5 and load15
 			pr.Load = p.Load
 			pr.Load1.Value = p.Load
 			pr.Load1 = pr.Load1.Next()
@@ -117,16 +116,26 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 			pr.Load5 = pr.Load5.Next()
 			pr.Load15.Value = p.Load
 			pr.Load15 = pr.Load15.Next()
+
+			newProcList[pr.PID] = pr
 		}
 
+		t.pList = newProcList
 		t.pListMtx.Unlock()
 	}
+}
+
+func (t *Top) clearProcessList() {
+	t.pListMtx.Lock()
+	t.pList = make(map[uint32]*Process)
+	t.pListMtx.Unlock()
 }
 
 // Run starts measuring process load on the system
 func (t *Top) Run() {
 	t.isRunningMtx.Lock()
 	if !t.isRunning {
+		t.clearProcessList()
 		t.isRunning = true
 		// Start collecting process info every sec
 		go t.startMeasureProcessLoad(time.Second * 5)
@@ -138,8 +147,8 @@ func (t *Top) Run() {
 
 // Stop signals that load measuring should be stopped
 func (t *Top) Stop() {
-	log.Printf("Top Stop called")
-	t.stop = true
+	log.Debug("Top Stop called")
+	t.interruptChan <- struct{}{}
 }
 
 func (t *Top) HighestNLoad(n int) []*ProcessInfo {
@@ -158,9 +167,9 @@ func (t *Top) HighestNLoad(n int) []*ProcessInfo {
 			Command: p.Command,
 			PID:     p.PID,
 			Load:    p.Load,
-			Load1:   Avg1(p),
-			Load5:   Avg5(p),
-			Load15:  Avg15(p),
+			Load1:   calcRingAverage(p.Load1),
+			Load5:   calcRingAverage(p.Load5),
+			Load15:  calcRingAverage(p.Load15),
 		}
 		result = append(result, pi)
 	}
@@ -174,40 +183,10 @@ func (t *Top) HighestNLoad(n int) []*ProcessInfo {
 	return result
 }
 
-// Avg1 calculates 1min average
-func Avg1(pi *Process) float64 {
+func calcRingAverage(ring *ring.Ring) float64 {
 	total := float64(0)
 	count := 0
-	pi.Load1.Do(func(p interface{}) {
-		if p == nil {
-			return
-		}
-		count++
-		total += p.(float64)
-	})
-
-	return math.Round(total/float64(count)*100) / 100
-}
-
-// Avg5 calculates 5min average
-func Avg5(pi *Process) float64 {
-	total := float64(0)
-	count := 0
-	pi.Load5.Do(func(p interface{}) {
-		if p == nil {
-			return
-		}
-		count++
-		total += p.(float64)
-	})
-	return math.Round(total/float64(count)*100) / 100
-}
-
-// Avg15 calculates 15min average
-func Avg15(pi *Process) float64 {
-	total := float64(0)
-	count := 0
-	pi.Load15.Do(func(p interface{}) {
+	ring.Do(func(p interface{}) {
 		if p == nil {
 			return
 		}
