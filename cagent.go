@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"strings"
 	"sync"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
@@ -79,9 +78,7 @@ func (ca *Cagent) userAgent() string {
 	if ca.version == "" {
 		ca.version = "{undefined}"
 	}
-	parts := strings.Split(ca.version, "-")
-
-	return fmt.Sprintf("Cagent v%s %s %s", parts[0], runtime.GOOS, runtime.GOARCH)
+	return fmt.Sprintf("Cagent v%s %s %s", ca.version, runtime.GOOS, runtime.GOARCH)
 }
 
 func (ca *Cagent) Shutdown() error {
