@@ -10,159 +10,179 @@
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
-   <Product Id="*" UpgradeCode="{{.UpgradeCode}}"
+    <Product Id="*" UpgradeCode="{{.UpgradeCode}}"
             Name="{{.Product}}"
             Version="{{.VersionOk}}"
             Manufacturer="{{.Company}}"
             Language="1033">
 
-      <Package InstallScope="perMachine" InstallerVersion="200" Compressed="yes" Comments="Windows Installer Package"/>
+        <Package InstallScope="perMachine" InstallerVersion="200" Compressed="yes" Comments="Windows Installer Package" />
 
-      <Media Id="1" Cabinet="product.cab" EmbedCab="yes"/>
+        <Media Id="1" Cabinet="product.cab" EmbedCab="yes"/>
 
-      <Upgrade Id="{{.UpgradeCode}}">
-         <UpgradeVersion Minimum="0.0.0.0" IncludeMinimum="yes" OnlyDetect="yes" Property="ANYVERSIONDETECTED"/>
-         <UpgradeVersion Minimum="{{.VersionOk}}" IncludeMinimum="no" OnlyDetect="yes" Property="NEWERVERSIONDETECTED"/>
-         <UpgradeVersion Minimum="0.0.0.0" Maximum="{{.VersionOk}}" IncludeMinimum="yes" IncludeMaximum="no"
-                         Property="OLDERVERSIONBEINGUPGRADED"/>
-      </Upgrade>
-      <Condition Message="A newer version of this software is already installed.">NOT NEWERVERSIONDETECTED</Condition>
+        <Upgrade Id="{{.UpgradeCode}}">
+            <UpgradeVersion Minimum="0.0.0.0" IncludeMinimum="yes" OnlyDetect="yes" Property="ANYVERSIONDETECTED"/>
+            <UpgradeVersion Minimum="{{.VersionOk}}" IncludeMinimum="no" OnlyDetect="yes" Property="NEWERVERSIONDETECTED"/>
+            <UpgradeVersion Minimum="0.0.0.0" Maximum="{{.VersionOk}}" IncludeMinimum="yes" IncludeMaximum="no"
+                            Property="OLDERVERSIONBEINGUPGRADED"/>
+        </Upgrade>
+        <Condition Message="A newer version of this software is already installed.">NOT NEWERVERSIONDETECTED</Condition>
 
-      <Directory Id="TARGETDIR" Name="SourceDir">
-        <Component Id="RegistryEntries" Guid="e4e0d475-ca19-4a32-bd22-d0ed7ce303f0">
-            <RegistryKey Root="HKCR"
-                         Key="cagent\shell\open\command"
-                  ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
-                <RegistryValue Type="string" Value='"[INSTALLDIR]\cagent.exe" "%1%"'/>
-            </RegistryKey>
-            <RegistryKey Root="HKCR"
-                                      Key="cagent"
-                                      ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
-                  <RegistryValue Type="string" Name="URL Protocol" Value="" KeyPath="yes"/>
-                  <RegistryValue Type="string" Value="URL:cagent"/>
+        <!-- The old versions which was installed in 'perUser' scope can not be detected nor removed. We will try to find if they were installed before: -->
+        <Property Id="OLD_CAGENT_100_X86">
+            <RegistrySearch Id="TryFindCagent100_X86" Name="DisplayName" Type="raw" Root="HKLM"
+                            Key="SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\{EE14C48B-CACC-4267-8A26-5CF5965F76B5}" />
+        </Property>
+        <Property Id="OLD_CAGENT_100_X64">
+            <RegistrySearch Id="TryFindCagent100_X64" Name="DisplayName" Type="raw" Root="HKLM"
+                            Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{F2B666AE-3E95-49C9-934C-03CF2748F6D6}" />
+        </Property>
+        <Property Id="OLD_CAGENT_103_X86">
+            <RegistrySearch Id="TryFindCagent103_X86" Name="DisplayName" Type="raw" Root="HKLM"
+                            Key="SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\{13EA2C47-F747-4F53-A32B-1BCB1D88CA17}" />
+        </Property>
+        <Property Id="OLD_CAGENT_103_X64">
+            <RegistrySearch Id="TryFindCagent103_X64" Name="DisplayName" Type="raw" Root="HKLM"
+                            Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{F388B99D-FBCC-4BBE-BBD3-24FB116DAD85}" />
+        </Property>
+        <Condition Message="The old cagent installation which cannot be upgraded was found. Please remove it and restart the installer."
+            >OLD_CAGENT_100_X86 = "" AND OLD_CAGENT_100_X64 = "" AND OLD_CAGENT_103_X86 = "" AND OLD_CAGENT_103_X64 = ""</Condition>
 
-            </RegistryKey>
-        </Component>
-        <Directory Id="ProgramMenuFolder">
-            <Directory Id="ApplicationProgramsFolder" Name="Cagent"/>
-        </Directory>
-        <Directory Id="$(var.Program_Files)">
-            <Directory Id="INSTALLDIR" Name="{{.Product}}">
-               {{if gt (.Files.Items | len) 0}}
-               <Component Id="ApplicationFiles" Guid="{{.Files.GUID}}">
-                  {{range $i, $e := .Files.Items}}
-                     {{if eq $i 0}}
-                         <ServiceInstall Id="ServiceInstaller" Name="Cagent" Type="ownProcess" Vital="yes" DisplayName="Cagent" Description="Cagent" Start="auto" Account="LocalSystem" ErrorControl="normal" Interactive="no">
-                         </ServiceInstall>
-                         <ServiceControl Id="StartService" Name="Cagent" Stop="both" Start="install" Remove="uninstall" Wait="yes">
-                               <ServiceArgument />
-                         </ServiceControl>
-                         <File Id="ApplicationFile{{$i}}" Source="{{$e}}" KeyPath="yes">
-                             <Shortcut Id="CagentShortcut"
-                                     Name="Cagent Settings"
-                                     Arguments="cagent:settings"
-                                     Description="Opens the settings UI"
-                                     Directory="ApplicationProgramsFolder" />
-                         </File>
-                     {{else}}
-                     <File Id="ApplicationFile{{$i}}" Source="{{$e}}" />
-                     {{end}}
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Component Id="RegistryEntries" Guid="e4e0d475-ca19-4a32-bd22-d0ed7ce303f0">
+                <RegistryKey Root="HKCR"
+                            Key="cagent\shell\open\command"
+                    ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
+                    <RegistryValue Type="string" Value='"[INSTALLDIR]\cagent.exe" "%1%"'/>
+                </RegistryKey>
+                <RegistryKey Root="HKCR"
+                                        Key="cagent"
+                                        ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
+                    <RegistryValue Type="string" Name="URL Protocol" Value="" KeyPath="yes"/>
+                    <RegistryValue Type="string" Value="URL:cagent"/>
 
-		         {{end}}
-               </Component>
-               {{end}}
-               {{if gt (.Directories | len) 0}}
-                  {{range $i, $e := .Directories}}
-                     <Directory Id="APPDIR{{$i}}" Name="{{$e}}" />
-                 {{end}}
-               {{end}}
+                </RegistryKey>
+            </Component>
+            <Directory Id="ProgramMenuFolder">
+                <Directory Id="ApplicationProgramsFolder" Name="Cagent"/>
             </Directory>
-         </Directory>
+            <Directory Id="$(var.Program_Files)">
+                <Directory Id="INSTALLDIR" Name="{{.Product}}">
+                    {{if gt (.Files.Items | len) 0}}
+                    <Component Id="ApplicationFiles" Guid="{{.Files.GUID}}">
+                        {{range $i, $e := .Files.Items}}
+                            {{if eq $i 0}}
+                                <ServiceInstall Id="ServiceInstaller" Name="Cagent" Type="ownProcess" Vital="yes" DisplayName="Cagent" Description="Cagent" Start="auto" Account="LocalSystem" ErrorControl="normal" Interactive="no">
+                                </ServiceInstall>
+                                <ServiceControl Id="StartService" Name="Cagent" Stop="both" Start="install" Remove="uninstall" Wait="yes">
+                                    <ServiceArgument />
+                                </ServiceControl>
+                                <File Id="ApplicationFile{{$i}}" Source="{{$e}}" KeyPath="yes">
+                                    <Shortcut Id="CagentShortcut"
+                                            Name="Cagent Settings"
+                                            Arguments="cagent:settings"
+                                            Description="Opens the settings UI"
+                                            Directory="ApplicationProgramsFolder" />
+                                </File>
+                            {{else}}
+                            <File Id="ApplicationFile{{$i}}" Source="{{$e}}" />
+                            {{end}}
 
-          <Component Id="ENVS" Guid="{{.Env.GUID}}">
-                      <Environment Id="ENV_HUB"
-                      Name="CAGENT_HUB_URL"
-                      Value="[HUB_URL]"
-                      Permanent="no"
-                      Part="all"
-                      Action="set"
-                      System="yes" />
+                        {{end}}
+                    </Component>
+                    {{end}}
+                    {{if gt (.Directories | len) 0}}
+                        {{range $i, $e := .Directories}}
+                            <Directory Id="APPDIR{{$i}}" Name="{{$e}}" />
+                        {{end}}
+                    {{end}}
+                </Directory>
+            </Directory>
 
-                      <Environment Id="ENV_HUB_USER"
-                      Name="CAGENT_HUB_USER"
-                      Value="[HUB_USER]"
-                      Permanent="no"
-                      Part="all"
-                      Action="set"
-                      System="yes" />
+            <Component Id="ENVS" Guid="{{.Env.GUID}}">
+                        <Environment Id="ENV_HUB"
+                        Name="CAGENT_HUB_URL"
+                        Value="[HUB_URL]"
+                        Permanent="no"
+                        Part="all"
+                        Action="set"
+                        System="yes" />
 
-                      <Environment Id="ENV_HUB_PASSWORD"
-                      Name="CAGENT_HUB_PASSWORD"
-                      Value="[HUB_PASSWORD]"
-                      Permanent="no"
-                      Part="all"
-                      Action="set"
-                      System="yes" />
-           </Component>
+                        <Environment Id="ENV_HUB_USER"
+                        Name="CAGENT_HUB_USER"
+                        Value="[HUB_USER]"
+                        Permanent="no"
+                        Part="all"
+                        Action="set"
+                        System="yes" />
 
-      </Directory>
+                        <Environment Id="ENV_HUB_PASSWORD"
+                        Name="CAGENT_HUB_PASSWORD"
+                        Value="[HUB_PASSWORD]"
+                        Permanent="no"
+                        Part="all"
+                        Action="set"
+                        System="yes" />
+            </Component>
+        </Directory>
 
-      <SetProperty Id="CustomInstallExecInstall" Value='"[INSTALLDIR]\cagent.exe" "cagent:install"' Before="CustomInstallExecInstall" Sequence="execute"/>
-      <CustomAction Id="CustomInstallExecInstall" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="ignore" Impersonate="no"/>
+        <SetProperty Id="CustomInstallExecInstall" Value='"[INSTALLDIR]\cagent.exe" "cagent:install"' Before="CustomInstallExecInstall" Sequence="execute"/>
+        <CustomAction Id="CustomInstallExecInstall" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="ignore" Impersonate="no"/>
 
-      <SetProperty Id="CustomInstallExecQuietInstall" Value='"[INSTALLDIR]\cagent.exe" "cagent:test"' Before="CustomInstallExecQuietInstall" Sequence="execute"/>
-      <CustomAction Id="CustomInstallExecQuietInstall" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="ignore" Impersonate="no"/>
+        <SetProperty Id="CustomInstallExecQuietInstall" Value='"[INSTALLDIR]\cagent.exe" "cagent:test"' Before="CustomInstallExecQuietInstall" Sequence="execute"/>
+        <CustomAction Id="CustomInstallExecQuietInstall" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="ignore" Impersonate="no"/>
 
-      {{range $i, $e := .InstallHooks}}
-      <SetProperty Id="CustomInstallExec{{$i}}" Value="{{$e.CookedCommand}}" Before="CustomInstallExec{{$i}}" Sequence="execute"/>
-      <CustomAction Id="CustomInstallExec{{$i}}" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="ignore" Impersonate="no"/>
-      {{end}}
+        {{range $i, $e := .InstallHooks}}
+        <SetProperty Id="CustomInstallExec{{$i}}" Value="{{$e.CookedCommand}}" Before="CustomInstallExec{{$i}}" Sequence="execute"/>
+        <CustomAction Id="CustomInstallExec{{$i}}" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="ignore" Impersonate="no"/>
+        {{end}}
 
-      {{range $i, $e := .UninstallHooks}}
-      <SetProperty Id="CustomUninstallExec{{$i}}" Value="{{$e.CookedCommand}}" Before="CustomUninstallExec{{$i}}" Sequence="execute"/>
-      <CustomAction Id="CustomUninstallExec{{$i}}" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="check" Impersonate="no"/>
-      {{end}}
+        {{range $i, $e := .UninstallHooks}}
+        <SetProperty Id="CustomUninstallExec{{$i}}" Value="{{$e.CookedCommand}}" Before="CustomUninstallExec{{$i}}" Sequence="execute"/>
+        <CustomAction Id="CustomUninstallExec{{$i}}" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="check" Impersonate="no"/>
+        {{end}}
 
-      <SetProperty Id="ARPNOMODIFY" Value="1" After="InstallValidate" Sequence="execute"/>
-      <InstallExecuteSequence>
-         <RemoveExistingProducts After="InstallValidate"/>
-         <Custom Action="CustomInstallExecInstall" Before="InstallFinalize">NOT Installed AND NOT REMOVE AND UILevel &gt; 2</Custom>
-         <Custom Action="CustomInstallExecQuietInstall" Before="InstallFinalize">NOT Installed AND NOT REMOVE AND UILevel &lt; 3</Custom>
-         {{range $i, $e := .InstallHooks}}
-         <Custom Action="CustomInstallExec{{$i}}" {{if eq $i 0}}Before="InstallFinalize{{else}}After="CustomInstallExec{{dec $i}}{{end}}">NOT Installed AND NOT REMOVE</Custom>
-         {{end}}
-         {{range $i, $e := .UninstallHooks}}
-         <Custom Action="CustomUninstallExec{{$i}}" After="{{if eq $i 0}}InstallInitialize{{else}}CustomUninstallExec{{dec $i}}{{end}}">REMOVE ~= "ALL"</Custom>
-         {{end}}
-      </InstallExecuteSequence>
+        <SetProperty Id="ARPNOMODIFY" Value="1" After="InstallValidate" Sequence="execute"/>
+        <InstallExecuteSequence>
+            <RemoveExistingProducts After="InstallValidate"/>
 
-      <Feature Id="DefaultFeature" Level="1">
-         <ComponentRef Id="ENVS"/>
-         {{if gt (.Files.Items | len) 0}}
-         <ComponentRef Id="ApplicationFiles"/>
-         {{end}}
-         {{range $i, $e := .Directories}}
-         <ComponentGroupRef Id="AppFiles{{$i}}" />
-         {{end}}
-         <ComponentRef Id="RegistryEntries"/>
-         <Feature Id="Uninstall">
-             <ComponentRef Id="UninstallFolder" Primary="yes"/>
-         </Feature>
-      </Feature>
+            <Custom Action="CustomInstallExecInstall" Before="InstallFinalize">NOT Installed AND NOT REMOVE AND UILevel &gt; 2</Custom>
+            <Custom Action="CustomInstallExecQuietInstall" Before="InstallFinalize">NOT Installed AND NOT REMOVE AND UILevel &lt; 3</Custom>
+            
+            {{range $i, $e := .InstallHooks}}
+            <Custom Action="CustomInstallExec{{$i}}" {{if eq $i 0}}Before="InstallFinalize{{else}}After="CustomInstallExec{{dec $i}}{{end}}">NOT Installed AND NOT REMOVE</Custom>
+            {{end}}
 
-      <UI>
-         <!-- Define the installer UI -->
-         <UIRef Id="WixUI_HK" />
-      </UI>
-      <Property Id="INSTALLDIR" Secure="yes"/>
-      <Property Id="HUB_URL" Secure="yes"/>
-      <Property Id="HUB_USER" Secure="yes"/>
-      <Property Id="HUB_PASSWORD" Secure="yes"/>
-      <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
-      <Property Id="MSIUSEREALADMINDETECTION" Value="1" />
-      <!-- this should help to propagate env var changes -->
-      <CustomActionRef Id="WixBroadcastEnvironmentChange" />
+            {{range $i, $e := .UninstallHooks}}
+            <Custom Action="CustomUninstallExec{{$i}}" After="{{if eq $i 0}}InstallInitialize{{else}}CustomUninstallExec{{dec $i}}{{end}}">REMOVE ~= "ALL"</Custom>
+            {{end}}
+        </InstallExecuteSequence>
 
+        <Feature Id="DefaultFeature" Level="1">
+            <ComponentRef Id="ENVS"/>
+            {{if gt (.Files.Items | len) 0}}
+            <ComponentRef Id="ApplicationFiles"/>
+            {{end}}
+            {{range $i, $e := .Directories}}
+            <ComponentGroupRef Id="AppFiles{{$i}}" />
+            {{end}}
+            <ComponentRef Id="RegistryEntries"/>
+            <Feature Id="Uninstall">
+                <ComponentRef Id="UninstallFolder" Primary="yes"/>
+            </Feature>
+        </Feature>
+
+        <UI>
+            <!-- Define the installer UI -->
+            <UIRef Id="WixUI_HK" />
+        </UI>
+        <Property Id="INSTALLDIR" Secure="yes"/>
+        <Property Id="HUB_URL" Secure="yes"/>
+        <Property Id="HUB_USER" Secure="yes"/>
+        <Property Id="HUB_PASSWORD" Secure="yes"/>
+        <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
+        <Property Id="MSIUSEREALADMINDETECTION" Value="1" />
+        <!-- this should help to propagate env var changes -->
+        <CustomActionRef Id="WixBroadcastEnvironmentChange" />
    </Product>
-
 </Wix>
