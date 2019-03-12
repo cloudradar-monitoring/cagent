@@ -11,8 +11,8 @@ import (
 	"github.com/shirou/gopsutil/process"
 )
 
-func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfo, error) {
-	results := make(chan *ProcessInfo)
+func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfoSnapshot, error) {
+	results := make(chan *ProcessInfoSnapshot)
 
 	// Get all currently active processes
 	ps, err := process.Processes()
@@ -28,6 +28,7 @@ func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfo, error) {
 		// Run in background because the call to Percent blocks for the duration
 		go func(p *process.Process) {
 			defer wg.Done()
+
 			load, err := p.Percent(interval)
 			if err != nil {
 				// If we log the error in this place, we get _a lot of_ messages
@@ -35,20 +36,30 @@ func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfo, error) {
 				return
 			}
 
-			name, _ := p.Name()
-			cmd, err := p.Cmdline()
+			name, err := p.Name()
 			if err != nil {
 				// If we log the error in this place, we get _a lot of_ messages
 				atomic.AddUint64(&skipped, 1)
 				return
 			}
 
+			cmd, err := p.Cmdline()
+			if err != nil {
+				cmd = ""
+			}
+
+			parentPID, err := p.Ppid()
+			if err != nil {
+				parentPID = 0
+			}
+
 			// Report result back to main goroutine
-			results <- &ProcessInfo{
-				Name:    name,
-				PID:     uint32(p.Pid),
-				Command: cmd,
-				Load:    load / float64(t.logicalCPUCount),
+			results <- &ProcessInfoSnapshot{
+				Name:      name,
+				PID:       uint32(p.Pid),
+				ParentPID: uint32(parentPID),
+				Command:   cmd,
+				Load:      load / float64(t.logicalCPUCount),
 			}
 		}(p)
 	}
@@ -59,8 +70,8 @@ func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfo, error) {
 		close(results)
 	}()
 
-	result := make([]*ProcessInfo, 0, len(ps))
-	var pi *ProcessInfo
+	result := make([]*ProcessInfoSnapshot, 0, len(ps))
+	var pi *ProcessInfoSnapshot
 	// Read loads collected in the background
 	for pi = range results {
 		result = append(result, pi)

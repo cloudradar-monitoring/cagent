@@ -2,6 +2,7 @@ package top
 
 import (
 	"container/ring"
+	"fmt"
 	"math"
 	"runtime"
 	"sort"
@@ -14,6 +15,7 @@ import (
 // Process is used to store aggregated load data about an OS process
 type Process struct {
 	PID        uint32
+	ParentPID  uint32
 	Load       float64
 	Load1      *ring.Ring
 	Load5      *ring.Ring
@@ -22,8 +24,28 @@ type Process struct {
 	Identifier string
 }
 
+// ProcessInfoSnapshot is used to store a snapshot of load data about an OS process
+type ProcessInfoSnapshot struct {
+	Name      string
+	PID       uint32
+	ParentPID uint32
+	Command   string
+	Load      float64
+}
+
+// GroupedProcessInfo is grouped stats for the processes with same (ParentPID, Name, Command)
+type GroupedProcessInfo struct {
+	Name      string   `json:"name"`
+	PIDs      []uint32 `json:"pid.list"`
+	ParentPID uint32   `json:"parent_pid"`
+	Command   string   `json:"command,omitempty"`
+	Load1     float64  `json:"load1_percent"`
+	Load5     float64  `json:"load5_percent"`
+	Load15    float64  `json:"load15_percent"`
+}
+
 // ProcessInfoSlice is used for sorting
-type ProcessInfoSlice []*ProcessInfo
+type ProcessInfoSlice []*GroupedProcessInfo
 
 func (s ProcessInfoSlice) Len() int {
 	return len(s)
@@ -33,17 +55,6 @@ func (s ProcessInfoSlice) Swap(i, j int) {
 }
 func (s ProcessInfoSlice) Less(i, j int) bool {
 	return s[i].Load1 < s[j].Load1
-}
-
-// ProcessInfo is used to store a snapshot of load data about an OS process
-type ProcessInfo struct {
-	Name    string  `json:"name"`
-	PID     uint32  `json:"pid"`
-	Command string  `json:"command,omitempty"`
-	Load    float64 `json:"-"`
-	Load1   float64 `json:"load1_percent"`
-	Load5   float64 `json:"load5_percent"`
-	Load15  float64 `json:"load15_percent"`
 }
 
 // Top holds a map with information about process loads
@@ -97,6 +108,7 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 			if _, ok := t.pList[p.PID]; !ok {
 				pr = &Process{
 					PID:        p.PID,
+					ParentPID:  p.ParentPID,
 					Command:    p.Command,
 					Identifier: p.Name,
 					Load1:      ring.New(len1),
@@ -151,36 +163,58 @@ func (t *Top) Stop() {
 	t.interruptChan <- struct{}{}
 }
 
-func (t *Top) HighestNLoad(n int) []*ProcessInfo {
+func (t *Top) HighestNLoad(n int) []*GroupedProcessInfo {
 	pl := make([]*Process, 0, len(t.pList))
 
+	// copy from guarded pList
 	t.pListMtx.RLock()
 	for _, v := range t.pList {
 		pl = append(pl, v)
 	}
 	t.pListMtx.RUnlock()
 
-	result := make([]*ProcessInfo, 0, len(pl))
+	// calc Load Avg and group by name+ParentPID
+	groupedResultList := make(map[string]*GroupedProcessInfo)
 	for _, p := range pl {
-		pi := &ProcessInfo{
-			Name:    p.Identifier,
-			Command: p.Command,
-			PID:     p.PID,
-			Load:    p.Load,
-			Load1:   calcRingAverage(p.Load1),
-			Load5:   calcRingAverage(p.Load5),
-			Load15:  calcRingAverage(p.Load15),
+		var key string
+		if p.Identifier == "" {
+			key = fmt.Sprintf("%d_%d_%s", p.ParentPID, p.PID, p.Command)
+		} else {
+			key = fmt.Sprintf("%d_%s_%s", p.ParentPID, p.Identifier, p.Command)
 		}
-		result = append(result, pi)
+		existingProcessInfo, exists := groupedResultList[key]
+		if exists {
+			// existingProcessInfo.PIDs = append(, p.PID)
+			existingProcessInfo.PIDs = append(existingProcessInfo.PIDs, p.PID)
+			existingProcessInfo.Load1 += calcRingAverage(p.Load1)
+			existingProcessInfo.Load5 += calcRingAverage(p.Load5)
+			existingProcessInfo.Load15 += calcRingAverage(p.Load15)
+		} else {
+			groupedResultList[key] = &GroupedProcessInfo{
+				Name:      p.Identifier,
+				Command:   p.Command,
+				ParentPID: p.ParentPID,
+				PIDs:      []uint32{p.PID},
+				Load1:     calcRingAverage(p.Load1),
+				Load5:     calcRingAverage(p.Load5),
+				Load15:    calcRingAverage(p.Load15),
+			}
+		}
 	}
 
-	sort.Sort(sort.Reverse(ProcessInfoSlice(result)))
-
-	if n <= len(result) {
-		return result[:n]
+	// get values as slice
+	resultList := make([]*GroupedProcessInfo, 0, len(groupedResultList))
+	for _, p := range groupedResultList {
+		resultList = append(resultList, p)
 	}
 
-	return result
+	sort.Sort(sort.Reverse(ProcessInfoSlice(resultList)))
+
+	if n <= len(resultList) {
+		return resultList[:n]
+	}
+
+	return resultList
 }
 
 func calcRingAverage(ring *ring.Ring) float64 {

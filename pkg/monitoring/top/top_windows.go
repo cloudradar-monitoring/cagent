@@ -3,12 +3,13 @@
 package top
 
 import (
-	"github.com/cloudradar-monitoring/cagent/pkg/winapi"
 	"runtime"
 	"time"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/winapi"
 )
 
-func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfo, error) {
+func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfoSnapshot, error) {
 	processesOld, err := winapi.GetSystemProcessInformation()
 	if err != nil {
 		return nil, err
@@ -25,17 +26,18 @@ func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfo, error) {
 
 	timeElapsedReal := (finishTime.Sub(startTime).Seconds()) * float64(t.logicalCPUCount)
 
-	result := make([]*ProcessInfo, 0, len(processesOld))
+	result := make([]*ProcessInfoSnapshot, 0, len(processesOld))
 	for pid, newProcessInfo := range processesNew {
 		if oldProcessInfo, exists := processesOld[pid]; exists {
 			if pid == 0 {
 				continue
 			}
-			info := &ProcessInfo{
-				Name:    newProcessInfo.ImageName.String(),
-				PID:     pid,
-				Command: "",
-				Load:    calculateUsagePercent(oldProcessInfo, newProcessInfo, timeElapsedReal),
+			info := &ProcessInfoSnapshot{
+				Name:      newProcessInfo.ImageName.String(),
+				PID:       pid,
+				ParentPID: uint32(newProcessInfo.InheritedFromUniqueProcessId),
+				Command:   "",
+				Load:      calculateUsagePercent(oldProcessInfo, newProcessInfo, timeElapsedReal),
 			}
 			result = append(result, info)
 		}
