@@ -3,100 +3,212 @@
 package services
 
 import (
-	"context"
-	"strings"
-	"time"
+	"syscall"
+	"unsafe"
 
-	"github.com/StackExchange/wmi"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/svc/mgr"
 )
-
-const serviceListTimeout = time.Second * 5
 
 // ErrorNotImplementedForOS exists here just for cross-platform building (cause it presented in services.go)
 var ErrorNotImplementedForOS error
 
-type Win32_Service struct {
-	Name             *string
-	DisplayName      *string
-	Description      *string
-	StartMode        *string
-	State            *string
-	Status           *string
-	DelayedAutoStart *bool
+type serviceInfo struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	StartMode   string `json:"start"`
+	AutoStart   bool   `json:"auto_start"`
+	State       string `json:"state"`
+	Manager     string `json:"manager"`
 }
 
-// todo: move to the separate package when we will also move processes.go to the separate package
-func wmiQueryWithContext(ctx context.Context, query string, dst interface{}, connectServerArgs ...interface{}) error {
-	errChan := make(chan error, 1)
-	go func() {
-		errChan <- wmi.Query(query, dst, connectServerArgs...)
+var serviceStartTypeToStringMap = map[uint32]string{
+	windows.SERVICE_BOOT_START:   "boot",
+	windows.SERVICE_SYSTEM_START: "system",
+	windows.SERVICE_AUTO_START:   "auto",
+	windows.SERVICE_DEMAND_START: "manual",
+	windows.SERVICE_DISABLED:     "disabled",
+}
+
+var serviceStateToStringMap = map[uint32]string{
+	windows.SERVICE_STOPPED:          "stopped",
+	windows.SERVICE_START_PENDING:    "start pending",
+	windows.SERVICE_STOP_PENDING:     "stop pending",
+	windows.SERVICE_RUNNING:          "running",
+	windows.SERVICE_CONTINUE_PENDING: "continue pending",
+	windows.SERVICE_PAUSE_PENDING:    "pause pending",
+	windows.SERVICE_PAUSED:           "paused",
+}
+
+func ListServices(autoStartOnly bool) (map[string]interface{}, error) {
+	svcManager, err := mgr.Connect()
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		err := svcManager.Disconnect()
+		if err != nil {
+			log.Debugf("could not disconnect from Windows serviceInfo Manager: %s", err)
+		}
 	}()
 
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case err := <-errChan:
-		return err
-	}
-}
-
-// ListServices parse Windows Service Manager
-func ListServices(autostartOnly bool) (map[string]interface{}, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), serviceListTimeout)
-	defer cancel()
-
-	var wmiServices []Win32_Service
-	err := wmiQueryWithContext(ctx, "Select Name,DisplayName,Description,StartMode,State,Status,DelayedAutoStart from Win32_Service", &wmiServices)
+	names, err := svcManager.ListServices()
 	if err != nil {
 		return nil, err
 	}
 
-	var servicesList []map[string]interface{}
-	for _, wmiService := range wmiServices {
-		if wmiService.Name == nil {
+	servicesList := make([]*serviceInfo, 0)
+	for _, serviceName := range names {
+		serviceInfo, err := tryGetServiceInfo(svcManager, serviceName, autoStartOnly)
+		if err != nil {
+			log.Debugf("could not get information about service %s: %s", serviceName, err.Error())
 			continue
 		}
 
-		var autoStart bool
-		if wmiService.StartMode != nil && strings.HasPrefix(strings.ToLower(*wmiService.StartMode), "auto") {
-			autoStart = true
+		if serviceInfo != nil {
+			servicesList = append(servicesList, serviceInfo)
 		}
-
-		if autostartOnly && !autoStart {
-			continue
-		}
-
-		if wmiService.StartMode != nil && wmiService.DelayedAutoStart != nil && *wmiService.DelayedAutoStart {
-			*wmiService.StartMode = *wmiService.StartMode + "_delayed"
-		}
-
-		description := *wmiService.DisplayName
-		if wmiService.Description != nil {
-			description += *wmiService.Description
-		}
-
-		if wmiService.StartMode != nil {
-			*wmiService.StartMode = strings.ToLower(*wmiService.StartMode)
-		}
-
-		if wmiService.State != nil {
-			*wmiService.State = strings.ToLower(*wmiService.State)
-		}
-
-		if wmiService.Status != nil {
-			*wmiService.Status = strings.ToLower(*wmiService.Status)
-		}
-
-		servicesList = append(servicesList, map[string]interface{}{
-			"name":        wmiService.Name,
-			"description": description,
-			"start":       wmiService.StartMode,
-			"auto_start":  autoStart,
-			"state":       wmiService.State,
-			"status":      wmiService.Status,
-			"manager":     "windows",
-		})
 	}
 
 	return map[string]interface{}{"list": servicesList}, nil
+}
+
+func tryGetServiceInfo(svcManager *mgr.Mgr, serviceName string, autoStartOnly bool) (*serviceInfo, error) {
+	s, err := openService(svcManager, serviceName)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not open service")
+	}
+	defer func() {
+		err := s.Close()
+		if err != nil {
+			log.Debugf("could not close %s service handle: %s", serviceName, err.Error())
+		}
+	}()
+
+	cfg, err := s.Config()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get config for service")
+	}
+
+	isAutoStart := cfg.StartType == mgr.StartAutomatic
+	if autoStartOnly && !isAutoStart {
+		return nil, nil
+	}
+
+	description := cfg.DisplayName
+	if cfg.Description != "" {
+		description += " " + cfg.Description
+	}
+
+	serviceState, err := queryState(s.Handle)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not query state")
+	}
+
+	isDelayedAutoStart, err := queryIsDelayedAutoStart(s.Handle)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not query if service has DelayedAutoStart option")
+	}
+
+	result := serviceInfo{
+		Name:        serviceName,
+		Description: description,
+		State:       formatState(serviceState),
+		StartMode:   formatStartMode(cfg.StartType, isDelayedAutoStart),
+		AutoStart:   isAutoStart,
+		Manager:     "windows",
+	}
+
+	return &result, nil
+}
+
+// openService is similar to mgr.OpenService(), but asks only for read-only access to services
+func openService(svcManager *mgr.Mgr, serviceName string) (*mgr.Service, error) {
+	serviceNameAddr, err := syscall.UTF16PtrFromString(serviceName)
+	if err != nil {
+		return nil, err
+	}
+	h, err := windows.OpenService(
+		svcManager.Handle,
+		serviceNameAddr,
+		windows.SERVICE_QUERY_CONFIG|windows.SERVICE_QUERY_STATUS|windows.SERVICE_ENUMERATE_DEPENDENTS,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &mgr.Service{Name: serviceName, Handle: h}, nil
+}
+
+func formatStartMode(startType uint32, isDelayedAutoStart bool) string {
+	result := ""
+	if str, ok := serviceStartTypeToStringMap[startType]; ok {
+		result = str
+	} else {
+		result = "unknown"
+	}
+
+	if isDelayedAutoStart {
+		result += "_delayed"
+	}
+	return result
+}
+
+func formatState(serviceState uint32) string {
+	result := ""
+	if str, ok := serviceStateToStringMap[serviceState]; ok {
+		result = str
+	} else {
+		result = "unknown"
+	}
+	return result
+}
+
+func queryState(handle windows.Handle) (uint32, error) {
+	var p *windows.SERVICE_STATUS_PROCESS
+	var bytesNeeded uint32
+	var buf []byte
+
+	if err := windows.QueryServiceStatusEx(handle, windows.SC_STATUS_PROCESS_INFO, nil, 0, &bytesNeeded); err != windows.ERROR_INSUFFICIENT_BUFFER {
+		return 0, err
+	}
+
+	buf = make([]byte, bytesNeeded)
+	p = (*windows.SERVICE_STATUS_PROCESS)(unsafe.Pointer(&buf[0]))
+	if err := windows.QueryServiceStatusEx(handle, windows.SC_STATUS_PROCESS_INFO, &buf[0], uint32(len(buf)), &bytesNeeded); err != nil {
+		return 0, err
+	}
+
+	return p.CurrentState, nil
+}
+
+// TODO: move this function to winapi when
+func queryIsDelayedAutoStart(handle windows.Handle) (bool, error) {
+	// SERVICE_CONFIG_DELAYED_AUTO_START_INFO
+	const serviceConfigDelayedAutoStartInfoClass = 3
+
+	// SERVICE_DELAYED_AUTO_START_INFO
+	type serviceDelayedAutoStartInfo struct {
+		DelayedAutoStart bool
+	}
+
+	var resultBuffer []byte
+	currentBufferSize := uint32(128)
+	for {
+		b := make([]byte, currentBufferSize)
+		err := windows.QueryServiceConfig2(handle, serviceConfigDelayedAutoStartInfoClass, &b[0], currentBufferSize, &currentBufferSize)
+		if err == nil {
+			resultBuffer = b
+			break
+		}
+		if err.(syscall.Errno) != syscall.ERROR_INSUFFICIENT_BUFFER {
+			return false, err
+		}
+		if currentBufferSize <= uint32(len(b)) {
+			return false, err
+		}
+	}
+	infoStructure := (*serviceDelayedAutoStartInfo)(unsafe.Pointer(&resultBuffer[0]))
+	return infoStructure.DelayedAutoStart, nil
 }
