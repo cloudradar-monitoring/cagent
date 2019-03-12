@@ -49,7 +49,7 @@ func (ca *Cagent) ProcessesResult() (m MeasurementsMap, err error) {
 		log.Error("[PROC] error: ", err.Error())
 		return nil, err
 	}
-	log.Info("[PROC] results: ", len(procs))
+	log.Debugf("[PROC] results: %d", len(procs))
 
 	m = MeasurementsMap{"list": procs, "possible_states": states}
 
