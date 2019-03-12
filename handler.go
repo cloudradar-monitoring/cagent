@@ -233,13 +233,21 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 
 	measurements = measurements.AddWithPrefix("net.", netResults)
 
-	proc, err := ca.ProcessesResult()
+	proc, processList, err := ca.ProcessesResult()
 	if err != nil {
 		// no need to log because already done inside ProcessesResult()
 		errs = append(errs, err.Error())
 	}
 
 	measurements = measurements.AddWithPrefix("proc.", proc)
+
+	ports, err := ca.PortsResult(processList)
+	if err != nil {
+		// no need to log because already done inside PortsResult()
+		errs = append(errs, err.Error())
+	}
+
+	measurements = measurements.AddWithPrefix("listeningport.", ports)
 
 	mem, err := ca.MemResults()
 	if err != nil {
