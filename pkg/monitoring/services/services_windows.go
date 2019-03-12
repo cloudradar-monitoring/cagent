@@ -12,9 +12,6 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
-// ErrorNotImplementedForOS exists here just for cross-platform building (cause it presented in services.go)
-var ErrorNotImplementedForOS error
-
 type serviceInfo struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
