@@ -3,78 +3,46 @@
 package cagent
 
 import (
-	"context"
-	"errors"
-	"time"
-
-	"github.com/StackExchange/wmi"
-
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
+	"github.com/cloudradar-monitoring/cagent/pkg/winapi"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
-const processListTimeout = time.Second * 10
-
-type Win32_Process struct {
-	Name            *string
-	CommandLine     *string
-	ProcessID       *uint32
-	ParentProcessId *uint32
-	ExecutionState  *uint16
-}
-
-func WMIQueryWithContext(ctx context.Context, query string, dst interface{}, connectServerArgs ...interface{}) error {
-	errChan := make(chan error, 1)
-	go func() {
-		errChan <- wmi.Query(query, dst, connectServerArgs...)
-	}()
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case err := <-errChan:
-		return err
-	}
-}
-
 func processes(_ *docker.Watcher) ([]ProcStat, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), processListTimeout)
-	defer cancel()
-
-	wmiProcs := []Win32_Process{}
-
-	err := WMIQueryWithContext(ctx, `SELECT Name, CommandLine, ProcessID, ParentProcessId FROM Win32_Process`, &wmiProcs)
+	procs, err := winapi.GetSystemProcessInformation()
 	if err != nil {
-		if err == context.DeadlineExceeded {
-			return nil, TimeoutError{"WMI query", processListTimeout}
-		}
-		return nil, errors.New("WMI query error: " + err.Error())
+		return nil, errors.Wrap(err, "[PROC] can't get system processes")
 	}
 
-	var procs []ProcStat
-	for _, proc := range wmiProcs {
-		if proc.ProcessID == nil {
+	var result []ProcStat
+	cmdLineRetrievalFailuresCount := 0
+	for pid, proc := range procs {
+		if pid == 0 {
 			continue
 		}
 
+		cmdLine, err := winapi.GetProcessCommandLine(pid)
+		if err != nil {
+			// there are some edge-cases when we can't get cmdLine in reliable way.
+			// it includes system processes, which are not accessible in user-mode and processes from outside of WOW64 when running as a 32-bit process
+			cmdLineRetrievalFailuresCount++
+		}
+
 		ps := ProcStat{
-			PID:   int(*proc.ProcessID),
-			State: "running",
+			PID:       int(pid),
+			ParentPID: int(proc.InheritedFromUniqueProcessId),
+			State:     "running",
+			Name:      proc.ImageName.String(),
+			Cmdline:   cmdLine,
 		}
 
-		if proc.Name != nil {
-			ps.Name = *proc.Name
-		}
-
-		if proc.ParentProcessId != nil {
-			ps.ParentPID = int(*proc.ParentProcessId)
-		}
-
-		if proc.CommandLine != nil {
-			ps.Cmdline = *proc.CommandLine
-		}
-
-		procs = append(procs, ps)
+		result = append(result, ps)
 	}
 
-	return procs, nil
+	if cmdLineRetrievalFailuresCount > 0 {
+		log.Debugf("[PROC] could not get command line for %d processes", cmdLineRetrievalFailuresCount)
+	}
+
+	return result, nil
 }

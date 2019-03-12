@@ -4,147 +4,62 @@ package winapi
 
 import (
 	"fmt"
+	"unsafe"
+
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/windows"
-	"reflect"
-	"unicode/utf16"
-	"unsafe"
-)
-
-const (
-	HundredNSToTick = 0.0000001
-
-	// systemProcessorPerformanceInformationClass information class to query with NTQuerySystemInformation
-	// https://processhacker.sourceforge.io/doc/ntexapi_8h.html#ad5d815b48e8f4da1ef2eb7a2f18a54e0
-	systemProcessorPerformanceInformationClass = 8
-	systemProcessorPerformanceInfoSize         = uint32(unsafe.Sizeof(SystemProcessorPerformanceInformation{}))
-
-	// systemProcessInformationClass class to query with NTQuerySystemInformation
-	// https://docs.microsoft.com/en-us/windows/desktop/api/winternl/nf-winternl-ntquerysysteminformation#system_process_information
-	systemProcessInformationClass = 5
-	systemProcessInfoSize         = uint32(unsafe.Sizeof(SystemProcessInformation{}))
-	systemThreadInfoSize          = uint32(unsafe.Sizeof(systemThreadInformation{}))
 )
 
 var (
 	ntDLL        = windows.NewLazySystemDLL("Ntdll.dll")
-	ntDLLLoadErr = ntDLL.Load() // attempt to load the system dll and store the err for reference
+	ntDLLLoadErr = ntDLL.Load()
 
-	// Windows API Proc
+	kernel32DLL    = windows.NewLazySystemDLL("kernel32.dll")
+	kernel32DLLErr = kernel32DLL.Load()
+
 	// https://docs.microsoft.com/en-us/windows/desktop/api/winternl/nf-winternl-ntquerysysteminformation
 	procNtQuerySystemInformation        = ntDLL.NewProc("NtQuerySystemInformation")
-	procNtQuerySystemInformationLoadErr = procNtQuerySystemInformation.Find() // attempt to find the proc and store the error if needed
+	procNtQuerySystemInformationLoadErr = procNtQuerySystemInformation.Find()
+
+	// https://docs.microsoft.com/ru-ru/windows/desktop/api/winternl/nf-winternl-ntqueryinformationprocess
+	procNtQueryInformationProcess        = ntDLL.NewProc("NtQueryInformationProcess")
+	procNtQueryInformationProcessLoadErr = procNtQueryInformationProcess.Find()
+
+	// https://docs.microsoft.com/en-us/windows/desktop/api/memoryapi/nf-memoryapi-readprocessmemory
+	procReadProcessMemory        = kernel32DLL.NewProc("ReadProcessMemory")
+	procReadProcessMemoryLoadErr = procReadProcessMemory.Find()
 )
-
-// SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION
-// defined in windows api doc with the following
-// https://docs.microsoft.com/en-us/windows/desktop/api/winternl/nf-winternl-ntquerysysteminformation#system_processor_performance_information
-// additional fields documented here
-// https://www.geoffchappell.com/studies/windows/km/ntoskrnl/api/ex/sysinfo/processor_performance.htm
-type SystemProcessorPerformanceInformation struct {
-	IdleTime       int64 // idle time in 100ns (this is not a filetime).
-	KernelTime     int64 // kernel time in 100ns.  kernel time includes idle time. (this is not a filetime).
-	UserTime       int64 // usertime in 100ns (this is not a filetime).
-	DpcTime        int64 // dpc time in 100ns (this is not a filetime).
-	InterruptTime  int64 // interrupt time in 100ns
-	InterruptCount uint32
-}
-
-// KPRIORITY
-type kPriority int32
-
-// UNICODE_STRING
-type unicodeString struct {
-	Length        uint16
-	MaximumLength uint16
-	Buffer        *uint16
-}
-
-func (u unicodeString) String() string {
-	var s []uint16
-	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&s))
-	hdr.Data = uintptr(unsafe.Pointer(u.Buffer))
-	hdr.Len = int(u.Length / 2)
-	hdr.Cap = int(u.MaximumLength / 2)
-	return string(utf16.Decode(s))
-}
-
-// SYSTEM_PROCESS_INFORMATION
-type SystemProcessInformation struct {
-	NextEntryOffset              uint32        // ULONG
-	NumberOfThreads              uint32        // ULONG
-	WorkingSetPrivateSize        int64         // LARGE_INTEGER
-	HardFaultCount               uint32        // ULONG
-	NumberOfThreadsHighWatermark uint32        // ULONG
-	CycleTime                    uint64        // ULONGLONG
-	CreateTime                   int64         // LARGE_INTEGER
-	UserTime                     int64         // LARGE_INTEGER
-	KernelTime                   int64         // LARGE_INTEGER
-	ImageName                    unicodeString // UNICODE_STRING
-	BasePriority                 kPriority     // KPRIORITY
-	UniqueProcessId              uintptr       // HANDLE
-	InheritedFromUniqueProcessId uintptr       // HANDLE
-	HandleCount                  uint32        // ULONG
-	SessionId                    uint32        // ULONG
-	UniqueProcessKey             *uint32       // ULONG_PTR
-	PeakVirtualSize              uintptr       // SIZE_T
-	VirtualSize                  uintptr       // SIZE_T
-	PageFaultCount               uint32        // ULONG
-	PeakWorkingSetSize           uintptr       // SIZE_T
-	WorkingSetSize               uintptr       // SIZE_T
-	QuotaPeakPagedPoolUsage      uintptr       // SIZE_T
-	QuotaPagedPoolUsage          uintptr       // SIZE_T
-	QuotaPeakNonPagedPoolUsage   uintptr       // SIZE_T
-	QuotaNonPagedPoolUsage       uintptr       // SIZE_T
-	PagefileUsage                uintptr       // SIZE_T
-	PeakPagefileUsage            uintptr       // SIZE_T
-	PrivatePageCount             uintptr       // SIZE_T
-	ReadOperationCount           int64         // LARGE_INTEGER
-	WriteOperationCount          int64         // LARGE_INTEGER
-	OtherOperationCount          int64         // LARGE_INTEGER
-	ReadTransferCount            int64         // LARGE_INTEGER
-	WriteTransferCount           int64         // LARGE_INTEGER
-	OtherTransferCount           int64         // LARGE_INTEGER
-}
-
-type kWaitReason int32
-
-type clientID struct {
-	UniqueProcess uintptr // HANDLE
-	UniqueThread  uintptr // HANDLE
-}
-
-type systemThreadInformation struct {
-	KernelTime      int64       // LARGE_INTEGER
-	UserTime        int64       // LARGE_INTEGER
-	CreateTime      int64       // LARGE_INTEGER
-	WaitTime        uint32      // ULONG
-	StartAddress    uintptr     // PVOID
-	ClientId        clientID    // CLIENT_ID
-	Priority        kPriority   // KPRIORITY
-	BasePriority    int32       // LONG
-	ContextSwitches uint32      // ULONG
-	ThreadState     uint32      // ULONG
-	WaitReason      kWaitReason // KWAIT_REASON
-}
 
 func add(p unsafe.Pointer, x uintptr) unsafe.Pointer {
 	return unsafe.Pointer(uintptr(p) + x)
 }
 
-func checkProcNtQuerySystemInformationAvailable() error {
+func checkNtDLLProceduresAvailable() error {
 	if ntDLLLoadErr != nil {
 		return errors.Wrap(ntDLLLoadErr, "winapi: can't load dll Ntdll.dll")
 	}
 	if procNtQuerySystemInformationLoadErr != nil {
 		return errors.Wrap(procNtQuerySystemInformationLoadErr, "winapi: can't get procedure NtQuerySystemInformation")
 	}
+	if procNtQueryInformationProcessLoadErr != nil {
+		return errors.Wrap(procNtQueryInformationProcessLoadErr, "winapi: can't get procedure NtQueryInformationProcess")
+	}
+	return nil
+}
+
+func checkKernel32ProceduresAvailable() error {
+	if kernel32DLLErr != nil {
+		return errors.Wrap(kernel32DLLErr, "winapi: can't load dll kernel32.dll")
+	}
+	if procReadProcessMemoryLoadErr != nil {
+		return errors.Wrap(procReadProcessMemoryLoadErr, "winapi: can't get procedure ReadProcessMemory")
+	}
 	return nil
 }
 
 func GetSystemProcessorPerformanceInformation() ([]SystemProcessorPerformanceInformation, error) {
-	if err := checkProcNtQuerySystemInformationAvailable(); err != nil {
+	if err := checkNtDLLProceduresAvailable(); err != nil {
 		return nil, err
 	}
 
@@ -155,7 +70,7 @@ func GetSystemProcessorPerformanceInformation() ([]SystemProcessorPerformanceInf
 	// buffer for results from the windows proc
 	resultBuffer := make([]SystemProcessorPerformanceInformation, maxBuffer)
 	// size of the buffer in memory
-	bufferSize := uintptr(systemProcessorPerformanceInfoSize) * uintptr(maxBuffer)
+	bufferSize := systemProcessorPerformanceInfoSize * uintptr(maxBuffer)
 	// size of the returned response
 	var retSize uint32
 
@@ -171,7 +86,7 @@ func GetSystemProcessorPerformanceInformation() ([]SystemProcessorPerformanceInf
 	}
 
 	// calculate the number of returned elements based on the returned size
-	numReturnedElements := retSize / systemProcessorPerformanceInfoSize
+	numReturnedElements := retSize / uint32(systemProcessorPerformanceInfoSize)
 
 	// trim results to the number of returned elements
 	resultBuffer = resultBuffer[:numReturnedElements]
@@ -179,7 +94,7 @@ func GetSystemProcessorPerformanceInformation() ([]SystemProcessorPerformanceInf
 }
 
 func GetSystemProcessInformation() (map[uint32]*SystemProcessInformation, error) {
-	if err := checkProcNtQuerySystemInformationAvailable(); err != nil {
+	if err := checkNtDLLProceduresAvailable(); err != nil {
 		return nil, err
 	}
 
@@ -202,7 +117,7 @@ func GetSystemProcessInformation() (map[uint32]*SystemProcessInformation, error)
 	const maxProcs = 300
 	const maxThreadsPerProc = 100
 	// technically, windows can have more processes and more threads per process, but we try to calculate average value
-	var currBufferSize = (uintptr(systemProcessInfoSize) + uintptr(systemThreadInfoSize)*uintptr(maxThreadsPerProc)) * uintptr(maxProcs)
+	var currBufferSize = (systemProcessInfoSize + systemThreadInfoSize*uintptr(maxThreadsPerProc)) * uintptr(maxProcs)
 	callWithBufferSize(currBufferSize)
 
 	if retCode != 0 {
@@ -242,4 +157,49 @@ func GetSystemProcessInformation() (map[uint32]*SystemProcessInformation, error)
 	}
 
 	return result, nil
+}
+
+// returns address for ProcessEnvironmentBlock struct
+func GetProcessBasicInformation(processHandle windows.Handle) (*processBasicInformation, error) {
+	if err := checkNtDLLProceduresAvailable(); err != nil {
+		return nil, err
+	}
+
+	var pbi processBasicInformation
+	var retSize int
+	retCode, _, err := procNtQueryInformationProcess.Call(
+		uintptr(processHandle),
+		systemProcessBasicInformationClass,
+		uintptr(unsafe.Pointer(&pbi)),
+		systemProcessBasicInformationSize,
+		uintptr(unsafe.Pointer(&retSize)),
+	)
+
+	if retCode != 0 {
+		return nil, fmt.Errorf("winapi call to NtQueryInformationProcess returned %d. err: %s", retCode, err.Error())
+	}
+
+	return &pbi, nil
+}
+
+func ReadProcessMemory(processHandle windows.Handle, srcAddr uintptr, dstAddr uintptr, size uintptr) (int, error) {
+	if err := checkKernel32ProceduresAvailable(); err != nil {
+		return 0, err
+	}
+
+	var nBytesRead int
+	retCode, _, err := procReadProcessMemory.Call(
+		uintptr(processHandle),
+		srcAddr,
+		dstAddr,
+		size,
+		uintptr(unsafe.Pointer(&nBytesRead)),
+	)
+
+	// ReadProcessMemory function returns 0 in the case of failure
+	if retCode == 0 {
+		return nBytesRead, fmt.Errorf("winapi call to ReadProcessMemory returned %d. err: %s", retCode, err.Error())
+	}
+
+	return nBytesRead, nil
 }
