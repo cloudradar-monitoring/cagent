@@ -6,6 +6,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/winapi"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/windows"
@@ -104,7 +105,7 @@ func tryGetServiceInfo(svcManager *mgr.Mgr, serviceName string, autoStartOnly bo
 		return nil, errors.Wrap(err, "could not query state")
 	}
 
-	isDelayedAutoStart, err := queryIsDelayedAutoStart(s.Handle)
+	isDelayedAutoStart, err := winapi.GetIsServiceHaveDelayedAutoStartFlag(s.Handle)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not query if service has DelayedAutoStart option")
 	}
@@ -178,34 +179,4 @@ func queryState(handle windows.Handle) (uint32, error) {
 	}
 
 	return p.CurrentState, nil
-}
-
-// TODO: move this function to winapi when
-func queryIsDelayedAutoStart(handle windows.Handle) (bool, error) {
-	// SERVICE_CONFIG_DELAYED_AUTO_START_INFO
-	const serviceConfigDelayedAutoStartInfoClass = 3
-
-	// SERVICE_DELAYED_AUTO_START_INFO
-	type serviceDelayedAutoStartInfo struct {
-		DelayedAutoStart bool
-	}
-
-	var resultBuffer []byte
-	currentBufferSize := uint32(128)
-	for {
-		b := make([]byte, currentBufferSize)
-		err := windows.QueryServiceConfig2(handle, serviceConfigDelayedAutoStartInfoClass, &b[0], currentBufferSize, &currentBufferSize)
-		if err == nil {
-			resultBuffer = b
-			break
-		}
-		if err.(syscall.Errno) != syscall.ERROR_INSUFFICIENT_BUFFER {
-			return false, err
-		}
-		if currentBufferSize <= uint32(len(b)) {
-			return false, err
-		}
-	}
-	infoStructure := (*serviceDelayedAutoStartInfo)(unsafe.Pointer(&resultBuffer[0]))
-	return infoStructure.DelayedAutoStart, nil
 }

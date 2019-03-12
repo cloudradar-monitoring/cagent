@@ -4,9 +4,11 @@ package winapi
 
 import (
 	"reflect"
+	"syscall"
 	"unicode/utf16"
 	"unsafe"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/windows"
 )
@@ -83,4 +85,25 @@ func GetProcessCommandLine(pid uint32) (string, error) {
 	hdr.Cap = int(externalCommandLine.MaximumLength / 2)
 
 	return string(utf16.Decode(buffer)), nil
+}
+
+func GetIsServiceHaveDelayedAutoStartFlag(serviceHandle windows.Handle) (bool, error) {
+	var resultBuffer []byte
+	currentBufferSize := uint32(128)
+	for {
+		b := make([]byte, currentBufferSize)
+		err := windows.QueryServiceConfig2(serviceHandle, systemServiceConfigDelayedAutoStartInfoClass, &b[0], currentBufferSize, &currentBufferSize)
+		if err == nil {
+			resultBuffer = b
+			break
+		}
+		if err.(syscall.Errno) != syscall.ERROR_INSUFFICIENT_BUFFER {
+			return false, errors.Wrapf(err, "winapi call to QueryServiceConfig2 returned %s", err)
+		}
+		if currentBufferSize <= uint32(len(b)) {
+			return false, errors.Wrapf(err, "winapi call to QueryServiceConfig2 returned unexpected value for buffer size: %d", currentBufferSize)
+		}
+	}
+	infoStructure := (*serviceDelayedAutoStartInfo)(unsafe.Pointer(&resultBuffer[0]))
+	return infoStructure.DelayedAutoStart, nil
 }
