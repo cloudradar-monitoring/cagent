@@ -183,12 +183,11 @@ func GetProcessBasicInformation(processHandle windows.Handle) (*processBasicInfo
 }
 
 func ReadProcessMemory(processHandle windows.Handle, srcAddr uintptr, dstAddr uintptr, size uintptr) (int, error) {
-	var nBytesRead int
-
 	if err := checkKernel32ProceduresAvailable(); err != nil {
-		return nBytesRead, err
+		return 0, err
 	}
 
+	var nBytesRead int
 	retCode, _, err := procReadProcessMemory.Call(
 		uintptr(processHandle),
 		srcAddr,
