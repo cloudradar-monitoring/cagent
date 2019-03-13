@@ -30,6 +30,9 @@ const (
 	// returns PROCESS_BASIC_INFORMATION struct
 	systemProcessBasicInformationClass = 0
 	systemProcessBasicInformationSize  = unsafe.Sizeof(processBasicInformation{})
+
+	// SERVICE_CONFIG_DELAYED_AUTO_START_INFO
+	systemServiceConfigDelayedAutoStartInfoClass = 3
 )
 
 // SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION
@@ -132,4 +135,9 @@ type processBasicInformation struct {
 	BasePriority                 int32
 	UniqueProcessID              uintptr
 	InheritedFromUniqueProcessId uintptr
+}
+
+// SERVICE_DELAYED_AUTO_START_INFO
+type serviceDelayedAutoStartInfo struct {
+	DelayedAutoStart bool
 }
