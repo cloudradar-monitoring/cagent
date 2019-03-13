@@ -3,6 +3,7 @@
 package winapi
 
 import (
+	"fmt"
 	"reflect"
 	"syscall"
 	"unicode/utf16"
@@ -58,6 +59,10 @@ func GetProcessCommandLine(pid uint32) (string, error) {
 		return "", err
 	}
 
+	if rtlUserProcessParametersAddr == 0 {
+		return "", fmt.Errorf("winapi: error while reading [%d] process memory: RTL_USER_PROCESS_PARAMETERS addr was not found", pid)
+	}
+
 	var externalCommandLine unicodeString
 	_, err = ReadProcessMemory(
 		handle,
@@ -67,6 +72,10 @@ func GetProcessCommandLine(pid uint32) (string, error) {
 	)
 	if err != nil {
 		return "", err
+	}
+
+	if externalCommandLine.Length == 0 || externalCommandLine.MaximumLength == 0 {
+		return "", fmt.Errorf("winapi: error while reading [%d] process memory: command line UNICODE_STRING addr was not found", pid)
 	}
 
 	buffer := make([]uint16, externalCommandLine.Length, externalCommandLine.MaximumLength)
