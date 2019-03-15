@@ -8,18 +8,18 @@ import (
 )
 
 func getProcessorModelName() (string, error) {
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `HARDWARE\DESCRIPTION\System\CentralProcessor\0`, registry.QUERY_VALUE)
+	registryKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `HARDWARE\DESCRIPTION\System\CentralProcessor\0`, registry.QUERY_VALUE)
 	if err != nil {
 		return "", err
 	}
 	defer func() {
-		err = k.Close()
+		err = registryKey.Close()
 		if err != nil {
 			log.Warnf("[SYSTEM] could not close registry key handler: %s", err.Error())
 		}
 	}()
 
-	processorName, _, err := k.GetStringValue("ProcessorNameString")
+	processorName, _, err := registryKey.GetStringValue("ProcessorNameString")
 	if err != nil {
 		return "", err
 	}
