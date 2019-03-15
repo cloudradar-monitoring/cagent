@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
@@ -117,17 +116,14 @@ func (ca *Cagent) HostInfoResults() (MeasurementsMap, error) {
 		case "fqdn":
 			res[field] = getFQDN()
 		case "cpu_model":
-			ctx, cancel := context.WithTimeout(context.Background(), cpuInfoTimeout)
-			defer cancel()
-			cpuInfo, err := cpu.InfoWithContext(ctx)
+			cpuName, err := getProcessorModelName()
 			if err != nil {
 				log.Errorf("[SYSTEM] Failed to read cpu info: %s", err.Error())
 				errs = append(errs, err.Error())
 				res[field] = nil
 				continue
 			}
-
-			res[field] = cpuInfo[0].ModelName
+			res[field] = cpuName
 		case "os_arch":
 			res[field] = runtime.GOARCH
 		case "memory_total_b":
