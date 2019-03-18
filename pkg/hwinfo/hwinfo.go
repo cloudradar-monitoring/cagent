@@ -1,16 +1,47 @@
 package hwinfo
 
 import (
-	"errors"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
-var ErrNotPresent = errors.New("hwinfo: not present")
+type pciDeviceInfo struct {
+	Address     string `json:"address"`
+	DeviceType  string `json:"device_type,omitempty"`
+	VendorName  string `json:"vendor_name"`
+	ProductName string `json:"product_name"`
+	Description string `json:"description,omitempty"`
+}
+
+type usbDeviceInfo struct {
+	BusNum      int    `json:"bus"`
+	DevNum      int    `json:"dev"`
+	DeviceID    string `json:"id"`
+	Description string `json:"description,omitempty"`
+}
+
+type monitorInfo struct {
+	ID         string `json:"id"`
+	IsPrimary  bool   `json:"is_primary"`
+	Size       string `json:"size,omitempty"`
+	Resolution string `json:"resolution,omitempty"`
+}
 
 func Inventory() (map[string]interface{}, error) {
 	hw, err := fetchInventory()
 	if err != nil {
-		return nil, err
+		err = errors.Wrap(err, "hwinfo")
+		log.Error(err)
+		return hw, err
 	}
 
 	return hw, nil
+}
+
+func mergeStringMaps(mapA, mapB *map[string]interface{}) map[string]interface{} {
+	result := *mapA
+	for k, v := range *mapB {
+		result[k] = v
+	}
+	return result
 }

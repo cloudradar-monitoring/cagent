@@ -68,3 +68,11 @@
 [[constraint]]
   branch = "master"
   name = "github.com/lxn/walk"
+
+[[constraint]]
+  name = "github.com/jaypipes/ghw"
+  version = "0.3.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/vcraescu/go-xrandr"
