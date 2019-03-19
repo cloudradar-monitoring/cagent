@@ -76,3 +76,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/vcraescu/go-xrandr"
+
+[[constraint]]
+  name = "github.com/gentlemanautomaton/windevice"
+  revision = "de21ffdab1a3b60205fe0782a9df61feb34367f1"

@@ -20,6 +20,36 @@
   version = "v1.1.1"
 
 [[projects]]
+  name = "github.com/gentlemanautomaton/windevice"
+  packages = [
+    ".",
+    "deviceclass",
+    "devicecreation",
+    "deviceid",
+    "deviceproperty",
+    "deviceregistry",
+    "diflag",
+    "diflagex",
+    "difunc",
+    "difuncremove",
+    "drivertype",
+    "driverversion",
+    "hwprofile",
+    "infpath",
+    "installflag",
+    "installstate",
+    "newdevapi",
+    "setupapi"
+  ]
+  revision = "de21ffdab1a3b60205fe0782a9df61feb34367f1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/gentlemanautomaton/winguid"
+  packages = ["."]
+  revision = "3f364f74ee74ad2a7e7afc3cf5fdd771086edbb5"
+
+[[projects]]
   name = "github.com/ghodss/yaml"
   packages = ["."]
   revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
@@ -188,6 +218,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "185192816307d2fc2ef7bf97becb498defa5f70d7854aaf39620085221f90cf8"
+  inputs-digest = "3a1a408a61a1dd4428555854e379165742935a61087596b14856839817b0dedf"
   solver-name = "gps-cdcl"
   solver-version = 1

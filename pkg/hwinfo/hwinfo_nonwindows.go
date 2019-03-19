@@ -158,8 +158,14 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 			errs.Addf("error while parsing device number: %s. line: %s", err.Error(), lines[i])
 			continue
 		}
+		address := fmt.Sprintf("bus %d device %d", busNum, devNum)
 		devID := lsusbLineRegexp.FindString(sanitizedTokens[5])
-		results = append(results, &usbDeviceInfo{busNum, devNum, devID, description})
+		results = append(results, &usbDeviceInfo{
+			address,
+			"",
+			devID,
+			description,
+		})
 	}
 	return results
 }
@@ -176,10 +182,11 @@ func listDisplays(errs *common.ErrorCollector) []*monitorInfo {
 			physicalSizeStr := fmt.Sprintf("%dmm x %dmm", int(m.Size.Width), int(m.Size.Height))
 			resolutionStr := fmt.Sprintf("%dx%d", int(m.Resolution.Width), int(m.Resolution.Height))
 			results = append(results, &monitorInfo{
-				ID:         m.ID,
-				IsPrimary:  m.Primary,
-				Size:       physicalSizeStr,
-				Resolution: resolutionStr,
+				ID:          m.ID,
+				Size:        physicalSizeStr,
+				Resolution:  resolutionStr,
+				Description: "",
+				VendorName:  "",
 			})
 		}
 	}
