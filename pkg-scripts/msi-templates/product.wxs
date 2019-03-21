@@ -70,6 +70,7 @@
                 <Directory Id="INSTALLDIR" Name="{{.Product}}">
                     {{if gt (.Files.Items | len) 0}}
                     <Component Id="ApplicationFiles" Guid="{{.Files.GUID}}">
+                        <RemoveFolder Id="CleanApplicationFolders" Directory="ApplicationProgramsFolder" On="uninstall"/>
                         {{range $i, $e := .Files.Items}}
                             {{if eq $i 0}}
                                 <ServiceInstall Id="ServiceInstaller" Name="Cagent" Type="ownProcess" Vital="yes" DisplayName="Cagent" Description="Cagent" Start="auto" Account="LocalSystem" ErrorControl="normal" Interactive="no">
