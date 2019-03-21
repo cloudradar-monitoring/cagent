@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/DHowett/go-plist"
+  packages = ["."]
+  revision = "591f970eefbbeb04d7b37f334a0c4c3256e32876"
+
+[[projects]]
   name = "github.com/StackExchange/wmi"
   packages = ["."]
   revision = "5d049714c4a64225c3c79a7cf7d02f7fb5b96338"
@@ -218,6 +224,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3a1a408a61a1dd4428555854e379165742935a61087596b14856839817b0dedf"
+  inputs-digest = "5cad005304d95a6ef391cdeafac3fa691eca5f194ac7db29d4223cb76493517a"
   solver-name = "gps-cdcl"
   solver-version = 1
