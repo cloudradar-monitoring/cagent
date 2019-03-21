@@ -83,7 +83,7 @@ func TestParseOutputToListOfUSBDevices(t *testing.T) {
 		},
 		{
 			Address:     "0x1a100000 / 1",
-			VendorName:  "0x8087  (Intel Corporation)",
+			VendorName:  "0x8087 (Intel Corporation)",
 			DeviceID:    "0x0024",
 			Description: "hub_device",
 		},
@@ -95,13 +95,13 @@ func TestParseOutputToListOfUSBDevices(t *testing.T) {
 		},
 		{
 			Address:     "0x1d100000 / 1",
-			VendorName:  "0x8087  (Intel Corporation)",
+			VendorName:  "0x8087 (Intel Corporation)",
 			DeviceID:    "0x0024",
 			Description: "hub_device",
 		},
 		{
 			Address:     "0x1d180000 / 2",
-			VendorName:  "0x0424  (SMSC)",
+			VendorName:  "0x0424 (SMSC)",
 			DeviceID:    "0x2512",
 			Description: "hub_device",
 		},
@@ -113,7 +113,7 @@ func TestParseOutputToListOfUSBDevices(t *testing.T) {
 		},
 		{
 			Address:     "0x1d181000 / 4",
-			VendorName:  "Apple Inc. 0x0a5c  (Broadcom Corp.)",
+			VendorName:  "Apple Inc. 0x0a5c (Broadcom Corp.)",
 			DeviceID:    "0x4500",
 			Description: "BRCM20702 Hub",
 		},

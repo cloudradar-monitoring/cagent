@@ -6,7 +6,9 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -19,14 +21,56 @@ import (
 
 var lsusbLineRegexp = regexp.MustCompile(`[0-9|a-z|A-Z|.|/|-|:|\[|\]|_|+| ]+`)
 
-func listPCIDevices(errs *common.ErrorCollector) []*pciDeviceInfo {
-	pciInfo, err := ghw.PCI()
+func captureStderr(funcToExecute func()) (string, error) {
+	r, w, err := os.Pipe()
 	if err != nil {
-		errs.New(err)
-		return nil
+		return "", err
 	}
 
-	devices := pciInfo.ListDevices()
+	stderr := os.Stderr
+	os.Stderr = w
+	defer func() {
+		os.Stderr = stderr
+	}()
+
+	funcToExecute()
+	err = w.Close()
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, r)
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}
+
+func listPCIDevices(errs *common.ErrorCollector) []*pciDeviceInfo {
+	var ghwErr error
+	var devices []*ghw.PCIDevice
+
+	// unfortunately, jaypipes/ghw library sometime writes error message directly to os.Stderr instead of returning from function call.
+	// that's why we will try to capture stderr output and handle it:
+	stderrOutput, err := captureStderr(func() {
+		pciInfo, ghwErr := ghw.PCI()
+		if ghwErr == nil {
+			devices = pciInfo.ListDevices()
+		}
+	})
+	if err != nil {
+		errs.Addf("could not capture stderr when retrieving PCI information using ghw: %s", err.Error())
+		return nil
+	}
+	if ghwErr != nil {
+		errs.Addf("there were error while retrieving PCI information using ghw: %s", ghwErr.Error())
+		return nil
+	}
+	if len(stderrOutput) > 0 {
+		errs.Addf("there were error output while retrieving PCI information using ghw: %s", stderrOutput)
+	}
 
 	result := make([]*pciDeviceInfo, 0, len(devices))
 	for _, device := range devices {
