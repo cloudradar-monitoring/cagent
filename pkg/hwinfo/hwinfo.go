@@ -38,11 +38,3 @@ func Inventory() (map[string]interface{}, error) {
 
 	return hw, nil
 }
-
-func mergeStringMaps(mapA, mapB *map[string]interface{}) map[string]interface{} {
-	result := *mapA
-	for k, v := range *mapB {
-		result[k] = v
-	}
-	return result
-}

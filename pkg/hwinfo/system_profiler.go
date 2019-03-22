@@ -7,8 +7,9 @@ import (
 	"io"
 	"strings"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"howett.net/plist"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 type spPCIDataTypeEntry struct {
@@ -65,12 +66,12 @@ func parseOutputToListOfPCIDevices(r io.ReadSeeker, errs *common.ErrorCollector)
 	var data []spPCIDataType
 	err := decoder.Decode(&data)
 	if err != nil {
-		errs.New(err)
+		errs.Add(err)
 		return nil
 	}
 
 	if len(data) == 0 {
-		errs.Add("unexpected XML input: no entries in plist of PCI devices")
+		errs.AddNew("unexpected XML input: no entries in plist of PCI devices")
 		return nil
 	}
 
@@ -93,12 +94,12 @@ func parseOutputToListOfUSBDevices(r io.ReadSeeker, errs *common.ErrorCollector)
 	var data []spUSBDataType
 	err := decoder.Decode(&data)
 	if err != nil {
-		errs.New(err)
+		errs.Add(err)
 		return nil
 	}
 
 	if len(data) == 0 {
-		errs.Add("unexpected XML input: no entries in plist of USB devices")
+		errs.AddNew("unexpected XML input: no entries in plist of USB devices")
 		return nil
 	}
 
@@ -132,12 +133,12 @@ func parseOutputToListOfDisplays(r io.ReadSeeker, errs *common.ErrorCollector) [
 	var data []spDisplaysDataType
 	err := decoder.Decode(&data)
 	if err != nil {
-		errs.New(err)
+		errs.Add(err)
 		return nil
 	}
 
 	if len(data) == 0 {
-		errs.Add("unexpected XML input: no entries in plist of monitors")
+		errs.AddNew("unexpected XML input: no entries in plist of monitors")
 		return nil
 	}
 

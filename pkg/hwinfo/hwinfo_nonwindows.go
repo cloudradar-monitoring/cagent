@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/dmidecode"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 func isCommandAvailable(name string) bool {
@@ -42,7 +43,7 @@ func fetchInventory() (map[string]interface{}, error) {
 
 	dmiDecodeResults := retrieveInfoUsingDmiDecode(&errorCollector)
 	if len(dmiDecodeResults) > 0 {
-		res = mergeStringMaps(&res, &dmiDecodeResults)
+		res = common.MergeStringMaps(res, dmiDecodeResults)
 	}
 
 	return res, errorCollector.Combine()
@@ -50,7 +51,7 @@ func fetchInventory() (map[string]interface{}, error) {
 
 func retrieveInfoUsingDmiDecode(errs *common.ErrorCollector) map[string]interface{} {
 	if !isCommandAvailable("dmidecode") {
-		errs.Add("dmidecode not present")
+		errs.AddNew("dmidecode not present")
 		return nil
 	}
 
@@ -60,13 +61,13 @@ func retrieveInfoUsingDmiDecode(errs *common.ErrorCollector) map[string]interfac
 	buf := bytes.Buffer{}
 	cmd.Stdout = bufio.NewWriter(&buf)
 	if err := cmd.Run(); err != nil {
-		errs.Addf("execute dmidecode %s", err.Error())
+		errs.AddNewf("execute dmidecode %s", err.Error())
 		return nil
 	}
 
 	dmi, err := dmidecode.Unmarshal(bufio.NewReader(&buf))
 	if err != nil {
-		errs.Addf("unmarshal dmi %s", err.Error())
+		errs.AddNewf("unmarshal dmi %s", err.Error())
 		return nil
 	}
 
@@ -80,14 +81,14 @@ func retrieveInfoUsingDmiDecode(errs *common.ErrorCollector) map[string]interfac
 		res["baseboard.model"] = reqSys[0].Version
 		res["baseboard.serial_number"] = reqSys[0].SerialNumber
 	} else if err != dmidecode.ErrNotFound {
-		errs.Addf("failed fetching baseboard info, %s", err.Error())
+		errs.AddNewf("failed fetching baseboard info, %s", err.Error())
 	}
 
 	var reqMem []dmidecode.ReqPhysicalMemoryArray
 	if err = dmi.Get(&reqMem); err == nil {
 		res["ram.number_of_modules"] = reqMem[0].NumberOfDevices
 	} else if err != dmidecode.ErrNotFound {
-		errs.Addf("failed fetching memory array info, %s", err.Error())
+		errs.AddNewf("failed fetching memory array info, %s", err.Error())
 	}
 
 	var reqMemDevs []dmidecode.ReqMemoryDevice
@@ -100,7 +101,7 @@ func retrieveInfoUsingDmiDecode(errs *common.ErrorCollector) map[string]interfac
 			res[fmt.Sprintf("ram.%d.type", i)] = reqMemDevs[i].Type
 		}
 	} else if err != dmidecode.ErrNotFound {
-		errs.Addf("failed fetching memory device info, %s", err.Error())
+		errs.AddNewf("failed fetching memory device info, %s", err.Error())
 	}
 
 	var reqCPU []dmidecode.ReqProcessor
@@ -114,7 +115,7 @@ func retrieveInfoUsingDmiDecode(errs *common.ErrorCollector) map[string]interfac
 			res[fmt.Sprintf("cpu.%d.thread_count", i)] = reqCPU[i].ThreadCount
 		}
 	} else if err != dmidecode.ErrNotFound {
-		errs.Addf("failed fetching cpu info, %s", err.Error())
+		errs.AddNewf("failed fetching cpu info, %s", err.Error())
 	}
 
 	return res

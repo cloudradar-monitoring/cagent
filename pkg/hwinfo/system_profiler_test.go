@@ -6,8 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 func helperLoadSystemProfilerXML(t *testing.T, xmlFileName string) []byte {

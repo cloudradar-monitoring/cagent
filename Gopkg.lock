@@ -2,12 +2,6 @@
 
 
 [[projects]]
-  branch = "master"
-  name = "github.com/DHowett/go-plist"
-  packages = ["."]
-  revision = "591f970eefbbeb04d7b37f334a0c4c3256e32876"
-
-[[projects]]
   name = "github.com/StackExchange/wmi"
   packages = ["."]
   revision = "5d049714c4a64225c3c79a7cf7d02f7fb5b96338"
@@ -173,7 +167,6 @@
   version = "v0.4.2"
 
 [[projects]]
-  branch = "master"
   name = "github.com/vcraescu/go-xrandr"
   packages = ["."]
   revision = "135ba5f1bc04bf19feffaca04c0dcec85770ffd1"
@@ -224,6 +217,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5cad005304d95a6ef391cdeafac3fa691eca5f194ac7db29d4223cb76493517a"
+  inputs-digest = "7211435436eb75d9730a0b2ed0f4d3817b4b6e214ca7e0e7b550e179ff335303"
   solver-name = "gps-cdcl"
   solver-version = 1

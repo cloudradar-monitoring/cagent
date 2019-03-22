@@ -7,8 +7,9 @@ import (
 	"bytes"
 	"os/exec"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/pkg/errors"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 func runSystemProfiler(dataType string) ([]byte, error) {
@@ -25,7 +26,7 @@ func runSystemProfiler(dataType string) ([]byte, error) {
 func listPCIDevices(errs *common.ErrorCollector) []*pciDeviceInfo {
 	xml, err := runSystemProfiler("SPPCIDataType")
 	if err != nil {
-		errs.New(err)
+		errs.Add(err)
 		return nil
 	}
 	return parseOutputToListOfPCIDevices(bytes.NewReader(xml), errs)
@@ -34,7 +35,7 @@ func listPCIDevices(errs *common.ErrorCollector) []*pciDeviceInfo {
 func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 	xml, err := runSystemProfiler("SPUSBDataType")
 	if err != nil {
-		errs.New(err)
+		errs.Add(err)
 		return nil
 	}
 	return parseOutputToListOfUSBDevices(bytes.NewReader(xml), errs)
@@ -43,7 +44,7 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 func listDisplays(errs *common.ErrorCollector) []*monitorInfo {
 	xml, err := runSystemProfiler("SPDisplaysDataType")
 	if err != nil {
-		errs.New(err)
+		errs.Add(err)
 		return nil
 	}
 	return parseOutputToListOfDisplays(bytes.NewReader(xml), errs)

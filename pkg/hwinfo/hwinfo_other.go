@@ -14,9 +14,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/jaypipes/ghw"
 	"github.com/vcraescu/go-xrandr"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 var lsusbLineRegexp = regexp.MustCompile(`[0-9|a-z|A-Z|.|/|-|:|\[|\]|_|+| ]+`)
@@ -27,10 +28,13 @@ func captureStderr(funcToExecute func()) (string, error) {
 		return "", err
 	}
 
-	stderr := os.Stderr
+	// replace default stderr Writer with our own to capture output:
+	defaultStderrWriter := os.Stderr
 	os.Stderr = w
+
+	// in any case, the default writer will be set again:
 	defer func() {
-		os.Stderr = stderr
+		os.Stderr = defaultStderrWriter
 	}()
 
 	funcToExecute()
@@ -61,15 +65,15 @@ func listPCIDevices(errs *common.ErrorCollector) []*pciDeviceInfo {
 		}
 	})
 	if err != nil {
-		errs.Addf("could not capture stderr when retrieving PCI information using ghw: %s", err.Error())
+		errs.AddNewf("could not capture stderr when retrieving PCI information using ghw: %s", err.Error())
 		return nil
 	}
 	if ghwErr != nil {
-		errs.Addf("there were error while retrieving PCI information using ghw: %s", ghwErr.Error())
+		errs.AddNewf("there were error while retrieving PCI information using ghw: %s", ghwErr.Error())
 		return nil
 	}
 	if len(stderrOutput) > 0 {
-		errs.Addf("there were error output while retrieving PCI information using ghw: %s", stderrOutput)
+		errs.AddNewf("there were error output while retrieving PCI information using ghw: %s", stderrOutput)
 	}
 
 	result := make([]*pciDeviceInfo, 0, len(devices))
@@ -116,19 +120,19 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 	buf := bytes.Buffer{}
 	cmd.Stdout = bufio.NewWriter(&buf)
 	if err := cmd.Run(); err != nil {
-		errs.New(err)
+		errs.Add(err)
 		return nil
 	}
 
 	outBytes, err := ioutil.ReadAll(bufio.NewReader(&buf))
 	if err != nil {
-		errs.New(err)
+		errs.Add(err)
 		return nil
 	}
 
 	lines = strings.Split(string(outBytes), "\n")
-	for i := 0; i < len(lines); i++ {
-		tokens := strings.Split(lines[i], " ")
+	for _, line := range lines {
+		tokens := strings.Split(line, " ")
 		sanitizedTokens := make([]string, 0)
 		for _, t := range tokens {
 			if t != "" && t != "\t" {
@@ -138,7 +142,7 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 		sanitizedTokensCount := len(sanitizedTokens)
 		if sanitizedTokensCount < 6 {
 			if sanitizedTokensCount > 0 {
-				errs.Addf("unexpected lsusb command output: got %d tokens in line: %s", sanitizedTokensCount, lines[i])
+				errs.AddNewf("unexpected lsusb command output: got %d tokens in line: %s", sanitizedTokensCount, line)
 			}
 			continue
 		}
@@ -152,21 +156,21 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 		}
 		busNum, err := strconv.Atoi(sanitizedTokens[1])
 		if err != nil {
-			errs.Addf("error while parsing bus number: %s. line: %s", err.Error(), lines[i])
+			errs.AddNewf("error while parsing bus number: %s. line: %s", err.Error(), line)
 			continue
 		}
 		devNum, err := strconv.Atoi(reg.FindString(sanitizedTokens[3]))
 		if err != nil {
-			errs.Addf("error while parsing device number: %s. line: %s", err.Error(), lines[i])
+			errs.AddNewf("error while parsing device number: %s. line: %s", err.Error(), line)
 			continue
 		}
 		address := fmt.Sprintf("bus %d device %d", busNum, devNum)
 		devID := lsusbLineRegexp.FindString(sanitizedTokens[5])
 		results = append(results, &usbDeviceInfo{
-			address,
-			"",
-			devID,
-			description,
+			Address:     address,
+			VendorName:  "",
+			DeviceID:    devID,
+			Description: description,
 		})
 	}
 	return results
@@ -176,7 +180,7 @@ func listDisplays(errs *common.ErrorCollector) []*monitorInfo {
 	results := make([]*monitorInfo, 0)
 	screens, err := xrandr.GetScreens()
 	if err != nil {
-		errs.New(err)
+		errs.Add(err)
 		return nil
 	}
 	for _, s := range screens {
