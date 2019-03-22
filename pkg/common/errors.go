@@ -5,6 +5,8 @@ import (
 	"fmt"
 )
 
+// ErrorCollector type allows accumulation of errors in one place
+// and operating on them as a single error.
 type ErrorCollector struct {
 	errs []error
 }

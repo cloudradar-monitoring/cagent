@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/jaypipes/ghw"
@@ -131,6 +130,8 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 	}
 
 	lines = strings.Split(string(outBytes), "\n")
+
+	// tokenize and parse command output line by line:
 	for _, line := range lines {
 		tokens := strings.Split(line, " ")
 		sanitizedTokens := make([]string, 0)
@@ -146,25 +147,14 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 			}
 			continue
 		}
+
 		var description string
-		for i := 6; i < sanitizedTokensCount; i++ {
-			if i == sanitizedTokensCount-1 {
-				description += sanitizedTokens[i]
-			} else {
-				description += sanitizedTokens[i] + " "
-			}
+		if sanitizedTokensCount > 6 {
+			restTokens := sanitizedTokens[6:]
+			description = strings.Join(restTokens, " ")
 		}
-		busNum, err := strconv.Atoi(sanitizedTokens[1])
-		if err != nil {
-			errs.AddNewf("error while parsing bus number: %s. line: %s", err.Error(), line)
-			continue
-		}
-		devNum, err := strconv.Atoi(reg.FindString(sanitizedTokens[3]))
-		if err != nil {
-			errs.AddNewf("error while parsing device number: %s. line: %s", err.Error(), line)
-			continue
-		}
-		address := fmt.Sprintf("bus %d device %d", busNum, devNum)
+
+		address := fmt.Sprintf("bus %s device %s", sanitizedTokens[1], reg.FindString(sanitizedTokens[3]))
 		devID := lsusbLineRegexp.FindString(sanitizedTokens[5])
 		results = append(results, &usbDeviceInfo{
 			Address:     address,
