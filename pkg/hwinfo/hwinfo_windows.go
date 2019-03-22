@@ -167,7 +167,7 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 }
 
 func listDisplays(errs *common.ErrorCollector) []*monitorInfo {
-	var monitors []win32DesktopMonitor
+	var monitors []win32_DesktopMonitor
 	query := wmi.CreateQuery(&monitors, "")
 	err := wmiutil.QueryWithTimeout(wmiQueryTimeout, query, &monitors)
 	if err != nil {
@@ -222,7 +222,7 @@ func listDisplays(errs *common.ErrorCollector) []*monitorInfo {
 func getCPUInfo(errs *common.ErrorCollector) map[string]interface{} {
 	res := make(map[string]interface{})
 
-	var cpus []win32Processor
+	var cpus []win32_Processor
 	query := wmi.CreateQuery(&cpus, "")
 	err := wmiutil.QueryWithTimeout(wmiQueryTimeout, query, &cpus)
 	if err != nil {
@@ -243,7 +243,7 @@ func getCPUInfo(errs *common.ErrorCollector) map[string]interface{} {
 }
 
 func getBaseboardInfo(errs *common.ErrorCollector) map[string]interface{} {
-	var baseBoard []win32BaseBoard
+	var baseBoard []win32_BaseBoard
 	query := wmi.CreateQuery(&baseBoard, "")
 	if err := wmiutil.QueryWithTimeout(wmiQueryTimeout, query, &baseBoard); err != nil {
 		errs.AddNewf("request baseboard info failed: %s", err.Error())
@@ -261,7 +261,7 @@ func getBaseboardInfo(errs *common.ErrorCollector) map[string]interface{} {
 }
 
 func getRamInfo(errs *common.ErrorCollector) map[string]interface{} {
-	var ram []win32PhysicalMemory
+	var ram []win32_PhysicalMemory
 	query := wmi.CreateQuery(&ram, "")
 	if err := wmi.Query(query, &ram); err != nil {
 		errs.AddNewf("request ram info failed: %s", err.Error())

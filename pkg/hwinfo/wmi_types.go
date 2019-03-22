@@ -5,13 +5,13 @@ package hwinfo
 type winMemoryType uint16
 
 // https://docs.microsoft.com/en-us/windows/desktop/cimwin32prov/win32-physicalmemory
-type win32PhysicalMemory struct {
+type win32_PhysicalMemory struct {
 	Capacity   *uint64
 	MemoryType *winMemoryType
 }
 
 // https://docs.microsoft.com/en-us/windows/desktop/cimwin32prov/win32-baseboard
-type win32BaseBoard struct {
+type win32_BaseBoard struct {
 	Manufacturer *string
 	Product      *string
 	Model        *string
@@ -19,7 +19,7 @@ type win32BaseBoard struct {
 }
 
 // https://docs.microsoft.com/en-us/windows/desktop/cimwin32prov/win32-processor
-type win32Processor struct {
+type win32_Processor struct {
 	Description               *string
 	Name                      *string
 	Manufacturer              *string
@@ -53,7 +53,7 @@ const (
 )
 
 // https://docs.microsoft.com/en-us/windows/desktop/cimwin32prov/win32-desktopmonitor
-type win32DesktopMonitor struct {
+type win32_DesktopMonitor struct {
 	Availability        *uint16
 	Caption             *string
 	Description         *string
@@ -65,7 +65,7 @@ type win32DesktopMonitor struct {
 	PNPDeviceID         *string
 }
 
-func (d *win32DesktopMonitor) IsActive() bool {
+func (d *win32_DesktopMonitor) IsActive() bool {
 	if d.Availability != nil {
 		switch *d.Availability {
 		case monitorAvailabilityRunningOrFullPower, monitorAvailabilityWarning, monitorAvailabilityInTest,
