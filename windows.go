@@ -22,15 +22,16 @@ const (
 )
 
 type WindowsUpdateWatcher struct {
-	LastFetchedAt time.Time
-	Available     int
-	Pending       int
-	Err           error
+	LastFetchedAt     time.Time
+	LastTimeUpdatedAt time.Time
+	Available         int
+	Pending           int
+	Err               error
 
 	ca *Cagent
 }
 
-func windowsUpdates() (available int, pending int, err error) {
+func windowsUpdates() (available int, pending int, lastTimeUpdated time.Time, err error) {
 	start := time.Now()
 	err = ole.CoInitializeEx(0, 0)
 	if err != nil {
@@ -98,6 +99,7 @@ func windowsUpdates() (available int, pending int, err error) {
 
 	thcn := int(thc.Val)
 
+	// uhistRaw is list of update event records on the computer in descending chronological order
 	uhistRaw, err := oleutil.CallMethod(usd, "QueryHistory", 0, thcn)
 	if err != nil {
 		log.Error("[Windows Updates] Failed CallMethod QueryHistory: ", err.Error())
@@ -114,9 +116,12 @@ func windowsUpdates() (available int, pending int, err error) {
 	}
 
 	for i := 0; i < int(countUhist.Val); i++ {
+		// other available properties can be found here:
+		// https://docs.microsoft.com/en-us/previous-versions/windows/desktop/aa386472(v%3dvs.85)
+
 		itemRaw, err := oleutil.GetProperty(uhist, "Item", i)
 		if err != nil {
-			log.Error("[Windows] Failed to fetch Windows Update history item: ", err.Error())
+			log.Error("[Windows Updates] Failed to fetch Windows Update history item: ", err.Error())
 			continue
 		}
 
@@ -130,8 +135,20 @@ func windowsUpdates() (available int, pending int, err error) {
 			continue
 		}
 
-		if WindowsUpdateStatus(int(resultCode.Val)) == WUStatusPending {
+		updateStatus := WindowsUpdateStatus(int(resultCode.Val))
+		if updateStatus == WUStatusPending {
 			pending++
+		}
+
+		if lastTimeUpdated.IsZero() && updateStatus == WUStatusCompleted {
+			date, err := oleutil.GetProperty(item, "Date")
+			if err != nil {
+				log.Warn("[Windows Updates] Failed to get Date property: ", err.Error())
+				continue
+			}
+			if updateDate, ok := date.Value().(time.Time); ok {
+				lastTimeUpdated = updateDate
+			}
 		}
 	}
 	return
@@ -146,10 +163,11 @@ func (ca *Cagent) WindowsUpdatesWatcher() *WindowsUpdateWatcher {
 
 	go func() {
 		for {
-			available, pending, err := windowsUpdates()
+			available, pending, lastTimeUpdated, err := windowsUpdates()
 			ca.windowsUpdateWatcher.LastFetchedAt = time.Now()
 			ca.windowsUpdateWatcher.Err = err
 			ca.windowsUpdateWatcher.Available = available
+			ca.windowsUpdateWatcher.LastTimeUpdatedAt = lastTimeUpdated
 			ca.windowsUpdateWatcher.Pending = pending
 
 			time.Sleep(time.Second * time.Duration(ca.Config.WindowsUpdatesWatcherInterval))
@@ -164,6 +182,7 @@ func (wuw *WindowsUpdateWatcher) WindowsUpdates() (MeasurementsMap, error) {
 	if wuw.LastFetchedAt.IsZero() {
 		results["updates_available"] = nil
 		results["updates_pending"] = nil
+		results["last_update_timestamp"] = nil
 		results["query_state"] = "pending"
 		results["query_timestamp"] = nil
 
@@ -176,6 +195,7 @@ func (wuw *WindowsUpdateWatcher) WindowsUpdates() (MeasurementsMap, error) {
 	if wuw.Err != nil {
 		results["updates_available"] = nil
 		results["updates_pending"] = nil
+		results["last_update_timestamp"] = nil
 		results["query_state"] = "failed"
 		results["query_message"] = wuw.Err.Error()
 
@@ -185,6 +205,11 @@ func (wuw *WindowsUpdateWatcher) WindowsUpdates() (MeasurementsMap, error) {
 	results["updates_available"] = wuw.Available
 	results["updates_pending"] = wuw.Pending
 	results["query_state"] = "succeeded"
+	if wuw.LastTimeUpdatedAt.IsZero() {
+		results["last_update_timestamp"] = nil
+	} else {
+		results["last_update_timestamp"] = wuw.LastTimeUpdatedAt.Unix()
+	}
 
 	return results, nil
 }
