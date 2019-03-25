@@ -3,10 +3,12 @@ package cagent
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/hwinfo"
@@ -23,168 +26,158 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
 )
 
-var ErrorTestWinUISettingsAreEmpty = errors.New("Please fill 'HUB URL', 'HUB USER' and 'HUB PASSWORD' from your Cloudradar account")
-
-func (ca *Cagent) initHubHTTPClient() {
-	if ca.hubHTTPClient == nil {
-		tr := *(http.DefaultTransport.(*http.Transport))
-		if ca.rootCAs != nil {
-			tr.TLSClientConfig = &tls.Config{RootCAs: ca.rootCAs}
+func (ca *Cagent) initHubClientOnce() {
+	ca.hubClientOnce.Do(func() {
+		transport := &http.Transport{
+			ResponseHeaderTimeout: 15 * time.Second,
 		}
-		if ca.Config.HubProxy != "" {
+		if ca.rootCAs != nil {
+			transport.TLSClientConfig = &tls.Config{
+				RootCAs: ca.rootCAs,
+			}
+		}
+		if len(ca.Config.HubProxy) > 0 {
+			// TODO(max): this should be moved to config sanitizer/validator layer.
 			if !strings.HasPrefix(ca.Config.HubProxy, "http://") {
 				ca.Config.HubProxy = "http://" + ca.Config.HubProxy
 			}
-
-			u, err := url.Parse(ca.Config.HubProxy)
-
+			proxyURL, err := url.Parse(ca.Config.HubProxy)
 			if err != nil {
-				log.Errorf("Failed to parse 'hub_proxy' URL")
+				log.WithFields(log.Fields{
+					"url": ca.Config.HubProxy,
+				}).Warningln("failed to parse hub_proxy URL")
 			} else {
-				if ca.Config.HubProxyUser != "" {
-					u.User = url.UserPassword(ca.Config.HubProxyUser, ca.Config.HubProxyPassword)
+				if len(ca.Config.HubProxyUser) > 0 {
+					proxyURL.User = url.UserPassword(ca.Config.HubProxyUser, ca.Config.HubProxyPassword)
 				}
-				tr.Proxy = func(_ *http.Request) (*url.URL, error) {
-					return u, nil
+				transport.Proxy = func(_ *http.Request) (*url.URL, error) {
+					return proxyURL, nil
 				}
 			}
 		}
-
-		ca.hubHTTPClient = &http.Client{
-			Timeout:   time.Second * 30,
-			Transport: &tr,
+		ca.hubClient = &http.Client{
+			Timeout:   30 * time.Second,
+			Transport: transport,
 		}
-	}
+	})
 }
 
-func (ca *Cagent) TestHub() error {
-	if ca.Config.HubURL == "" {
-		return fmt.Errorf("please fill config with hub_url, hub_user and hub_password from your Cloudradar account")
-	}
+// CheckHubCredentials performs credentials check for a Hub config, returning errors that reference
+// field names as in source config. Since config may be filled from file or UI, the field names can be different.
+// Consider also localization of UI, we want to decouple credential checking logic from their actual view in UI.
+//
+// Examples:
+// * for TOML: CheckHubCredentials(ctx, "hub_url", "hub_user", "hub_password")
+// * for WinUI: CheckHubCredentials(ctx, "URL", "User", "Password")
+func (ca *Cagent) CheckHubCredentials(ctx context.Context, fieldHubURL, fieldHubUser, fieldHubPassword string) error {
+	ca.initHubClientOnce()
 
-	var u *url.URL
-	var err error
-	if u, err = url.Parse(ca.Config.HubURL); err != nil {
-		return fmt.Errorf("can't parse hub_url: %s. Make sure to put the right params from your Cloudradar account", err.Error())
+	if len(ca.Config.HubURL) == 0 {
+		return newEmptyFieldError(fieldHubURL)
+	} else if u, err := url.Parse(ca.Config.HubURL); err != nil {
+		return newFieldError(fieldHubURL, err)
+	} else if u.Scheme != "http" && u.Scheme != "https" {
+		err := fmt.Errorf("wrong scheme '%s', URL must start with http:// or https://", u.Scheme)
+		return newFieldError(fieldHubURL, err)
 	}
-
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return fmt.Errorf("wrong scheme: hub_url must start with 'https' or 'http'")
-	}
-
-	ca.initHubHTTPClient()
-	req, err := http.NewRequest("HEAD", ca.Config.HubURL, nil)
-	if err != nil {
-		return err
-	}
-
+	req, _ := http.NewRequest("HEAD", ca.Config.HubURL, nil)
 	req.Header.Add("User-Agent", ca.userAgent())
-	if ca.Config.HubUser != "" {
+	if len(ca.Config.HubUser) > 0 {
 		req.SetBasicAuth(ca.Config.HubUser, ca.Config.HubPassword)
 	}
 
-	resp, err := ca.hubHTTPClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("unable to connect. %s. If you have a proxy or firewall, it may be blocking the connection", err.Error())
-	}
-
-	if resp.StatusCode == 401 && ca.Config.HubUser == "" {
-		return fmt.Errorf("unable to authorise without credentials. Please set hub_user & hub_password in the сonfig according to your Cloudradar account")
-	} else if resp.StatusCode == 401 && ca.Config.HubUser != "" {
-		return fmt.Errorf("unable to authorise with provided credentials. Please correct the hub_user & hub_password in the сonfig according to your Cloudradar account")
-	} else if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-		return fmt.Errorf("got bad response status: %d, %s. If you have a proxy or firewall it may be blocking the connection", resp.StatusCode, resp.Status)
+	ctx, cancelFn := context.WithTimeout(ctx, time.Minute)
+	req = req.WithContext(ctx)
+	resp, err := ca.hubClient.Do(req)
+	cancelFn()
+	if err = ca.checkClientError(resp, err, fieldHubUser, fieldHubPassword); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (ca *Cagent) TestHubWinUI() error {
-	if ca.Config.HubURL == "" {
-		return ErrorTestWinUISettingsAreEmpty
-	}
-
-	var u *url.URL
-	var err error
-	if u, err = url.Parse(ca.Config.HubURL); err != nil {
-		return fmt.Errorf("Can't parse 'HUB URL': %s. Make sure to put the right params from your Cloudradar account", err.Error())
-	}
-
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return fmt.Errorf("'HUB URL' must start with 'https://' or 'http://'")
-	}
-
-	ca.initHubHTTPClient()
-	req, err := http.NewRequest("HEAD", ca.Config.HubURL, nil)
+func (ca *Cagent) checkClientError(resp *http.Response, err error, fieldHubUser, fieldHubPassword string) error {
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			err = errors.New("connection timeout, please check your proxy or firewall settings")
+			return err
+		}
+		err = errors.Wrap(err, "connection error, please check your proxy or firewall settings")
 		return err
 	}
-
-	req.Header.Add("User-Agent", ca.userAgent())
-	if ca.Config.HubUser != "" {
-		req.SetBasicAuth(ca.Config.HubUser, ca.Config.HubPassword)
+	io.Copy(ioutil.Discard, resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode == http.StatusUnauthorized {
+		if len(ca.Config.HubUser) > 0 {
+			return newEmptyFieldError(fieldHubUser)
+		} else if len(ca.Config.HubPassword) == 0 {
+			return newEmptyFieldError(fieldHubPassword)
+		}
+		err := fmt.Errorf("unable to authorize with provided Hub credentials (HTTP %d)", resp.StatusCode)
+		return err
+	} else if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
+		err := fmt.Errorf("unable to authorize with provided Hub credentials (HTTP %d)", resp.StatusCode)
+		return err
 	}
-
-	resp, err := ca.hubHTTPClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("Unable to connect. %s. If you have a proxy or firewall, it may be blocking the connection", err.Error())
-	}
-
-	if resp.StatusCode == 401 && ca.Config.HubUser == "" {
-		return fmt.Errorf("Unable to authorise without credentials. Please set 'HUB USER' and 'HUB PASSWORD' from your Cloudradar account")
-	} else if resp.StatusCode == 401 && ca.Config.HubUser != "" {
-		return fmt.Errorf("Unable to authorise with provided credentials. Please correct 'HUB USER' and 'HUB PASSWORD' according to your Cloudradar account")
-	} else if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-		return fmt.Errorf("Got bad response status: %d, %s. If you have a proxy or firewall it may be blocking the connection", resp.StatusCode, resp.Status)
-	}
-
 	return nil
 }
 
-func (ca *Cagent) PostResultsToHub(result Result) error {
-	ca.initHubHTTPClient()
+func newEmptyFieldError(name string) error {
+	err := fmt.Errorf("unexpected empty field %s", name)
+	return errors.Wrap(err, "the field must be filled with details of your Cloudradar account")
+}
 
+func newFieldError(name string, err error) error {
+	return errors.Wrapf(err, "%s field verification failed", name)
+}
+
+func (ca *Cagent) PostResultToHub(ctx context.Context, result *Result) error {
+	ca.initHubClientOnce()
+
+	if len(ca.Config.HubURL) == 0 {
+		return newEmptyFieldError("hub_url")
+	} else if u, err := url.Parse(ca.Config.HubURL); err != nil {
+		return newFieldError("hub_url", err)
+	} else if u.Scheme != "http" && u.Scheme != "https" {
+		err := fmt.Errorf("wrong scheme '%s', URL must start with http:// or https://", u.Scheme)
+		return newFieldError("hub_url", err)
+	}
 	b, err := json.Marshal(result)
 	if err != nil {
+		err = errors.Wrap(err, "failed to serialize result")
 		return err
 	}
 
 	var req *http.Request
-
 	if ca.Config.HubGzip {
-		var buffer bytes.Buffer
-		zw := gzip.NewWriter(&buffer)
-		zw.Write(b)
-		zw.Close()
-		req, err = http.NewRequest("POST", ca.Config.HubURL, &buffer)
+		buf := new(bytes.Buffer)
+		gzipped := gzip.NewWriter(buf)
+		if _, err := gzipped.Write(b); err != nil {
+			err = errors.Wrap(err, "failed to write into gzipped buffer")
+			return err
+		}
+		if err := gzipped.Close(); err != nil {
+			err = errors.Wrap(err, "failed to finalize gzipped buffer")
+			return err
+		}
+		req, _ = http.NewRequest("POST", ca.Config.HubURL, buf)
 		req.Header.Set("Content-Encoding", "gzip")
 	} else {
-		req, err = http.NewRequest("POST", ca.Config.HubURL, bytes.NewBuffer(b))
+		req, _ = http.NewRequest("POST", ca.Config.HubURL, bytes.NewBuffer(b))
+	}
+	if err != nil {
+		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-
-	if err != nil {
-		return err
-	}
-
 	req.Header.Add("User-Agent", ca.userAgent())
-
-	if ca.Config.HubUser != "" {
+	if len(ca.Config.HubUser) > 0 {
 		req.SetBasicAuth(ca.Config.HubUser, ca.Config.HubPassword)
 	}
-
-	resp, err := ca.hubHTTPClient.Do(req)
-
-	if err != nil {
+	req = req.WithContext(ctx)
+	resp, err := ca.hubClient.Do(req)
+	if err = ca.checkClientError(resp, err, "hub_user", "hub_password"); err != nil {
 		return err
-	}
-
-	log.Debugf("Sent to HUB.. Status %d", resp.StatusCode)
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-		return errors.New(resp.Status)
 	}
 
 	return nil
@@ -342,25 +335,26 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 }
 
 func (ca *Cagent) ReportMeasurements(measurements MeasurementsMap, outputFile *os.File) error {
-	result := Result{
+	result := &Result{
 		Timestamp:    time.Now().Unix(),
 		Measurements: measurements,
 	}
-
 	if outputFile != nil {
-		jsonEncoder := json.NewEncoder(outputFile)
-		err := jsonEncoder.Encode(&result)
+		err := json.NewEncoder(outputFile).Encode(result)
 		if err != nil {
-			return fmt.Errorf("Results json encode error: %s", err.Error())
+			err = errors.Wrap(err, "failed to JSON encode measurement result")
+			return err
 		}
-
 		return nil
 	}
-
-	err := ca.PostResultsToHub(result)
+	ctx, cancelFn := context.WithTimeout(context.Background(), 5*time.Minute)
+	err := ca.PostResultToHub(ctx, result)
 	if err != nil {
-		return fmt.Errorf("POST to hub error: %s", err.Error())
+		cancelFn()
+		err = errors.Wrap(err, "failed to POST measurement result to Hub")
+		return err
 	}
+	cancelFn()
 
 	return nil
 }
