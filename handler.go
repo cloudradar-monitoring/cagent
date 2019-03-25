@@ -103,13 +103,12 @@ func (ca *Cagent) checkClientError(resp *http.Response, err error, fieldHubUser,
 			err = errors.New("connection timeout, please check your proxy or firewall settings")
 			return err
 		}
-		err = errors.Wrap(err, "connection error, please check your proxy or firewall settings")
 		return err
 	}
 	_, _ = io.Copy(ioutil.Discard, resp.Body)
 	resp.Body.Close()
 	if resp.StatusCode == http.StatusUnauthorized {
-		if len(ca.Config.HubUser) > 0 {
+		if len(ca.Config.HubUser) == 0 {
 			return newEmptyFieldError(fieldHubUser)
 		} else if len(ca.Config.HubPassword) == 0 {
 			return newEmptyFieldError(fieldHubPassword)
