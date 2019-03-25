@@ -132,6 +132,7 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 	lines = strings.Split(string(outBytes), "\n")
 
 	// tokenize and parse command output line by line:
+	const minExpectedTokensCount = 6
 	for _, line := range lines {
 		tokens := strings.Split(line, " ")
 		sanitizedTokens := make([]string, 0)
@@ -141,7 +142,7 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 			}
 		}
 		sanitizedTokensCount := len(sanitizedTokens)
-		if sanitizedTokensCount < 6 {
+		if sanitizedTokensCount < minExpectedTokensCount {
 			if sanitizedTokensCount > 0 {
 				errs.AddNewf("unexpected lsusb command output: got %d tokens in line: %s", sanitizedTokensCount, line)
 			}
@@ -149,8 +150,8 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 		}
 
 		var description string
-		if sanitizedTokensCount > 6 {
-			restTokens := sanitizedTokens[6:]
+		if sanitizedTokensCount > minExpectedTokensCount {
+			restTokens := sanitizedTokens[minExpectedTokensCount:]
 			description = strings.Join(restTokens, " ")
 		}
 
