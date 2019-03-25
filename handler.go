@@ -106,7 +106,7 @@ func (ca *Cagent) checkClientError(resp *http.Response, err error, fieldHubUser,
 		err = errors.Wrap(err, "connection error, please check your proxy or firewall settings")
 		return err
 	}
-	io.Copy(ioutil.Discard, resp.Body)
+	_, _ = io.Copy(ioutil.Discard, resp.Body)
 	resp.Body.Close()
 	if resp.StatusCode == http.StatusUnauthorized {
 		if len(ca.Config.HubUser) > 0 {
