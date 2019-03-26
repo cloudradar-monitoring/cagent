@@ -20,6 +20,42 @@
   version = "v1.1.1"
 
 [[projects]]
+  name = "github.com/gentlemanautomaton/windevice"
+  packages = [
+    ".",
+    "deviceclass",
+    "devicecreation",
+    "deviceid",
+    "deviceproperty",
+    "deviceregistry",
+    "diflag",
+    "diflagex",
+    "difunc",
+    "difuncremove",
+    "drivertype",
+    "driverversion",
+    "hwprofile",
+    "infpath",
+    "installflag",
+    "installstate",
+    "newdevapi",
+    "setupapi"
+  ]
+  revision = "de21ffdab1a3b60205fe0782a9df61feb34367f1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/gentlemanautomaton/winguid"
+  packages = ["."]
+  revision = "3f364f74ee74ad2a7e7afc3cf5fdd771086edbb5"
+
+[[projects]]
+  name = "github.com/ghodss/yaml"
+  packages = ["."]
+  revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/go-ole/go-ole"
   packages = [
     ".",
@@ -27,6 +63,18 @@
   ]
   revision = "39dc8486bd0952279431257138bc428275b86797"
   version = "v1.2.2"
+
+[[projects]]
+  name = "github.com/jaypipes/ghw"
+  packages = ["."]
+  revision = "032dfb1f8cb2b9b5c0e894855833e23ff1fe24a9"
+  version = "0.3"
+
+[[projects]]
+  name = "github.com/jaypipes/pcidb"
+  packages = ["."]
+  revision = "141a53e65d4ad43fdbd2760c714344da88f24adb"
+  version = "0.3"
 
 [[projects]]
   branch = "master"
@@ -54,6 +102,12 @@
   name = "github.com/lxn/win"
   packages = ["."]
   revision = "a7f87360b10eafe73bd3ff01db16976fe7560fbf"
+
+[[projects]]
+  name = "github.com/mitchellh/go-homedir"
+  packages = ["."]
+  revision = "af06845cf3004701891bf4fdb884bfe4920b3727"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
@@ -113,6 +167,11 @@
   version = "v0.4.2"
 
 [[projects]]
+  name = "github.com/vcraescu/go-xrandr"
+  packages = ["."]
+  revision = "135ba5f1bc04bf19feffaca04c0dcec85770ffd1"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
@@ -143,9 +202,21 @@
   packages = ["."]
   revision = "0a84660828b24d25b35525c9a1f1f51267f8da91"
 
+[[projects]]
+  name = "gopkg.in/yaml.v2"
+  packages = ["."]
+  revision = "51d6538a90f86fe93ac480b35f37b2be17fef232"
+  version = "v2.2.2"
+
+[[projects]]
+  name = "howett.net/plist"
+  packages = ["."]
+  revision = "591f970eefbbeb04d7b37f334a0c4c3256e32876"
+  source = "github.com/DHowett/go-plist"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "457dc3bedf83542e053307e89ff88848662ee52497b85b9b6a59963cffcfdf1e"
+  inputs-digest = "7211435436eb75d9730a0b2ed0f4d3817b4b6e214ca7e0e7b550e179ff335303"
   solver-name = "gps-cdcl"
   solver-version = 1

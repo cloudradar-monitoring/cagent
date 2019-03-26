@@ -9,7 +9,8 @@ import (
 	"os/exec"
 
 	"github.com/cloudradar-monitoring/dmidecode"
-	"github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 func isCommandAvailable(name string) bool {
@@ -22,9 +23,36 @@ func isCommandAvailable(name string) bool {
 }
 
 func fetchInventory() (map[string]interface{}, error) {
-	// check dmidecode is present in the system
+	res := make(map[string]interface{})
+
+	errorCollector := common.ErrorCollector{}
+	pciDevices := listPCIDevices(&errorCollector)
+	if len(pciDevices) > 0 {
+		res["pci.list"] = pciDevices
+	}
+
+	usbDevices := listUSBDevices(&errorCollector)
+	if len(usbDevices) > 0 {
+		res["usb.list"] = usbDevices
+	}
+
+	displays := listDisplays(&errorCollector)
+	if len(displays) > 0 {
+		res["display.list"] = displays
+	}
+
+	dmiDecodeResults := retrieveInfoUsingDmiDecode(&errorCollector)
+	if len(dmiDecodeResults) > 0 {
+		res = common.MergeStringMaps(res, dmiDecodeResults)
+	}
+
+	return res, errorCollector.Combine()
+}
+
+func retrieveInfoUsingDmiDecode(errs *common.ErrorCollector) map[string]interface{} {
 	if !isCommandAvailable("dmidecode") {
-		return nil, ErrNotPresent
+		errs.AddNew("dmidecode not present")
+		return nil
 	}
 
 	// expecting /etc/sudoers.d/cagent-dmidecode is present
@@ -33,12 +61,14 @@ func fetchInventory() (map[string]interface{}, error) {
 	buf := bytes.Buffer{}
 	cmd.Stdout = bufio.NewWriter(&buf)
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("hwinfo: execute dmidecode %s", err.Error())
+		errs.AddNewf("execute dmidecode %s", err.Error())
+		return nil
 	}
 
 	dmi, err := dmidecode.Unmarshal(bufio.NewReader(&buf))
 	if err != nil {
-		return nil, fmt.Errorf("hwinfo: unmarshal dmi %s", err.Error())
+		errs.AddNewf("unmarshal dmi %s", err.Error())
+		return nil
 	}
 
 	res := make(map[string]interface{})
@@ -51,14 +81,14 @@ func fetchInventory() (map[string]interface{}, error) {
 		res["baseboard.model"] = reqSys[0].Version
 		res["baseboard.serial_number"] = reqSys[0].SerialNumber
 	} else if err != dmidecode.ErrNotFound {
-		logrus.Errorf("hwinfo: failed fetching baseboard info, %s", err.Error())
+		errs.AddNewf("failed fetching baseboard info, %s", err.Error())
 	}
 
 	var reqMem []dmidecode.ReqPhysicalMemoryArray
 	if err = dmi.Get(&reqMem); err == nil {
 		res["ram.number_of_modules"] = reqMem[0].NumberOfDevices
 	} else if err != dmidecode.ErrNotFound {
-		logrus.Errorf("hwinfo: failed fetching memory array info, %s", err.Error())
+		errs.AddNewf("failed fetching memory array info, %s", err.Error())
 	}
 
 	var reqMemDevs []dmidecode.ReqMemoryDevice
@@ -71,7 +101,7 @@ func fetchInventory() (map[string]interface{}, error) {
 			res[fmt.Sprintf("ram.%d.type", i)] = reqMemDevs[i].Type
 		}
 	} else if err != dmidecode.ErrNotFound {
-		logrus.Errorf("hwinfo: failed fetching memory device info, %s", err.Error())
+		errs.AddNewf("failed fetching memory device info, %s", err.Error())
 	}
 
 	var reqCPU []dmidecode.ReqProcessor
@@ -85,8 +115,8 @@ func fetchInventory() (map[string]interface{}, error) {
 			res[fmt.Sprintf("cpu.%d.thread_count", i)] = reqCPU[i].ThreadCount
 		}
 	} else if err != dmidecode.ErrNotFound {
-		logrus.Errorf("hwinfo: failed fetching cpu info, %s", err.Error())
+		errs.AddNewf("failed fetching cpu info, %s", err.Error())
 	}
 
-	return res, nil
+	return res
 }
