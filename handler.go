@@ -36,7 +36,6 @@ func (ca *Cagent) initHubClientOnce() {
 			}
 		}
 		if len(ca.Config.HubProxy) > 0 {
-			// TODO(max): this should be moved to config sanitizer/validator layer.
 			if !strings.HasPrefix(ca.Config.HubProxy, "http://") {
 				ca.Config.HubProxy = "http://" + ca.Config.HubProxy
 			}

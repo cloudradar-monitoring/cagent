@@ -453,7 +453,6 @@ func handleFlagServiceInstall(ca *cagent.Cagent, systemManager service.System, s
 	log.Infof("Cagent service(%s) has been installed. Starting...", systemManager.String())
 	err = s.Start()
 	if err != nil {
-		// TODO(max): shouldn't this be fatal?
 		log.WithError(err).Warningf("Cagent service(%s) startup failed", systemManager.String())
 	}
 

@@ -250,11 +250,9 @@ func windowsShowSettingsUI(ca *cagent.Cagent, installationMode bool) {
 			},
 		},
 		StatusBarItems: []StatusBarItem{{
-			AssignTo: &ui.StatusBar,
-			Width:    40,
-			OnClicked: func() {
-				// todo: show full error on click
-			},
+			AssignTo:  &ui.StatusBar,
+			Width:     40,
+			OnClicked: func() {},
 		}},
 	}.Create()
 

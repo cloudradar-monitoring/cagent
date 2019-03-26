@@ -14,7 +14,6 @@ func TestNewMinimumConfig(t *testing.T) {
 	envUser := "foo"
 	envPass := "bar"
 
-	// TODO: Not sure if this is really a good idea... could mess with other things
 	os.Setenv("CAGENT_HUB_URL", envURL)
 	os.Setenv("CAGENT_HUB_USER", envUser)
 	os.Setenv("CAGENT_HUB_PASSWORD", envPass)
