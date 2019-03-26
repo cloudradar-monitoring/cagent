@@ -2,7 +2,6 @@ package common
 
 import (
 	"errors"
-	"fmt"
 )
 
 // ErrorCollector type allows accumulation of errors in one place
@@ -16,17 +15,6 @@ func (c *ErrorCollector) Add(err error) {
 	if err != nil {
 		c.errs = append(c.errs, err)
 	}
-}
-
-// AddNew creates new error and adds to collection
-func (c *ErrorCollector) AddNew(text string) {
-	c.Add(errors.New(text))
-}
-
-// AddNewf creates new error using specified format and adds to collection
-func (c *ErrorCollector) AddNewf(format string, args ...interface{}) {
-	err := fmt.Errorf(format, args...)
-	c.Add(err)
 }
 
 // HasErrors returns true if there were any errors collected

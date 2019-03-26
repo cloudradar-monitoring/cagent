@@ -31,7 +31,7 @@ type monitorInfo struct {
 func Inventory() (map[string]interface{}, error) {
 	hw, err := fetchInventory()
 	if err != nil {
-		err = errors.Wrap(err, "hwinfo")
+		err = errors.Wrap(err, "[HWINFO]")
 		log.Error(err)
 		return hw, err
 	}

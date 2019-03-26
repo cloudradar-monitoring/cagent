@@ -9,6 +9,8 @@ import (
 	"github.com/StackExchange/wmi"
 	"github.com/gentlemanautomaton/windevice"
 	"github.com/gentlemanautomaton/windevice/deviceclass"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/wmi"
@@ -20,32 +22,38 @@ func fetchInventory() (map[string]interface{}, error) {
 	res := make(map[string]interface{})
 
 	errorCollector := common.ErrorCollector{}
-	pciDevices := listPCIDevices(&errorCollector)
+	pciDevices, err := listPCIDevices()
+	errorCollector.Add(err)
 	if len(pciDevices) > 0 {
 		res["pci.list"] = pciDevices
 	}
 
-	usbDevices := listUSBDevices(&errorCollector)
+	usbDevices, err := listUSBDevices()
+	errorCollector.Add(err)
 	if len(usbDevices) > 0 {
 		res["usb.list"] = usbDevices
 	}
 
-	displays := listDisplays(&errorCollector)
+	displays, err := listDisplays()
+	errorCollector.Add(err)
 	if len(displays) > 0 {
 		res["display.list"] = displays
 	}
 
-	cpuInfo := getCPUInfo(&errorCollector)
+	cpuInfo, err := getCPUInfo()
+	errorCollector.Add(err)
 	if len(cpuInfo) > 0 {
 		res = common.MergeStringMaps(res, cpuInfo)
 	}
 
-	baseboardInfo := getBaseboardInfo(&errorCollector)
+	baseboardInfo, err := getBaseboardInfo()
+	errorCollector.Add(err)
 	if len(baseboardInfo) > 0 {
 		res = common.MergeStringMaps(res, baseboardInfo)
 	}
 
-	ramInfo := getRamInfo(&errorCollector)
+	ramInfo, err := getRamInfo()
+	errorCollector.Add(err)
 	if len(ramInfo) > 0 {
 		res = common.MergeStringMaps(res, ramInfo)
 	}
@@ -53,7 +61,7 @@ func fetchInventory() (map[string]interface{}, error) {
 	return res, errorCollector.Combine()
 }
 
-func listPCIDevices(errs *common.ErrorCollector) []*pciDeviceInfo {
+func listPCIDevices() ([]*pciDeviceInfo, error) {
 	query := windevice.DeviceQuery{
 		Enumerator: "PCI",
 		Flags:      deviceclass.Present,
@@ -64,7 +72,7 @@ func listPCIDevices(errs *common.ErrorCollector) []*pciDeviceInfo {
 	err := query.Each(func(device windevice.Device) {
 		fullDisplayingName, err := device.Description()
 		if err != nil {
-			errs.AddNewf("could not get PCI device description %s", err.Error())
+			log.WithError(err).Warn("[HWINFO] could not get PCI device description")
 			index++
 			return
 		}
@@ -72,15 +80,15 @@ func listPCIDevices(errs *common.ErrorCollector) []*pciDeviceInfo {
 
 		class, err := device.Class()
 		if err != nil {
-			errs.AddNewf("could not get PCI device class %s", err.Error())
+			log.WithError(err).Warn("[HWINFO] could not get PCI device class")
 		}
 		location, err := device.LocationInformation()
 		if err != nil {
-			errs.AddNewf("could not get PCI device location %s", err.Error())
+			log.WithError(err).Warn("[HWINFO] could not get PCI device location")
 		}
 		vendor, err := device.Manufacturer()
 		if err != nil {
-			errs.AddNewf("could not get PCI device vendor %s", err.Error())
+			log.WithError(err).Warn("[HWINFO] could not get PCI device vendor")
 		}
 
 		description := class
@@ -99,14 +107,10 @@ func listPCIDevices(errs *common.ErrorCollector) []*pciDeviceInfo {
 		index++
 	})
 
-	if err != nil {
-		errs.Add(err)
-	}
-
-	return result
+	return result, errors.Wrap(err, "while listing PCI devices")
 }
 
-func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
+func listUSBDevices() ([]*usbDeviceInfo, error) {
 	enumerator := "USB"
 
 	query := windevice.DeviceQuery{
@@ -119,7 +123,7 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 	err := query.Each(func(device windevice.Device) {
 		fullDisplayingName, err := device.Description()
 		if err != nil {
-			errs.AddNewf("could not get USB device description %s", err.Error())
+			log.WithError(err).Warn("[HWINFO] could not get USB device description")
 			index++
 			return
 		}
@@ -128,11 +132,11 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 		location, _ := device.LocationInformation()
 		vendor, err := device.Manufacturer()
 		if err != nil {
-			errs.AddNewf("could not get USB device vendor %s", err.Error())
+			log.WithError(err).Warn("[HWINFO] could not get USB device vendor")
 		}
 		class, err := device.Class()
 		if err != nil {
-			errs.AddNewf("could not get USB device class %s", err.Error())
+			log.WithError(err).Warn("[HWINFO] could not get USB device class")
 		}
 		if class == "USB" {
 			class = ""
@@ -159,20 +163,15 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 		index++
 	})
 
-	if err != nil {
-		errs.Add(err)
-	}
-
-	return result
+	return result, errors.Wrap(err, "while listing USB devices")
 }
 
-func listDisplays(errs *common.ErrorCollector) []*monitorInfo {
+func listDisplays() ([]*monitorInfo, error) {
 	var monitors []win32_DesktopMonitor
 	query := wmi.CreateQuery(&monitors, "")
 	err := wmiutil.QueryWithTimeout(wmiQueryTimeout, query, &monitors)
 	if err != nil {
-		errs.AddNewf("request cpus info failed: %s", err.Error())
-		return nil
+		return nil, errors.Wrap(err, "request cpus info failed")
 	}
 
 	result := make([]*monitorInfo, 0)
@@ -216,18 +215,17 @@ func listDisplays(errs *common.ErrorCollector) []*monitorInfo {
 			Resolution:  resolutionStr,
 		})
 	}
-	return result
+	return result, nil
 }
 
-func getCPUInfo(errs *common.ErrorCollector) map[string]interface{} {
+func getCPUInfo() (map[string]interface{}, error) {
 	res := make(map[string]interface{})
 
 	var cpus []win32_Processor
 	query := wmi.CreateQuery(&cpus, "")
 	err := wmiutil.QueryWithTimeout(wmiQueryTimeout, query, &cpus)
 	if err != nil {
-		errs.AddNewf("request cpus info failed: %s", err.Error())
-		return nil
+		return nil, errors.Wrap(err, "request CPU info failed")
 	}
 
 	for i := range cpus {
@@ -239,15 +237,14 @@ func getCPUInfo(errs *common.ErrorCollector) map[string]interface{} {
 		res[fmt.Sprintf("cpu.%d.thread_count", i)] = cpus[i].NumberOfLogicalProcessors
 	}
 
-	return res
+	return res, nil
 }
 
-func getBaseboardInfo(errs *common.ErrorCollector) map[string]interface{} {
+func getBaseboardInfo() (map[string]interface{}, error) {
 	var baseBoard []win32_BaseBoard
 	query := wmi.CreateQuery(&baseBoard, "")
 	if err := wmiutil.QueryWithTimeout(wmiQueryTimeout, query, &baseBoard); err != nil {
-		errs.AddNewf("request baseboard info failed: %s", err.Error())
-		return nil
+		return nil, errors.Wrap(err, "request baseboard info failed")
 	}
 
 	res := make(map[string]interface{})
@@ -257,14 +254,14 @@ func getBaseboardInfo(errs *common.ErrorCollector) map[string]interface{} {
 		res["baseboard.model"] = baseBoard[0].Product
 	}
 
-	return res
+	return res, nil
 }
 
-func getRamInfo(errs *common.ErrorCollector) map[string]interface{} {
+func getRamInfo() (map[string]interface{}, error) {
 	var ram []win32_PhysicalMemory
 	query := wmi.CreateQuery(&ram, "")
 	if err := wmi.Query(query, &ram); err != nil {
-		errs.AddNewf("request ram info failed: %s", err.Error())
+		return nil, errors.Wrap(err, "request ram info failed")
 	}
 
 	res := make(map[string]interface{})
@@ -280,5 +277,5 @@ func getRamInfo(errs *common.ErrorCollector) map[string]interface{} {
 		}
 	}
 
-	return res
+	return res, nil
 }

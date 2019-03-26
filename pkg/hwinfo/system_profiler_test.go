@@ -7,8 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 func helperLoadSystemProfilerXML(t *testing.T, xmlFileName string) []byte {
@@ -23,9 +21,8 @@ func helperLoadSystemProfilerXML(t *testing.T, xmlFileName string) []byte {
 func TestParseOutputToListOfPCIDevices(t *testing.T) {
 	xml := helperLoadSystemProfilerXML(t, "pci.xml")
 
-	errs := &common.ErrorCollector{}
-	pciDevicesList := parseOutputToListOfPCIDevices(bytes.NewReader(xml), errs)
-	assert.False(t, errs.HasErrors())
+	pciDevicesList, err := parseOutputToListOfPCIDevices(bytes.NewReader(xml))
+	assert.NoError(t, err)
 
 	expectedPCIDevicesList := []*pciDeviceInfo{
 		{
@@ -71,9 +68,8 @@ func TestParseOutputToListOfPCIDevices(t *testing.T) {
 func TestParseOutputToListOfUSBDevices(t *testing.T) {
 	xml := helperLoadSystemProfilerXML(t, "usb.xml")
 
-	errs := &common.ErrorCollector{}
-	usbDevicesList := parseOutputToListOfUSBDevices(bytes.NewReader(xml), errs)
-	assert.False(t, errs.HasErrors())
+	usbDevicesList, err := parseOutputToListOfUSBDevices(bytes.NewReader(xml))
+	assert.NoError(t, err)
 
 	expectedUSBDevicesList := []*usbDeviceInfo{
 		{
@@ -138,9 +134,8 @@ func TestParseOutputToListOfUSBDevices(t *testing.T) {
 func TestParseOutputToListOfDisplays(t *testing.T) {
 	xml := helperLoadSystemProfilerXML(t, "displays.xml")
 
-	errs := &common.ErrorCollector{}
-	displayList := parseOutputToListOfDisplays(bytes.NewReader(xml), errs)
-	assert.False(t, errs.HasErrors())
+	displayList, err := parseOutputToListOfDisplays(bytes.NewReader(xml))
+	assert.NoError(t, err)
 
 	expectedDisplayList := []*monitorInfo{
 		{

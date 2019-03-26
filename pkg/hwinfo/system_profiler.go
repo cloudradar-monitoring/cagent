@@ -7,9 +7,8 @@ import (
 	"io"
 	"strings"
 
+	"github.com/pkg/errors"
 	"howett.net/plist"
-
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 type spPCIDataTypeEntry struct {
@@ -61,18 +60,16 @@ type spDisplaysDataType struct {
 	GraphicCards []spGraphicsCardDataTypeEntry `plist:"_items"`
 }
 
-func parseOutputToListOfPCIDevices(r io.ReadSeeker, errs *common.ErrorCollector) []*pciDeviceInfo {
+func parseOutputToListOfPCIDevices(r io.ReadSeeker) ([]*pciDeviceInfo, error) {
 	decoder := plist.NewDecoder(r)
 	var data []spPCIDataType
 	err := decoder.Decode(&data)
 	if err != nil {
-		errs.Add(err)
-		return nil
+		return nil, err
 	}
 
 	if len(data) == 0 {
-		errs.AddNew("unexpected XML input: no entries in plist of PCI devices")
-		return nil
+		return nil, errors.New("unexpected XML input: no entries in plist of PCI devices")
 	}
 
 	result := make([]*pciDeviceInfo, 0)
@@ -86,24 +83,22 @@ func parseOutputToListOfPCIDevices(r io.ReadSeeker, errs *common.ErrorCollector)
 		}
 		result = append(result, pciInfo)
 	}
-	return result
+	return result, nil
 }
 
-func parseOutputToListOfUSBDevices(r io.ReadSeeker, errs *common.ErrorCollector) []*usbDeviceInfo {
+func parseOutputToListOfUSBDevices(r io.ReadSeeker) ([]*usbDeviceInfo, error) {
 	decoder := plist.NewDecoder(r)
 	var data []spUSBDataType
 	err := decoder.Decode(&data)
 	if err != nil {
-		errs.Add(err)
-		return nil
+		return nil, err
 	}
 
 	if len(data) == 0 {
-		errs.AddNew("unexpected XML input: no entries in plist of USB devices")
-		return nil
+		return nil, errors.New("unexpected XML input: no entries in plist of USB devices")
 	}
 
-	return getUSBInfoFromHierarchy(data[0].Items)
+	return getUSBInfoFromHierarchy(data[0].Items), nil
 }
 
 func getUSBInfoFromHierarchy(items []spUSBDataTypeEntry) []*usbDeviceInfo {
@@ -128,18 +123,16 @@ func getUSBInfoFromHierarchy(items []spUSBDataTypeEntry) []*usbDeviceInfo {
 	return list
 }
 
-func parseOutputToListOfDisplays(r io.ReadSeeker, errs *common.ErrorCollector) []*monitorInfo {
+func parseOutputToListOfDisplays(r io.ReadSeeker) ([]*monitorInfo, error) {
 	decoder := plist.NewDecoder(r)
 	var data []spDisplaysDataType
 	err := decoder.Decode(&data)
 	if err != nil {
-		errs.Add(err)
-		return nil
+		return nil, err
 	}
 
 	if len(data) == 0 {
-		errs.AddNew("unexpected XML input: no entries in plist of monitors")
-		return nil
+		return nil, errors.New("unexpected XML input: no entries in plist of monitors")
 	}
 
 	result := make([]*monitorInfo, 0)
@@ -163,5 +156,5 @@ func parseOutputToListOfDisplays(r io.ReadSeeker, errs *common.ErrorCollector) [
 			result = append(result, monitorInfo)
 		}
 	}
-	return result
+	return result, nil
 }
