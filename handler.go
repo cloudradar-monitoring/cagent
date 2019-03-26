@@ -90,7 +90,7 @@ func (ca *Cagent) CheckHubCredentials(ctx context.Context, fieldHubURL, fieldHub
 	resp, err := ca.hubClient.Do(req)
 	cancelFn()
 	if err = ca.checkClientError(resp, err, fieldHubUser, fieldHubPassword); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
@@ -160,13 +160,13 @@ func (ca *Cagent) PostResultToHub(ctx context.Context, result *Result) error {
 			err = errors.Wrap(err, "failed to finalize gzipped buffer")
 			return err
 		}
-		req, _ = http.NewRequest("POST", ca.Config.HubURL, buf)
+		req, err = http.NewRequest("POST", ca.Config.HubURL, buf)
 		req.Header.Set("Content-Encoding", "gzip")
 	} else {
-		req, _ = http.NewRequest("POST", ca.Config.HubURL, bytes.NewBuffer(b))
+		req, err = http.NewRequest("POST", ca.Config.HubURL, bytes.NewBuffer(b))
 	}
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Add("User-Agent", ca.userAgent())
@@ -175,9 +175,8 @@ func (ca *Cagent) PostResultToHub(ctx context.Context, result *Result) error {
 	}
 	req = req.WithContext(ctx)
 	resp, err := ca.hubClient.Do(req)
-	err = errors.WithStack(err)
 	if err = ca.checkClientError(resp, err, "hub_user", "hub_password"); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
