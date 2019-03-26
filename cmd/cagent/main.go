@@ -478,7 +478,7 @@ func runUnderOsServiceManager(ca *cagent.Cagent) {
 }
 
 func writePidFileIfNeeded(ca *cagent.Cagent, oneRunOnlyModePtr *bool) {
-	if ca.Config.PidFile != "" && !*oneRunOnlyModePtr && runtime.GOOS != "windows" {
+	if len(ca.Config.PidFile) > 0 && !*oneRunOnlyModePtr && runtime.GOOS != "windows" {
 		err := ioutil.WriteFile(ca.Config.PidFile, []byte(strconv.Itoa(os.Getpid())), 0664)
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -489,11 +489,12 @@ func writePidFileIfNeeded(ca *cagent.Cagent, oneRunOnlyModePtr *bool) {
 }
 
 func removePidFileIfNeeded(ca *cagent.Cagent, oneRunOnlyModePtr *bool) {
-	if ca.Config.PidFile != "" && !*oneRunOnlyModePtr && runtime.GOOS != "windows" {
-		err := os.Remove(ca.Config.PidFile)
-		log.WithFields(log.Fields{
-			"pidFile": ca.Config.PidFile,
-		}).WithError(err).Errorf("Failed to remove pid file")
+	if len(ca.Config.PidFile) > 0 && !*oneRunOnlyModePtr && runtime.GOOS != "windows" {
+		if err := os.Remove(ca.Config.PidFile); err != nil {
+			log.WithFields(log.Fields{
+				"pidFile": ca.Config.PidFile,
+			}).WithError(err).Errorf("Failed to remove pid file")
+		}
 	}
 }
 

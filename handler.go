@@ -6,7 +6,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -75,9 +74,10 @@ func (ca *Cagent) CheckHubCredentials(ctx context.Context, fieldHubURL, fieldHub
 	if len(ca.Config.HubURL) == 0 {
 		return newEmptyFieldError(fieldHubURL)
 	} else if u, err := url.Parse(ca.Config.HubURL); err != nil {
+		err = errors.WithStack(err)
 		return newFieldError(fieldHubURL, err)
 	} else if u.Scheme != "http" && u.Scheme != "https" {
-		err := fmt.Errorf("wrong scheme '%s', URL must start with http:// or https://", u.Scheme)
+		err := errors.Errorf("wrong scheme '%s', URL must start with http:// or https://", u.Scheme)
 		return newFieldError(fieldHubURL, err)
 	}
 	req, _ := http.NewRequest("HEAD", ca.Config.HubURL, nil)
@@ -99,7 +99,7 @@ func (ca *Cagent) CheckHubCredentials(ctx context.Context, fieldHubURL, fieldHub
 
 func (ca *Cagent) checkClientError(resp *http.Response, err error, fieldHubUser, fieldHubPassword string) error {
 	if err != nil {
-		if err == context.DeadlineExceeded {
+		if errors.Cause(err) == context.DeadlineExceeded {
 			err = errors.New("connection timeout, please check your proxy or firewall settings")
 			return err
 		}
@@ -113,17 +113,17 @@ func (ca *Cagent) checkClientError(resp *http.Response, err error, fieldHubUser,
 		} else if len(ca.Config.HubPassword) == 0 {
 			return newEmptyFieldError(fieldHubPassword)
 		}
-		err := fmt.Errorf("unable to authorize with provided Hub credentials (HTTP %d)", resp.StatusCode)
+		err := errors.Errorf("unable to authorize with provided Hub credentials (HTTP %d)", resp.StatusCode)
 		return err
 	} else if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
-		err := fmt.Errorf("unable to authorize with provided Hub credentials (HTTP %d)", resp.StatusCode)
+		err := errors.Errorf("unable to authorize with provided Hub credentials (HTTP %d)", resp.StatusCode)
 		return err
 	}
 	return nil
 }
 
 func newEmptyFieldError(name string) error {
-	err := fmt.Errorf("unexpected empty field %s", name)
+	err := errors.Errorf("unexpected empty field %s", name)
 	return errors.Wrap(err, "the field must be filled with details of your Cloudradar account")
 }
 
@@ -137,9 +137,10 @@ func (ca *Cagent) PostResultToHub(ctx context.Context, result *Result) error {
 	if len(ca.Config.HubURL) == 0 {
 		return newEmptyFieldError("hub_url")
 	} else if u, err := url.Parse(ca.Config.HubURL); err != nil {
+		err = errors.WithStack(err)
 		return newFieldError("hub_url", err)
 	} else if u.Scheme != "http" && u.Scheme != "https" {
-		err := fmt.Errorf("wrong scheme '%s', URL must start with http:// or https://", u.Scheme)
+		err := errors.Errorf("wrong scheme '%s', URL must start with http:// or https://", u.Scheme)
 		return newFieldError("hub_url", err)
 	}
 	b, err := json.Marshal(result)
@@ -175,6 +176,7 @@ func (ca *Cagent) PostResultToHub(ctx context.Context, result *Result) error {
 	}
 	req = req.WithContext(ctx)
 	resp, err := ca.hubClient.Do(req)
+	err = errors.WithStack(err)
 	if err = ca.checkClientError(resp, err, "hub_user", "hub_password"); err != nil {
 		return err
 	}
@@ -347,15 +349,13 @@ func (ca *Cagent) ReportMeasurements(measurements MeasurementsMap, outputFile *o
 		return nil
 	}
 	ctx, cancelFn := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancelFn()
+
 	err := ca.PostResultToHub(ctx, result)
 	if err != nil {
-		cancelFn()
 		err = errors.Wrap(err, "failed to POST measurement result to Hub")
-		return err
 	}
-	cancelFn()
-
-	return nil
+	return err
 }
 
 func (ca *Cagent) RunOnce(outputFile *os.File) error {
