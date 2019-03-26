@@ -8,15 +8,16 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
 
 	"github.com/jaypipes/ghw"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/vcraescu/go-xrandr"
-
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 var lsusbLineRegexp = regexp.MustCompile(`[0-9|a-z|A-Z|.|/|-|:|\[|\]|_|+| ]+`)
@@ -51,7 +52,7 @@ func captureStderr(funcToExecute func()) (string, error) {
 	return buf.String(), nil
 }
 
-func listPCIDevices(errs *common.ErrorCollector) []*pciDeviceInfo {
+func listPCIDevices() ([]*pciDeviceInfo, error) {
 	var ghwErr error
 	var devices []*ghw.PCIDevice
 
@@ -64,15 +65,13 @@ func listPCIDevices(errs *common.ErrorCollector) []*pciDeviceInfo {
 		}
 	})
 	if err != nil {
-		errs.AddNewf("could not capture stderr when retrieving PCI information using ghw: %s", err.Error())
-		return nil
+		return nil, errors.Wrap(err, "could not capture stderr when retrieving PCI information using ghw")
 	}
 	if ghwErr != nil {
-		errs.AddNewf("there were error while retrieving PCI information using ghw: %s", ghwErr.Error())
-		return nil
+		return nil, errors.Wrap(ghwErr, "there were error while retrieving PCI information using ghw")
 	}
 	if len(stderrOutput) > 0 {
-		errs.AddNewf("there were error output while retrieving PCI information using ghw: %s", stderrOutput)
+		return nil, errors.Errorf("there were error output while retrieving PCI information using ghw: %s", stderrOutput)
 	}
 
 	result := make([]*pciDeviceInfo, 0, len(devices))
@@ -107,10 +106,10 @@ func listPCIDevices(errs *common.ErrorCollector) []*pciDeviceInfo {
 			Description: description,
 		})
 	}
-	return result
+	return result, nil
 }
 
-func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
+func listUSBDevices() ([]*usbDeviceInfo, error) {
 	results := make([]*usbDeviceInfo, 0)
 	reg := regexp.MustCompile(`[^:]+`)
 	var lines []string
@@ -119,14 +118,13 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 	buf := bytes.Buffer{}
 	cmd.Stdout = bufio.NewWriter(&buf)
 	if err := cmd.Run(); err != nil {
-		errs.Add(err)
-		return nil
+		log.Info("[HWINFO] lsusb command is not available. Skipping USB listing...")
+		return nil, nil
 	}
 
 	outBytes, err := ioutil.ReadAll(bufio.NewReader(&buf))
 	if err != nil {
-		errs.Add(err)
-		return nil
+		return nil, errors.Wrap(err, "could not read lsusb output")
 	}
 
 	lines = strings.Split(string(outBytes), "\n")
@@ -144,7 +142,7 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 		sanitizedTokensCount := len(sanitizedTokens)
 		if sanitizedTokensCount < minExpectedTokensCount {
 			if sanitizedTokensCount > 0 {
-				errs.AddNewf("unexpected lsusb command output: got %d tokens in line: %s", sanitizedTokensCount, line)
+				log.Warnf("[HWINFO] unexpected lsusb command output: got %d tokens in line: %s", sanitizedTokensCount, line)
 			}
 			continue
 		}
@@ -164,15 +162,15 @@ func listUSBDevices(errs *common.ErrorCollector) []*usbDeviceInfo {
 			Description: description,
 		})
 	}
-	return results
+	return results, nil
 }
 
-func listDisplays(errs *common.ErrorCollector) []*monitorInfo {
+func listDisplays() ([]*monitorInfo, error) {
 	results := make([]*monitorInfo, 0)
 	screens, err := xrandr.GetScreens()
 	if err != nil {
-		errs.Add(err)
-		return nil
+		log.WithError(err).Info("[HWINFO] xrandr not installed or returned not expected result. Skipping display listing...")
+		return nil, nil
 	}
 	for _, s := range screens {
 		for _, m := range s.Monitors {
@@ -188,5 +186,5 @@ func listDisplays(errs *common.ErrorCollector) []*monitorInfo {
 		}
 	}
 
-	return results
+	return results, nil
 }
