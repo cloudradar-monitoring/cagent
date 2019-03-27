@@ -319,7 +319,7 @@ func waitServiceState(ctx context.Context, s *mgr.Service, expectedState svc.Sta
 }
 
 func (ui *UI) CheckPermissions() {
-	if checkPermissions() {
+	if checkIsRunningWithElevatedPrivileges() {
 		return
 	}
 	RunDialog(ui.MainWindow, ui.ErrorIcon,
@@ -328,7 +328,7 @@ func (ui *UI) CheckPermissions() {
 		})
 }
 
-func checkPermissions() bool {
+func checkIsRunningWithElevatedPrivileges() bool {
 	_, err := os.Open("\\\\.\\PHYSICALDRIVE0")
 	if err != nil {
 		return false
