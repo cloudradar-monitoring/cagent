@@ -239,7 +239,7 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 		errs = append(errs, err.Error())
 	}
 
-	measurements = measurements.AddWithPrefix("listeningport.", ports)
+	measurements = measurements.AddWithPrefix("listeningports.", ports)
 
 	mem, err := ca.MemResults()
 	if err != nil {

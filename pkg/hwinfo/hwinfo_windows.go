@@ -37,7 +37,7 @@ func fetchInventory() (map[string]interface{}, error) {
 	displays, err := listDisplays()
 	errorCollector.Add(err)
 	if len(displays) > 0 {
-		res["display.list"] = displays
+		res["displays.list"] = displays
 	}
 
 	cpuInfo, err := getCPUInfo()
