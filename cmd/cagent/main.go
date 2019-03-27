@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -16,6 +17,7 @@ import (
 	"syscall"
 
 	"github.com/kardianos/service"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent"
@@ -41,7 +43,7 @@ func askForConfirmation(s string) bool {
 
 		response, err := reader.ReadString('\n')
 		if err != nil {
-			log.Fatalf("Failed to read confirmation: %s", err.Error())
+			log.WithError(err).Fatalln("Failed to read confirmation")
 		}
 
 		response = strings.ToLower(strings.TrimSpace(response))
@@ -97,19 +99,17 @@ func main() {
 	if serviceInstallUserPtr != nil && *serviceInstallUserPtr != "" ||
 		serviceInstallPtr != nil && *serviceInstallPtr {
 		if *outputFilePtr != "" {
-			fmt.Println("Output file(-o) flag can't be used together with service install(-s) flag")
-			os.Exit(1)
+			log.Fatalln("Output file(-o) flag can't be used together with service install(-s) flag")
 		}
 
 		if *serviceUninstallPtr {
-			fmt.Println("Service uninstall(-u) flag can't be used together with service install(-s) flag")
-			os.Exit(1)
+			log.Fatalln("Service uninstall(-u) flag can't be used together with service install(-s) flag")
 		}
 	}
 
 	cfg, err := cagent.HandleAllConfigSetup(*cfgPathPtr)
 	if err != nil {
-		log.Fatalf("Failed to handle cagent configuration: %s", err.Error())
+		log.WithError(err).Fatalln("Failed to handle Cagent configuration")
 	}
 
 	ca := cagent.New(cfg, *cfgPathPtr, version)
@@ -117,7 +117,7 @@ func main() {
 	handleFlagPrintConfig(*printConfigPtr, cfg)
 
 	if ((serviceInstallPtr == nil) || ((serviceInstallPtr != nil) && (!*serviceInstallPtr))) &&
-		((serviceInstallUserPtr == nil) || ((serviceInstallUserPtr != nil) && (*serviceInstallUserPtr == ""))) &&
+		((serviceInstallUserPtr == nil) || ((serviceInstallUserPtr != nil) && len(*serviceInstallUserPtr) == 0)) &&
 		!*serviceUninstallPtr {
 		handleServiceCommand(ca, *flagServiceStatusPtr, *flagServiceStartPtr, *flagServiceStopPtr, *flagServiceRestartPtr)
 	}
@@ -127,7 +127,7 @@ func main() {
 
 	configureLogger(ca)
 
-	if *outputFilePtr == "" && cfg.IOMode == cagent.IOModeFile {
+	if len(*outputFilePtr) == 0 && cfg.IOMode == cagent.IOModeFile {
 		*outputFilePtr = cfg.OutFile
 	}
 
@@ -172,7 +172,9 @@ func main() {
 	//  Handle interrupts
 	select {
 	case sig := <-sigc:
-		log.Infof("Got %s signal. Finishing the batch and exit...", sig.String())
+		log.WithFields(log.Fields{
+			"signal": sig.String(),
+		}).Infoln("Finishing the batch and exit...")
 		interruptChan <- struct{}{}
 		os.Exit(0)
 	case <-doneChan:
@@ -194,15 +196,13 @@ func handleServiceCommand(ca *cagent.Cagent, check, start, stop, restart bool) {
 
 	svc, err := getServiceFromFlags(ca, "", "")
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatalln(err)
 	}
 
 	var status service.Status
 
 	if status, err = svc.Status(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatalln(err)
 	}
 
 	if check {
@@ -270,15 +270,21 @@ func handleFlagSettings(settingsUI *bool, ca *cagent.Cagent) {
 
 func handleFlagLogLevel(ca *cagent.Cagent, logLevel string) {
 	// Check loglevel and if needed warn user and set to default
-	if logLevel == string(cagent.LogLevelError) || logLevel == string(cagent.LogLevelInfo) || logLevel == string(cagent.LogLevelDebug) {
+	switch cagent.LogLevel(logLevel) {
+	case cagent.LogLevelError, cagent.LogLevelInfo, cagent.LogLevelDebug:
 		ca.SetLogLevel(cagent.LogLevel(logLevel))
-	} else if logLevel != "" {
-		log.Warnf("Invalid log level: \"%s\". Set to default: \"%s\"", logLevel, ca.Config.LogLevel)
+	default:
+		if len(logLevel) > 0 {
+			log.WithFields(log.Fields{
+				"logLevel":     logLevel,
+				"defaultLevel": ca.Config.LogLevel,
+			}).Warnln("Unknown log level detected, setting to default")
+		}
 	}
 }
 
 func handleFlagOutput(outputFile string, oneRunOnlyMode bool) *os.File {
-	if outputFile == "" {
+	if len(outputFile) == 0 {
 		return nil
 	}
 
@@ -297,7 +303,9 @@ func handleFlagOutput(outputFile string, oneRunOnlyMode bool) *os.File {
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			err = os.MkdirAll(dir, 0644)
 			if err != nil {
-				log.WithError(err).Fatalf("Failed to create the output file directory: '%s'", dir)
+				log.WithFields(log.Fields{
+					"dir": dir,
+				}).WithError(err).Fatalln("Failed to create the output file directory")
 			}
 		}
 	}
@@ -313,7 +321,9 @@ func handleFlagOutput(outputFile string, oneRunOnlyMode bool) *os.File {
 	// Ensure that we can open the output file
 	output, err := os.OpenFile(outputFile, mode, 0644)
 	if err != nil {
-		log.WithError(err).Fatalf("Failed to open the output file: '%s'", outputFile)
+		log.WithFields(log.Fields{
+			"file": outputFile,
+		}).WithError(err).Fatalln("Failed to open the output file")
 	}
 
 	return output
@@ -323,8 +333,7 @@ func handleFlagOneRunOnlyMode(ca *cagent.Cagent, oneRunOnlyMode bool, output *os
 	if oneRunOnlyMode {
 		err := ca.RunOnce(output)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatalln(err)
 		}
 		os.Exit(0)
 	}
@@ -334,10 +343,8 @@ func handleFlagDaemonizeMode(daemonizeMode bool) {
 	if daemonizeMode && os.Getenv("cagent_FORK") != "1" {
 		err := rerunDetached()
 		if err != nil {
-			fmt.Println("Failed to fork process: ", err.Error())
-			os.Exit(1)
+			log.WithError(err).Fatalln("Failed to fork process")
 		}
-
 		os.Exit(0)
 	}
 }
@@ -349,26 +356,22 @@ func handleFlagServiceUninstall(ca *cagent.Cagent, serviceUninstallPtr bool) {
 
 	systemService, err := getServiceFromFlags(ca, "", "")
 	if err != nil {
-		log.Fatalf("Failed to get system service: %s", err.Error())
+		log.WithError(err).Fatalln("Failed to get system service")
 	}
-
 	status, err := systemService.Status()
 	if err != nil {
-		fmt.Println("Failed to get service status: ", err.Error())
+		log.WithError(err).Warnln("Failed to get service status")
 	}
-
 	if status == service.StatusRunning {
 		err = systemService.Stop()
 		if err != nil {
 			// don't exit here, just write a warning and try to uninstall
-			fmt.Println("Failed to stop the running service: ", err.Error())
+			log.WithError(err).Warnln("Failed to stop the running service")
 		}
 	}
-
 	err = systemService.Uninstall()
 	if err != nil {
-		fmt.Println("Failed to uninstall the service: ", err.Error())
-		os.Exit(1)
+		log.WithError(err).Fatalln("Failed to uninstall the service")
 	}
 
 	os.Exit(0)
@@ -378,7 +381,7 @@ func handleFlagServiceInstall(ca *cagent.Cagent, systemManager service.System, s
 	// serviceInstallPtr is currently used on windows
 	// serviceInstallUserPtr is used on other systems
 	// if both of them are empty - just return
-	if (serviceInstallUserPtr == nil || *serviceInstallUserPtr == "") &&
+	if (serviceInstallUserPtr == nil || len(*serviceInstallUserPtr) == 0) &&
 		(serviceInstallPtr == nil || !*serviceInstallPtr) {
 		return
 	}
@@ -390,16 +393,16 @@ func handleFlagServiceInstall(ca *cagent.Cagent, systemManager service.System, s
 
 	s, err := getServiceFromFlags(ca, cfgPath, username)
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		log.Fatalln(err)
 	}
 
 	if runtime.GOOS != "windows" {
 		userName := *serviceInstallUserPtr
 		u, err := user.Lookup(userName)
 		if err != nil {
-			fmt.Printf("Failed to find the user '%s'\n", userName)
-			os.Exit(1)
+			log.WithFields(log.Fields{
+				"user": userName,
+			}).WithError(err).Fatalln("Failed to find the user")
 		}
 
 		svcConfig.UserName = userName
@@ -407,7 +410,9 @@ func handleFlagServiceInstall(ca *cagent.Cagent, systemManager service.System, s
 		// because installer can be run under root so the log file will be also created under root
 		err = chownFile(ca.Config.LogFile, u)
 		if err != nil {
-			fmt.Printf("Failed to chown log file for '%s' user\n", userName)
+			log.WithFields(log.Fields{
+				"user": userName,
+			}).WithError(err).Warnln("Failed to chown log file")
 		}
 	}
 	const maxAttempts = 3
@@ -415,82 +420,79 @@ func handleFlagServiceInstall(ca *cagent.Cagent, systemManager service.System, s
 		err = s.Install()
 		// Check error case where the service already exists
 		if err != nil && strings.Contains(err.Error(), "already exists") {
-			fmt.Printf("cagent service(%s) already installed: %s\n", systemManager.String(), err.Error())
+			log.WithError(err).Warnf("Cagent service(%s) already installed", systemManager.String())
 
 			if attempt == maxAttempts {
-				fmt.Printf("Give up after %d attempts\n", maxAttempts)
-				os.Exit(1)
+				log.Fatalf("Giving up after %d attempts", maxAttempts)
 			}
 
-			osSpecificNote := ""
+			var osSpecificNote string
 			if runtime.GOOS == "windows" {
-				osSpecificNote = " Windows Services Manager app should not be opened!"
+				osSpecificNote = " Windows Services Manager application must be closed before proceeding!"
 			}
 			if askForConfirmation("Do you want to overwrite it?" + osSpecificNote) {
 				err = s.Stop()
 				if err != nil {
-					fmt.Println("Failed to stop the service: ", err.Error())
+					log.WithError(err).Warnln("Failed to stop the service")
 				}
 
 				// lets try to uninstall despite of this error
 				err := s.Uninstall()
 				if err != nil {
-					fmt.Println("Failed to unistall the service: ", err.Error())
-					os.Exit(1)
+					log.WithError(err).Fatalln("Failed to uninstall the service")
 				}
 			}
-
-			// Check general error case
 		} else if err != nil {
-			fmt.Printf("cagent service(%s) installing error: %s\n", systemManager.String(), err.Error())
-			os.Exit(1)
-			// Service install was success so we can exit the loop
+			log.WithError(err).Fatalf("Cagent service(%s) installation failed", systemManager.String())
 		} else {
+			// service installation was success so we can exit the loop
 			break
 		}
 	}
 
-	fmt.Printf("cagent service(%s) installed. Starting...\n", systemManager.String())
+	log.Infof("Cagent service(%s) has been installed. Starting...", systemManager.String())
 	err = s.Start()
 	if err != nil {
-		fmt.Println(err.Error())
+		log.WithError(err).Warningf("Cagent service(%s) startup failed", systemManager.String())
 	}
 
-	fmt.Printf("Log file located at: %s\n", ca.Config.LogFile)
-	fmt.Printf("Config file located at: %s\n\n", cfgPath)
-
+	log.Infof("Log file located at: %s", ca.Config.LogFile)
+	log.Infof("Config file located at: %s", cfgPath)
 	os.Exit(0)
 }
 
 func runUnderOsServiceManager(ca *cagent.Cagent) {
 	systemService, err := getServiceFromFlags(ca, "", "")
 	if err != nil {
-		log.Fatalf("Failed to get system service: %s", err.Error())
+		log.WithError(err).Fatalln("Failed to get system service")
 	}
 
 	// we are running under OS service manager
 	err = systemService.Run()
 	if err != nil {
-		log.Fatalf("Failed to run system service: %s", err.Error())
+		log.WithError(err).Fatalln("Failed to run system service")
 	}
 
 	os.Exit(0)
 }
 
 func writePidFileIfNeeded(ca *cagent.Cagent, oneRunOnlyModePtr *bool) {
-	if ca.Config.PidFile != "" && !*oneRunOnlyModePtr && runtime.GOOS != "windows" {
+	if len(ca.Config.PidFile) > 0 && !*oneRunOnlyModePtr && runtime.GOOS != "windows" {
 		err := ioutil.WriteFile(ca.Config.PidFile, []byte(strconv.Itoa(os.Getpid())), 0664)
 		if err != nil {
-			log.Errorf("Failed to write pid file at: %s", ca.Config.PidFile)
+			log.WithFields(log.Fields{
+				"pidFile": ca.Config.PidFile,
+			}).WithError(err).Errorf("Failed to write pid file")
 		}
 	}
 }
 
 func removePidFileIfNeeded(ca *cagent.Cagent, oneRunOnlyModePtr *bool) {
-	if ca.Config.PidFile != "" && !*oneRunOnlyModePtr && runtime.GOOS != "windows" {
-		err := os.Remove(ca.Config.PidFile)
-		if err != nil {
-			log.Errorf("Failed to remove pid file at: %s", ca.Config.PidFile)
+	if len(ca.Config.PidFile) > 0 && !*oneRunOnlyModePtr && runtime.GOOS != "windows" {
+		if err := os.Remove(ca.Config.PidFile); err != nil {
+			log.WithFields(log.Fields{
+				"pidFile": ca.Config.PidFile,
+			}).WithError(err).Errorf("Failed to remove pid file")
 		}
 	}
 }
@@ -501,32 +503,33 @@ func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 	}
 
 	if ca.Config.IOMode == cagent.IOModeFile {
+		localFields := log.Fields{
+			"outFile": ca.Config.OutFile,
+			"ioMode":  ca.Config.IOMode,
+		}
 		file, err := os.OpenFile(ca.Config.OutFile, os.O_WRONLY, 0666)
 		if err != nil {
-			fmt.Printf("Failed to validate config in local file mode. Access error to file \"%s\": %s", ca.Config.OutFile, err.Error())
-			os.Exit(1)
+			log.WithFields(localFields).WithError(err).Fatalln("Failed to validate config")
 		}
-
 		if err := file.Close(); err != nil {
-			fmt.Printf("couldn't close output file \"%s\": %s\n", ca.Config.OutFile, err.Error())
+			log.WithFields(localFields).WithError(err).Fatalln("Could not close the config file")
 		}
-
-		fmt.Printf("Config verified in local file mode. output file: %s\n", ca.Config.OutFile)
+		log.WithFields(localFields).Infoln("Config verified")
 		os.Exit(0)
 	}
 
-	err := ca.TestHub()
+	ctx := context.Background()
+	err := ca.CheckHubCredentials(ctx, "hub_url", "hub_user", "hub_password")
 	if err != nil {
 		if runtime.GOOS == "windows" {
 			// ignore toast error to make the main error clear for user
 			// toast error probably means toast not supported on the system
-			_ = sendErrorNotification("Cagent connection test failed", err.Error())
+			_ = sendErrorNotification("Hub connection check failed", err.Error())
 		}
-		fmt.Printf("Cagent HUB test failed: %s\n", err.Error())
+		log.WithError(err).Errorln("Hub connection check failed")
 		systemService, err := getServiceFromFlags(ca, "", "")
 		if err != nil {
-			fmt.Printf("Failed to get system service: %s\n", err.Error())
-			os.Exit(1)
+			log.WithError(err).Fatalln("Failed to get system service")
 		}
 
 		status, err := systemService.Status()
@@ -538,17 +541,19 @@ func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 
 		systemManager := service.ChosenSystem()
 		if status == service.StatusRunning || status == service.StatusStopped {
-			fmt.Printf("Fix the config and then restart the service:\n%s\n\n", getSystemMangerCommand(systemManager.String(), svcConfig.Name, "restart"))
+			restartCmdSpec := getSystemMangerCommand(systemManager.String(), svcConfig.Name, "restart")
+			log.WithFields(log.Fields{
+				"restartCmd": restartCmdSpec,
+			}).Infoln("Fix the config and then restart the service")
 		}
 
 		os.Exit(1)
 	}
 
 	if runtime.GOOS == "windows" {
-		_ = sendSuccessNotification("Cagent connection test succeeded", "")
+		_ = sendSuccessNotification("Hub connection check is done", "")
 	}
-
-	fmt.Printf("HUB connection test succeeded and credentials are correct!\n")
+	log.Infoln("Hub connection check is done and credentials are correct!")
 	os.Exit(0)
 }
 
@@ -567,7 +572,9 @@ func rerunDetached() error {
 		return err
 	}
 
-	fmt.Printf("Cagent will continue in background...\nPID %d", cmd.Process.Pid)
+	log.WithFields(log.Fields{
+		"PID": cmd.Process.Pid,
+	}).Infoln("Cagent will continue in background...")
 
 	cmd.Process.Release()
 	return nil
@@ -576,12 +583,14 @@ func rerunDetached() error {
 func chownFile(filePath string, u *user.User) error {
 	uid, err := strconv.Atoi(u.Uid)
 	if err != nil {
-		return fmt.Errorf("Chown files: error converting UID(%s) to int", u.Uid)
+		err = errors.Wrapf(err, "UID(%s) to int conversion failed", u.Uid)
+		return err
 	}
 
 	gid, err := strconv.Atoi(u.Gid)
 	if err != nil {
-		return fmt.Errorf("Chown files: error converting GID(%s) to int", u.Gid)
+		err = errors.Wrapf(err, "GID(%s) to int conversion failed", u.Gid)
+		return err
 	}
 
 	return os.Chown(filePath, uid, gid)
@@ -619,7 +628,8 @@ func getServiceFromFlags(ca *cagent.Cagent, configPath, userName string) (servic
 			var err error
 			configPath, err = filepath.Abs(configPath)
 			if err != nil {
-				return nil, fmt.Errorf("Failed to get absolute path to config at '%s': %s", configPath, err)
+				err = errors.Wrapf(err, "Failed to get absolute path to config at %s", configPath)
+				return nil, err
 			}
 		}
 		svcConfig.Arguments = []string{"-c", configPath}
@@ -641,9 +651,12 @@ func configureLogger(ca *cagent.Cagent) {
 
 	log.SetFormatter(&tfmt)
 
-	if ca.Config.LogFile != "" {
-		if err := cagent.AddLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666); err != nil {
-			log.Errorf("Failed to setup log file: %s: %s", ca.Config.PidFile, err.Error())
+	if len(ca.Config.LogFile) > 0 {
+		err := cagent.AddLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"logFile": ca.Config.LogFile,
+			}).WithError(err).Errorln("Failed to setup log file")
 		}
 	}
 

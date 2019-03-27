@@ -3,6 +3,8 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,12 +14,327 @@ import (
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
 	"github.com/lxn/win"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
 
 	"github.com/cloudradar-monitoring/cagent"
 )
+
+type UI struct {
+	MainWindow  *walk.MainWindow
+	DataBinder  *walk.DataBinder
+	SuccessIcon *walk.Icon
+	ErrorIcon   *walk.Icon
+	StatusBar   *walk.StatusBarItem
+	SaveButton  *walk.ToolButton
+
+	cagent           *cagent.Cagent
+	installationMode bool
+}
+
+type setupErrors struct {
+	connectionError error
+	configError     error
+	serviceError    error
+}
+
+func (se *setupErrors) SetConnectionError(err error) {
+	se.connectionError = err
+}
+
+func (se *setupErrors) SetConfigError(err error) {
+	se.configError = err
+}
+
+func (se *setupErrors) SetServiceError(err error) {
+	se.serviceError = err
+}
+
+func (se *setupErrors) Describe() string {
+	buf := new(bytes.Buffer)
+	if se.connectionError != nil {
+		fmt.Fprintf(buf, "Hub connection failed: %v", se.connectionError)
+		return buf.String()
+	} else {
+		fmt.Fprintln(buf, "Hub connection succeeded.")
+	}
+	if se.configError != nil {
+		fmt.Fprintf(buf, "Failed to save settings: %v", se.configError)
+		return buf.String()
+	} else {
+		fmt.Fprintln(buf, "Your settings are saved.")
+	}
+	if se.serviceError != nil {
+		fmt.Fprintf(buf, "Failed to start Cagent service: %v", se.serviceError)
+		return buf.String()
+	} else {
+		fmt.Fprint(buf, "Services restarted and you are all set up!")
+	}
+	return buf.String()
+}
+
+// CheckSaveAndReload trying to test the Hub address and credentials from the config.
+// If testOnly is true do not show alert message about the status (used to test the existing config on start).
+func (ui *UI) CheckSaveAndReload(testOnly bool) {
+	saveButtonText := ui.SaveButton.Text()
+	defer func() {
+		ui.SaveButton.SetText(saveButtonText)
+		ui.SaveButton.SetEnabled(true)
+	}()
+
+	ui.SaveButton.SetEnabled(false)
+	ui.SaveButton.SetText("Testing...")
+
+	ctx := context.Background()
+	setupStatus := &setupErrors{}
+	err := ui.cagent.CheckHubCredentials(ctx, "URL", "User", "Password")
+	if err != nil {
+		if !testOnly {
+			setupStatus.SetConnectionError(err)
+			ui.StatusBar.SetText("Status: failed to connect to the Hub")
+			ui.StatusBar.SetIcon(ui.ErrorIcon)
+			RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", setupStatus.Describe(), nil)
+		}
+		return
+	} else if testOnly {
+		// in case we running this inside msi installer, just exit
+		if ui.installationMode {
+			os.Exit(0)
+		}
+		// otherwise - provide a feedback for user and set the status
+		ui.StatusBar.SetText("Status: successfully connected to the Hub")
+		ui.StatusBar.SetIcon(ui.SuccessIcon)
+		return
+	}
+
+	ui.SaveButton.SetText("Saving...")
+
+	ui.cagent.Config.MinValuableConfig.IOMode = cagent.IOModeHTTP
+	err = cagent.SaveConfigFile(&ui.cagent.Config.MinValuableConfig, ui.cagent.ConfigLocation)
+	if err != nil {
+		setupStatus.SetConfigError(errors.Wrap(err, "Failed to write config file"))
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", setupStatus.Describe(), nil)
+		return
+	}
+
+	m, err := mgr.Connect()
+	if err != nil {
+		setupStatus.SetServiceError(errors.Wrap(err, "Failed to connect to Windows Service Manager"))
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", setupStatus.Describe(), nil)
+		return
+	}
+	defer m.Disconnect()
+
+	s, err := m.OpenService("cagent")
+	if err != nil {
+		setupStatus.SetServiceError(errors.Wrap(err, "Failed to find Cagent service"))
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", setupStatus.Describe(), nil)
+		return
+	}
+	defer s.Close()
+
+	ui.SaveButton.SetText("Stopping the service...")
+
+	if err := stopService(ctx, s); err != nil {
+		setupStatus.SetServiceError(errors.Wrap(err, "Failed to stop Cagent service"))
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", setupStatus.Describe(), nil)
+		return
+	}
+
+	ui.SaveButton.SetText("Starting the service...")
+	if err := startService(ctx, s); err != nil {
+		setupStatus.SetServiceError(errors.Wrap(err, "Failed to start Cagent service"))
+		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", setupStatus.Describe(), nil)
+		return
+	}
+
+	ui.StatusBar.SetText("Status: successfully connected to the Hub")
+	ui.StatusBar.SetIcon(ui.SuccessIcon)
+	if ui.installationMode {
+		RunDialog(ui.MainWindow, ui.SuccessIcon, "Success", setupStatus.Describe(), func() {
+			os.Exit(0)
+		})
+	}
+	RunDialog(ui.MainWindow, ui.SuccessIcon, "Success", setupStatus.Describe(), nil)
+}
+
+// windowsShowSettingsUI draws a window and waits until it will be closed.
+// When installationMode is true, close the window after successful test&save.
+func windowsShowSettingsUI(ca *cagent.Cagent, installationMode bool) {
+	ui := UI{
+		cagent:           ca,
+		installationMode: installationMode,
+	}
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	exPath := filepath.Dir(ex)
+
+	ui.SuccessIcon, err = walk.NewIconFromFile(filepath.Join(exPath, "resources", "success.ico"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	ui.ErrorIcon, err = walk.NewIconFromFile(filepath.Join(exPath, "resources", "error.ico"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	labelFont := Font{PointSize: 12, Family: "Segoe UI"}
+	inputFont := Font{PointSize: 12, Family: "Segoe UI"}
+	buttonFont := Font{PointSize: 12, Family: "Segoe UI"}
+
+	MainWindow{
+		AssignTo: &ui.MainWindow,
+		Title:    "Cagent",
+		MinSize:  Size{360, 300},
+		MaxSize:  Size{660, 300},
+
+		DataBinder: DataBinder{
+			AssignTo:       &ui.DataBinder,
+			Name:           "config",
+			DataSource:     ca.Config,
+			ErrorPresenter: ToolTipErrorPresenter{},
+		},
+		Layout: VBox{},
+		Children: []Widget{
+			GroupBox{
+				Title:  "Hub Connection Credentials",
+				Layout: Grid{Columns: 2},
+				Children: []Widget{
+					Label{
+						Text: "URL:",
+						Font: labelFont,
+					},
+					LineEdit{
+						Text: Bind("HubURL"),
+						Font: inputFont,
+					},
+
+					Label{
+						Text: "User:",
+						Font: labelFont,
+					},
+					LineEdit{
+						Text: Bind("HubUser"),
+						Font: inputFont,
+					},
+
+					Label{
+						Text: "Pass:",
+						Font: labelFont,
+					},
+					LineEdit{
+						Text: Bind("HubPassword"),
+						Font: inputFont,
+					},
+				},
+			},
+			Composite{
+				Layout: HBox{},
+				Children: []Widget{
+					ToolButton{
+						MinSize:            Size{380, 35},
+						AlwaysConsumeSpace: true,
+						AssignTo:           &ui.SaveButton,
+						Text:               "Test and Save",
+						Font:               buttonFont,
+						OnClicked: func() {
+							ui.DataBinder.Submit()
+							ui.CheckSaveAndReload(false)
+						},
+					},
+				},
+			},
+		},
+		StatusBarItems: []StatusBarItem{{
+			AssignTo:  &ui.StatusBar,
+			Width:     40,
+			OnClicked: func() {},
+		}},
+	}.Create()
+
+	go func() {
+		ui.CheckPermissions()
+		ui.CheckSaveAndReload(true)
+	}()
+
+	// disable window resize
+	win.SetWindowLong(ui.MainWindow.Handle(), win.GWL_STYLE, win.WS_CAPTION|win.WS_SYSMENU)
+	win.ShowWindow(ui.MainWindow.Handle(), win.SW_SHOW)
+	ui.MainWindow.Run()
+}
+
+func startService(ctx context.Context, s *mgr.Service) error {
+	err := s.Start("is", "manual-started")
+	if err != nil {
+		err = errors.Wrap(err, "could not schedule a service to start")
+		return err
+	}
+
+	return waitServiceState(ctx, s, svc.Running)
+}
+
+func stopService(ctx context.Context, s *mgr.Service) error {
+	status, err := s.Control(svc.Stop)
+	if err != nil {
+		if strings.Contains(err.Error(), "has not been started") {
+			return nil
+		}
+		err = errors.Wrap(err, "could not schedule a service to stop")
+		return err
+	}
+	if status.State == svc.Stopped {
+		return nil
+	}
+	return waitServiceState(ctx, s, svc.Stopped)
+}
+
+// waitServiceState checks the current state of a service and waits until it will match
+// the expectedState, or a context deadline appearing first.
+func waitServiceState(ctx context.Context, s *mgr.Service, expectedState svc.State) error {
+	for {
+		select {
+		case <-ctx.Done():
+			if ctx.Err() == context.DeadlineExceeded {
+				err := errors.Wrap(ctx.Err(), "timeout waiting for service to stop")
+				return err
+			}
+			return nil
+		default:
+			currentStatus, err := s.Query()
+			if err != nil {
+				err := errors.Wrap(err, "could not retrieve service status")
+				return err
+			}
+			if currentStatus.State == expectedState {
+				return nil
+			}
+			time.Sleep(300 * time.Millisecond)
+		}
+	}
+	return nil
+}
+
+func (ui *UI) CheckPermissions() {
+	if checkIsRunningWithElevatedPrivileges() {
+		return
+	}
+	RunDialog(ui.MainWindow, ui.ErrorIcon,
+		"Error", "Please run this program with administrator priveleges.", func() {
+			os.Exit(1)
+		})
+}
+
+func checkIsRunningWithElevatedPrivileges() bool {
+	_, err := os.Open("\\\\.\\PHYSICALDRIVE0")
+	if err != nil {
+		return false
+	}
+	return true
+}
 
 func RunDialog(owner walk.Form, icon *walk.Icon, title, text string, callback func()) (int, error) {
 	var dlg *walk.Dialog
@@ -66,270 +383,4 @@ func RunDialog(owner walk.Form, icon *walk.Icon, title, text string, callback fu
 			},
 		},
 	}.Run(owner)
-}
-
-type UI struct {
-	MainWindow  *walk.MainWindow
-	DataBinder  *walk.DataBinder
-	SuccessIcon *walk.Icon
-	ErrorIcon   *walk.Icon
-	StatusBar   *walk.StatusBarItem
-	SaveButton  *walk.ToolButton
-
-	installationMode bool
-	ca               *cagent.Cagent
-}
-
-// TestSaveReload trying to test the HUB address and credentials from the config
-// if testOnly is true do not show alert message about the status(used to test the existed config on start)
-func (ui *UI) TestSaveReload(testOnly bool) {
-	// it will become messy if we will handle all UI errors here
-	// just ignore them and go further, because next steps don't depend on previous ones
-
-	saveButtonText := ui.SaveButton.Text()
-	ui.SaveButton.SetEnabled(false)
-	ui.SaveButton.SetText("Testing...")
-	err := ui.ca.TestHubWinUI()
-	defer func() {
-		ui.SaveButton.SetText(saveButtonText)
-		ui.SaveButton.SetEnabled(true)
-	}()
-
-	if err != nil {
-		// do not set the error in the status bar by default
-		if err == cagent.ErrorTestWinUISettingsAreEmpty && testOnly {
-			return
-		}
-
-		ui.StatusBar.SetText("Status: failed to connect to the HUB ")
-		ui.StatusBar.SetIcon(ui.ErrorIcon)
-
-		if !testOnly {
-			RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", err.Error(), nil)
-		}
-		return
-	}
-
-	if testOnly {
-		// in case we running this inside msi installer, just exit
-		if ui.installationMode {
-			os.Exit(0)
-		}
-
-		// otherwise - provide a feedback for user and set the status
-		ui.StatusBar.SetText("Status: successfully connected to the HUB")
-		ui.StatusBar.SetIcon(ui.SuccessIcon)
-		return
-	}
-
-	message := "Test connection succeeded.\n"
-
-	ui.SaveButton.SetText("Saving...")
-
-	ui.ca.Config.MinValuableConfig.IOMode = cagent.IOModeHTTP
-
-	err = cagent.SaveConfigFile(&ui.ca.Config.MinValuableConfig, ui.ca.ConfigLocation)
-	if err != nil {
-		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to save config: "+err.Error(), nil)
-		return
-	}
-
-	message += "Your settings are saved.\n"
-
-	m, err := mgr.Connect()
-	if err != nil {
-		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to connect to Windows Service Manager: "+err.Error(), nil)
-		return
-	}
-	defer m.Disconnect()
-
-	s, err := m.OpenService("cagent")
-	if err != nil {
-		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to connect to find 'cagent' service: "+err.Error(), nil)
-		return
-	}
-	defer s.Close()
-
-	ui.SaveButton.SetText("Stopping the service...")
-	err = stopService(s)
-	if err != nil && !strings.Contains(err.Error(), "has not been started") {
-		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to stop 'cagent' service: "+err.Error(), nil)
-		return
-	}
-
-	ui.SaveButton.SetText("Starting the service...")
-	err = startService(s)
-	if err != nil {
-		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", message+"Failed to start 'cagent' service: "+err.Error(), nil)
-		return
-	}
-
-	var callback func()
-
-	if ui.installationMode {
-		callback = func() {
-			os.Exit(0)
-		}
-	}
-
-	RunDialog(ui.MainWindow, ui.SuccessIcon, "Success", message+"Services restarted and you are all set up!", callback)
-	ui.StatusBar.SetText("Status: successfully connected to the HUB")
-	ui.StatusBar.SetIcon(ui.SuccessIcon)
-}
-
-// windowsShowSettingsUI draws a window and wait until it will be closed closed
-// when installationMode is true close the window after successful test&save
-func windowsShowSettingsUI(ca *cagent.Cagent, installationMode bool) {
-	ui := UI{ca: ca, installationMode: installationMode}
-	ex, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
-	exPath := filepath.Dir(ex)
-
-	ui.SuccessIcon, err = walk.NewIconFromFile(filepath.Join(exPath, "resources", "success.ico"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ui.ErrorIcon, err = walk.NewIconFromFile(filepath.Join(exPath, "resources", "error.ico"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	labelFont := Font{PointSize: 12, Family: "Segoe UI"}
-	inputFont := Font{PointSize: 12, Family: "Segoe UI"}
-	buttonFont := Font{PointSize: 12, Family: "Segoe UI"}
-
-	MainWindow{
-		AssignTo: &ui.MainWindow,
-		Title:    "Cagent",
-		MinSize:  Size{360, 300},
-		MaxSize:  Size{660, 300},
-
-		DataBinder: DataBinder{
-			AssignTo:       &ui.DataBinder,
-			Name:           "config",
-			DataSource:     ca.Config,
-			ErrorPresenter: ToolTipErrorPresenter{},
-		},
-		Layout: VBox{},
-		Children: []Widget{
-			Composite{
-				Layout: Grid{Columns: 2},
-				Children: []Widget{
-					Label{
-						Text: "HUB URL",
-						Font: labelFont,
-					},
-					LineEdit{
-						Text: Bind("HubURL"),
-						Font: inputFont,
-					},
-
-					Label{
-						Text: "HUB USER",
-						Font: labelFont,
-					},
-					LineEdit{
-						Text: Bind("HubUser"),
-						Font: inputFont,
-					},
-
-					Label{
-						Text: "HUB PASSWORD",
-						Font: labelFont,
-					},
-					LineEdit{
-						Text: Bind("HubPassword"),
-						Font: inputFont,
-					},
-				},
-			},
-			Composite{
-				Layout: HBox{},
-				Children: []Widget{
-					ToolButton{
-						MinSize:            Size{380, 35},
-						AlwaysConsumeSpace: true,
-						AssignTo:           &ui.SaveButton,
-						Text:               "Test and Save",
-						Font:               buttonFont,
-						OnClicked: func() {
-							ui.DataBinder.Submit()
-							ui.TestSaveReload(false)
-						},
-					},
-				},
-			},
-		},
-		StatusBarItems: []StatusBarItem{
-			{
-				AssignTo: &ui.StatusBar,
-				Width:    40,
-				OnClicked: func() {
-					// todo: show full error on click
-				},
-			},
-		},
-	}.Create()
-
-	go func() {
-		ui.ShowAdminAlert()
-		ui.TestSaveReload(true)
-	}()
-
-	// disable window resize
-	win.SetWindowLong(ui.MainWindow.Handle(), win.GWL_STYLE, win.WS_CAPTION|win.WS_SYSMENU)
-	win.ShowWindow(ui.MainWindow.Handle(), win.SW_SHOW)
-	ui.MainWindow.Run()
-}
-
-func startService(s *mgr.Service) error {
-	err := s.Start("is", "manual-started")
-	if err != nil {
-		return err
-	}
-
-	return waitServiceState(s, svc.Status{}, svc.Running, time.Second*15)
-}
-
-func stopService(s *mgr.Service) error {
-	status, err := s.Control(svc.Stop)
-	if err != nil {
-		return err
-	}
-
-	return waitServiceState(s, status, svc.Stopped, time.Second*15)
-}
-
-func waitServiceState(s *mgr.Service, currentStatus svc.Status, state svc.State, timeout time.Duration) error {
-	stopAt := time.Now().Add(timeout)
-	var err error
-	for currentStatus.State != state {
-		if stopAt.Before(time.Now()) {
-			return fmt.Errorf("timeout waiting for service to stop")
-		}
-		time.Sleep(300 * time.Millisecond)
-		currentStatus, err = s.Query()
-		if err != nil {
-			return fmt.Errorf("could not retrieve service status: %v", err)
-		}
-	}
-
-	return nil
-}
-
-func (ui *UI) ShowAdminAlert() {
-	if !checkAdmin() {
-		RunDialog(ui.MainWindow, ui.ErrorIcon, "Error", "Please run as administrator", func() { os.Exit(1) })
-	}
-}
-
-func checkAdmin() bool {
-	_, err := os.Open("\\\\.\\PHYSICALDRIVE0")
-	if err != nil {
-		return false
-	}
-	return true
 }

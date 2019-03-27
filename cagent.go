@@ -9,19 +9,19 @@ import (
 	"runtime"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type Cagent struct {
 	Config         *Config
 	ConfigLocation string
 
-	// internal use
-	hubHTTPClient *http.Client
+	hubClient     *http.Client
+	hubClientOnce sync.Once
 
 	cpuWatcher             *CPUWatcher
 	cpuUtilisationAnalyser *CPUUtilisationAnalyser
@@ -55,7 +55,7 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 
 			b, err := ioutil.ReadFile(rootCertsPath)
 			if err != nil {
-				log.Error("Failed to read cacert.pem: ", err.Error())
+				log.WithError(err).Warnln("Failed to read cacert.pem")
 			} else {
 				ok := certPool.AppendCertsFromPEM(b)
 				if ok {
@@ -84,7 +84,9 @@ func (ca *Cagent) userAgent() string {
 func (ca *Cagent) Shutdown() error {
 	for name, p := range ca.vmWatchers {
 		if err := vmstat.Release(p); err != nil {
-			log.Errorf("release vm provider \"%s\": %s", name, err.Error())
+			log.WithFields(log.Fields{
+				"name": name,
+			}).WithError(err).Warnln("unable to release vm provider")
 		}
 
 		delete(ca.vmWatchers, name)
