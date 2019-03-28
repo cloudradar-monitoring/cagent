@@ -21,7 +21,15 @@ run:
 	$(GOBUILD) -o $(BINARY_NAME) -v ./cmd/cagent/...
 	./$(BINARY_NAME)
 
-ci: goreleaser-rm-dist windows-sign
+ci: goreleaser-rm-dist aptly #windows-sign
+
+aptly:
+	# Create remote work dir
+	ssh -i /tmp/id_win_ssh -p 24480 -oStrictHostKeyChecking=no mkdir -p /home/cr/work/aptly/${CIRCLE_BUILD_NUM}
+	# Upload deb files
+	rsync -e 'scp -i /tmp/id_win_ssh -oStrictHostKeyChecking=no -p 24480' --recursive /go/src/github.com/cloudradar-monitoring/cagent/dist/*.deb  cr@repo.cloudradar.io:/home/cr/work/aptly/${CIRCLE_BUILD_NUM}/
+	# Trigger repository update
+	ssh -i /tmp/id_win_ssh -p 24480 -oStrictHostKeyChecking=no cr@repo.cloudradar.io /home/cr/work/aptly/update_repo.sh /home/cr/work/aptly/${CIRCLE_BUILD_NUM} ${CIRCLE_TAG}
 
 goreleaser-rm-dist:
 	goreleaser --rm-dist
