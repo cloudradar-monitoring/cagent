@@ -21,7 +21,7 @@ run:
 	$(GOBUILD) -o $(BINARY_NAME) -v ./cmd/cagent/...
 	./$(BINARY_NAME)
 
-ci: goreleaser-rm-dist aptly #windows-sign
+ci: goreleaser-rm-dist aptly windows-sign
 
 aptly:
 	# Create remote work dir
