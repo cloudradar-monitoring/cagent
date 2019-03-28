@@ -90,6 +90,11 @@ nfpm:
     postinstall: "pkg-scripts/postinstall.sh"
     preremove: "pkg-scripts/preremove.sh"
 
+  overrides:
+    rpm:
+      scripts:
+        preremove: "pkg-scripts/preremove-rpm.sh"
+
 release:
   github:
     owner: cloudradar-monitoring
