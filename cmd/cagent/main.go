@@ -43,6 +43,7 @@ func askForConfirmation(s string) bool {
 
 		response, err := reader.ReadString('\n')
 		if err != nil {
+			fmt.Println("")
 			log.WithError(err).Fatalln("Failed to read confirmation")
 		}
 
@@ -72,6 +73,7 @@ func main() {
 	serviceUninstallPtr := flag.Bool("u", false, fmt.Sprintf("stop and uninstall the system service(%s)", systemManager.String()))
 	printConfigPtr := flag.Bool("p", false, "print the active config")
 	testConfigPtr := flag.Bool("t", false, "test the HUB config")
+	assumeYesPtr := flag.Bool("y", false, "automatic yes to prompts. Assume 'yes' as answer to all prompts and run non-interactively")
 	flagServiceStatusPtr := flag.Bool("service_status", false, "check status of cagent within system service")
 	flagServiceStartPtr := flag.Bool("service_start", false, "start cagent as system service")
 	flagServiceStopPtr := flag.Bool("service_stop", false, "stop cagent if running as system service")
@@ -144,7 +146,7 @@ func main() {
 	}
 
 	handleFlagServiceUninstall(ca, *serviceUninstallPtr)
-	handleFlagServiceInstall(ca, systemManager, serviceInstallUserPtr, serviceInstallPtr, *cfgPathPtr)
+	handleFlagServiceInstall(ca, systemManager, serviceInstallUserPtr, serviceInstallPtr, *cfgPathPtr, assumeYesPtr)
 	handleFlagDaemonizeMode(*daemonizeModePtr)
 
 	output := handleFlagOutput(*outputFilePtr, *oneRunOnlyModePtr)
@@ -354,6 +356,8 @@ func handleFlagServiceUninstall(ca *cagent.Cagent, serviceUninstallPtr bool) {
 		return
 	}
 
+	log.Info("Uninstalling cagent service...")
+
 	systemService, err := getServiceFromFlags(ca, "", "")
 	if err != nil {
 		log.WithError(err).Fatalln("Failed to get system service")
@@ -374,10 +378,18 @@ func handleFlagServiceUninstall(ca *cagent.Cagent, serviceUninstallPtr bool) {
 		log.WithError(err).Fatalln("Failed to uninstall the service")
 	}
 
+	log.Info("Uninstall successful")
 	os.Exit(0)
 }
 
-func handleFlagServiceInstall(ca *cagent.Cagent, systemManager service.System, serviceInstallUserPtr *string, serviceInstallPtr *bool, cfgPath string) {
+func handleFlagServiceInstall(
+	ca *cagent.Cagent,
+	systemManager service.System,
+	serviceInstallUserPtr *string,
+	serviceInstallPtr *bool,
+	cfgPath string,
+	assumeYesPtr *bool,
+) {
 	// serviceInstallPtr is currently used on windows
 	// serviceInstallUserPtr is used on other systems
 	// if both of them are empty - just return
@@ -420,8 +432,6 @@ func handleFlagServiceInstall(ca *cagent.Cagent, systemManager service.System, s
 		err = s.Install()
 		// Check error case where the service already exists
 		if err != nil && strings.Contains(err.Error(), "already exists") {
-			log.WithError(err).Warnf("Cagent service(%s) already installed", systemManager.String())
-
 			if attempt == maxAttempts {
 				log.Fatalf("Giving up after %d attempts", maxAttempts)
 			}
@@ -430,7 +440,10 @@ func handleFlagServiceInstall(ca *cagent.Cagent, systemManager service.System, s
 			if runtime.GOOS == "windows" {
 				osSpecificNote = " Windows Services Manager application must be closed before proceeding!"
 			}
-			if askForConfirmation("Do you want to overwrite it?" + osSpecificNote) {
+
+			fmt.Printf("cagent service(%s) already installed: %s\n", systemManager.String(), err.Error())
+			if *assumeYesPtr || askForConfirmation("Do you want to overwrite it?"+osSpecificNote) {
+				log.Info("Trying to override old service unit...")
 				err = s.Stop()
 				if err != nil {
 					log.WithError(err).Warnln("Failed to stop the service")
@@ -445,7 +458,7 @@ func handleFlagServiceInstall(ca *cagent.Cagent, systemManager service.System, s
 		} else if err != nil {
 			log.WithError(err).Fatalf("Cagent service(%s) installation failed", systemManager.String())
 		} else {
-			// service installation was success so we can exit the loop
+			// service installation was successful so we can exit the loop
 			break
 		}
 	}

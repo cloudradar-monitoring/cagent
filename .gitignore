@@ -1,3 +1,4 @@
 .idea
 cmd/cagent/cagent
 .DS_Store
+dist
