@@ -24,7 +24,7 @@ func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfoSnapshot, erro
 	}
 	finishTime := time.Now()
 
-	timeElapsedReal := (finishTime.Sub(startTime).Seconds()) * float64(t.logicalCPUCount)
+	timeElapsedReal := finishTime.Sub(startTime).Seconds()
 
 	result := make([]*ProcessInfoSnapshot, 0, len(processesOld))
 	for pid, newProcessInfo := range processesNew {
@@ -37,7 +37,7 @@ func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfoSnapshot, erro
 				PID:       pid,
 				ParentPID: uint32(newProcessInfo.InheritedFromUniqueProcessId),
 				Command:   "",
-				Load:      calculateUsagePercent(oldProcessInfo, newProcessInfo, timeElapsedReal),
+				Load:      winapi.CalculateProcessCPUUsagePercent(oldProcessInfo, newProcessInfo, timeElapsedReal, t.logicalCPUCount),
 			}
 			result = append(result, info)
 		}
@@ -47,14 +47,4 @@ func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfoSnapshot, erro
 	runtime.GC()
 
 	return result, nil
-}
-
-func calculateUsagePercent(p1, p2 *winapi.SystemProcessInformation, delta float64) float64 {
-	if delta == 0 {
-		return 0
-	}
-
-	deltaProc := float64((p2.UserTime+p2.KernelTime)-(p1.UserTime+p1.KernelTime)) * winapi.HundredNSToTick
-	overallPercent := (deltaProc / delta) * 100
-	return overallPercent
 }
