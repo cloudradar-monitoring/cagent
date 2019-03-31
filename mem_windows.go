@@ -16,7 +16,7 @@ import (
 
 const memGetTimeout = time.Second * 10
 
-func (ca *Cagent) MemResults() (MeasurementsMap, error) {
+func (ca *Cagent) MemResults() (MeasurementsMap, *mem.VirtualMemoryStat, error) {
 	results := MeasurementsMap{}
 
 	var errs []string
@@ -73,8 +73,8 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 	results["cached_percent"] = floatToIntPercentRoundUP(float64(cachedBytes) / float64(memStat.Total))
 
 	if len(errs) == 0 {
-		return results, nil
+		return results, memStat, nil
 	}
 
-	return results, errors.New("MEM: " + strings.Join(errs, "; "))
+	return results, memStat, errors.New("MEM: " + strings.Join(errs, "; "))
 }

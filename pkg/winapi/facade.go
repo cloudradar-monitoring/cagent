@@ -116,3 +116,14 @@ func GetIsServiceHaveDelayedAutoStartFlag(serviceHandle windows.Handle) (bool, e
 	infoStructure := (*serviceDelayedAutoStartInfo)(unsafe.Pointer(&resultBuffer[0]))
 	return infoStructure.DelayedAutoStart, nil
 }
+
+func CalculateProcessCPUUsagePercent(p1, p2 *SystemProcessInformation, delta float64, cpuCount uint8) float64 {
+	if delta == 0 {
+		return 0
+	}
+	delta = delta * float64(cpuCount)
+
+	deltaProc := float64((p2.UserTime+p2.KernelTime)-(p1.UserTime+p1.KernelTime)) * HundredNSToTick
+	overallPercent := (deltaProc / delta) * 100
+	return overallPercent
+}

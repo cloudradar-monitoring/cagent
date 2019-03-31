@@ -5,8 +5,8 @@ package cagent
 import (
 	"context"
 	"errors"
-	"time"
 	"runtime"
+	"time"
 
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
@@ -14,7 +14,7 @@ import (
 
 const memGetTimeout = time.Second * 10
 
-func (ca *Cagent) MemResults() (MeasurementsMap, error) {
+func (ca *Cagent) MemResults() (MeasurementsMap, *mem.VirtualMemoryStat, error) {
 	results := MeasurementsMap{}
 	ctx, cancel := context.WithTimeout(context.Background(), memGetTimeout)
 	defer cancel()
@@ -38,7 +38,7 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 	memStat, err := mem.VirtualMemoryWithContext(ctx)
 	if err != nil {
 		log.Errorf("[MEM] Failed to get virtual memory stat: %s", err.Error())
-		return results, errors.New("MEM: " + err.Error())
+		return results, memStat, errors.New("MEM: " + err.Error())
 	}
 
 	results["total_B"] = memStat.Total
@@ -69,5 +69,5 @@ func (ca *Cagent) MemResults() (MeasurementsMap, error) {
 		results["available_percent"] = floatToIntPercentRoundUP(float64(results["available_B"].(int)) / float64(memStat.Total))
 	}
 
-	return results, nil
+	return results, memStat, nil
 }

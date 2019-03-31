@@ -15,9 +15,12 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/shirou/gopsutil/process"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 )
 
@@ -29,12 +32,13 @@ type procStatus struct {
 }
 
 var dockerContainerIDRE = regexp.MustCompile(`(?m)/docker/([a-f0-9]*)$`)
+var monitoredProcessCache = make(map[int]*process.Process)
 
-func processes(dockerWatcher *docker.Watcher) ([]ProcStat, error) {
+func processes(dockerWatcher *docker.Watcher, systemMemorySize uint64) ([]ProcStat, error) {
 	if runtime.GOOS == "linux" {
-		return processesFromProc(dockerWatcher)
+		return processesFromProc(dockerWatcher, systemMemorySize)
 	}
-	return processesFromPS()
+	return processesFromPS(systemMemorySize)
 }
 
 func getHostProc() string {
@@ -69,13 +73,14 @@ func getProcLongState(shortState byte) string {
 }
 
 // get process states from /proc/(pid)/stat
-func processesFromProc(dockerWatcher *docker.Watcher) ([]ProcStat, error) {
+func processesFromProc(dockerWatcher *docker.Watcher, systemMemorySize uint64) ([]ProcStat, error) {
 	filepaths, err := filepath.Glob(getHostProc() + "/[0-9]*/status")
 	if err != nil {
 		return nil, err
 	}
 
 	var procs []ProcStat
+	var updatedProcessCache = make(map[int]*process.Process)
 
 	for _, statusFilepath := range filepaths {
 		statusFile, err := readProcFile(statusFilepath)
@@ -131,8 +136,16 @@ func processesFromProc(dockerWatcher *docker.Watcher) ([]ProcStat, error) {
 			}
 		}
 
+		if stat.PID > 0 {
+			p := getProcessByPID(stat.PID)
+			stat.RSS, stat.VMS, stat.MemoryUsagePercent, stat.CPUAverageUsagePercent = gatherProcessResourceUsage(p, systemMemorySize)
+			updatedProcessCache[stat.PID] = p
+		}
+
 		procs = append(procs, stat)
 	}
+
+	monitoredProcessCache = updatedProcessCache
 
 	return procs, nil
 }
@@ -215,7 +228,7 @@ func execPS() ([]byte, error) {
 	return out, err
 }
 
-func processesFromPS() ([]ProcStat, error) {
+func processesFromPS(systemMemorySize uint64) ([]ProcStat, error) {
 	out, err := execPS()
 	if err != nil {
 		return nil, err
@@ -223,6 +236,7 @@ func processesFromPS() ([]ProcStat, error) {
 
 	lines := strings.Split(string(out), "\n")
 	var procs []ProcStat
+	var updatedProcessCache = make(map[int]*process.Process)
 	var columnsIndex = map[string]int{}
 
 	for i, line := range lines {
@@ -278,8 +292,41 @@ func processesFromPS() ([]ProcStat, error) {
 			stat.Name = fileBaseParts[0]
 		}
 
+		if stat.PID > 0 {
+			p := getProcessByPID(stat.PID)
+			stat.RSS, stat.VMS, stat.MemoryUsagePercent, stat.CPUAverageUsagePercent = gatherProcessResourceUsage(p, systemMemorySize)
+			updatedProcessCache[stat.PID] = p
+		}
+
 		procs = append(procs, stat)
 	}
+	monitoredProcessCache = updatedProcessCache
 
 	return procs, nil
+}
+
+func getProcessByPID(pid int) *process.Process {
+	p, exists := monitoredProcessCache[pid]
+	if !exists {
+		p = &process.Process{
+			Pid: int32(pid),
+		}
+	}
+	return p
+}
+
+func gatherProcessResourceUsage(proc *process.Process, systemMemorySize uint64) (uint64, uint64, float32, float32) {
+	memoryInfo, err := proc.MemoryInfo()
+	if err != nil {
+		log.WithError(err).Error("[PROC] failed to get memory info")
+	}
+	memUsagePercent := (float64(memoryInfo.RSS) / float64(systemMemorySize)) * 100
+
+	// side effect: p.Percent() call update process internally
+	cpuUsagePercent, err := proc.Percent(time.Duration(0))
+	if err != nil {
+		log.WithError(err).Error("[PROC] failed to get CPU usage")
+	}
+
+	return memoryInfo.RSS, memoryInfo.VMS, float32(common.RoundToTwoDecimalPlaces(memUsagePercent)), float32(common.RoundToTwoDecimalPlaces(cpuUsagePercent))
 }

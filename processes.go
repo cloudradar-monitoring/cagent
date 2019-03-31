@@ -3,16 +3,21 @@ package cagent
 import (
 	"runtime"
 
+	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
 )
 
 type ProcStat struct {
-	PID       int    `json:"pid"`
-	ParentPID int    `json:"parent_pid"`
-	Name      string `json:"name"`
-	Cmdline   string `json:"cmdline"`
-	State     string `json:"state"`
-	Container string `json:"container,omitempty"`
+	PID                    int     `json:"pid"`
+	ParentPID              int     `json:"parent_pid"`
+	Name                   string  `json:"name"`
+	Cmdline                string  `json:"cmdline"`
+	State                  string  `json:"state"`
+	Container              string  `json:"container,omitempty"`
+	CPUAverageUsagePercent float32 `json:"cpu_avg_usage_percent,omitempty"`
+	RSS                    uint64  `json:"rss"` // Resident Set Size
+	VMS                    uint64  `json:"vms"` // Virtual Memory Size
+	MemoryUsagePercent     float32 `json:"memory_usage_percent"`
 }
 
 // Gets possible process states based on the OS
@@ -40,10 +45,16 @@ func getPossibleProcStates() []string {
 	return fields
 }
 
-func (ca *Cagent) ProcessesResult() (m MeasurementsMap, procs []ProcStat, err error) {
+func (ca *Cagent) ProcessesResult(memStat *mem.VirtualMemoryStat) (m MeasurementsMap, procs []ProcStat, err error) {
 	states := getPossibleProcStates()
 
-	procs, err = processes(ca.dockerWatcher)
+	var systemMemorySize uint64
+	if memStat == nil {
+		log.Warn("[PROC] system memory information in unavailable. Some process stats will not calculated...")
+	} else {
+		systemMemorySize = memStat.Total
+	}
+	procs, err = processes(ca.dockerWatcher, systemMemorySize)
 	if err != nil {
 		log.Error("[PROC] error: ", err.Error())
 		return nil, nil, err
