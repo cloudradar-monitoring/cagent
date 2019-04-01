@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/shirou/gopsutil/host"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 const readTimeout = time.Second * 10
@@ -24,13 +24,14 @@ func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
 
 	sensors, err := host.SensorsTemperaturesWithContext(ctx)
 	if err != nil {
+		l := log.WithField("package", "sensors").WithError(err)
 		errText := strings.ToLower(err.Error())
 		if strings.Contains(errText, "not implemented") {
-			logrus.Info("[SENSORS] reading temperature sensors is not implemented for this OS")
+			l.Info("reading temperature sensors is not implemented for this OS")
 		} else if strings.Contains(errText, "not supported") {
-			logrus.WithError(err).Debugf("[SENSORS] not supported by BIOS or driver required")
+			l.Debugf("not supported by BIOS or driver required")
 		} else {
-			logrus.WithError(err).Error("[SENSORS] failed to read temperature sensors")
+			l.Error("failed to read temperature sensors")
 		}
 		return nil, nil
 	}
