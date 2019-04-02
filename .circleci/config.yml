@@ -67,6 +67,9 @@ jobs:
       - attach_workspace:
           at: /go/src/github.com/cloudradar-monitoring
       - run:
+          name: Setup ssh key to access windows signing machine
+          command: echo $SSH_KEY | base64 -d > /tmp/id_ssh && chmod 0600 /tmp/id_ssh
+      - run:
           name: Update aptly repository
           command: make aptly
   
