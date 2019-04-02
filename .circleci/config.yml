@@ -56,8 +56,8 @@ jobs:
           name: Setup ssh key to access windows signing machine
           command: echo $SSH_KEY | base64 -d > /tmp/id_ssh && chmod 0600 /tmp/id_ssh
       - run: 
-        name: Sign msi files
-        command: make windows-sign
+          name: Sign msi files
+          command: make windows-sign
   
   build-aptly:
     docker:
@@ -156,7 +156,7 @@ workflows:
             - build-goreleaser
           filters:
             tags:
-              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
+              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$/
             branches:
               ignore: /.*/
       - release-github:
