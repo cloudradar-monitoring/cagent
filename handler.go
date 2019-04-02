@@ -20,6 +20,7 @@ import (
 
 	"github.com/cloudradar-monitoring/cagent/pkg/hwinfo"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/sensors"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
@@ -308,6 +309,13 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 	}
 
 	measurements = measurements.AddWithPrefix("docker.", containersList)
+
+	temperatures, err := sensors.ReadTemperatureSensors()
+	if err != nil {
+		errs = append(errs, err.Error())
+	}
+
+	measurements = measurements.AddWithPrefix("temperatures.", MeasurementsMap{"list": temperatures})
 
 	cpuUtilisationAnalysisResult, cpuUtilisationAnalysisIsActive, err := ca.CPUUtilisationAnalyser().Results()
 	if err != nil {
