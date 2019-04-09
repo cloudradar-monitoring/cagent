@@ -40,10 +40,10 @@ func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
 	result := make([]*TemperatureSensorInfo, 0)
 	for _, v := range thermalSensors {
 		result = append(result, &TemperatureSensorInfo{
-			SensorName:  v.InstanceName,
-			Temperature: wmiTemperatureToCentigrade(v.CurrentTemperature),
-			Critical:    wmiTemperatureToCentigrade(v.CriticalTripPoint),
-			Unit:        unitCelsius,
+			SensorName:        v.InstanceName,
+			Temperature:       wmiTemperatureToCentigrade(v.CurrentTemperature),
+			CriticalThreshold: wmiTemperatureToCentigrade(v.CriticalTripPoint),
+			Unit:              unitCelsius,
 		})
 	}
 	return result, nil
