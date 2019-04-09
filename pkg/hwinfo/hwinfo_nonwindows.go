@@ -6,7 +6,9 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os/exec"
+	"strings"
 
 	"github.com/cloudradar-monitoring/dmidecode"
 	"github.com/pkg/errors"
@@ -61,16 +63,27 @@ func retrieveInfoUsingDmiDecode() (map[string]interface{}, error) {
 		return nil, nil
 	}
 
-	// expecting /etc/sudoers.d/cagent-dmidecode is present
-	cmd := exec.Command("/bin/sh", "-c", "sudo dmidecode")
+	// expecting 'sudo' package is installed and /etc/sudoers.d/cagent-dmidecode is present
+	const dmidecodeCmd = "sudo dmidecode"
+	cmd := exec.Command("/bin/sh", "-c", dmidecodeCmd)
 
-	buf := bytes.Buffer{}
-	cmd.Stdout = bufio.NewWriter(&buf)
+	stdoutBuffer := bytes.Buffer{}
+	cmd.Stdout = bufio.NewWriter(&stdoutBuffer)
+
+	stderrBuffer := bytes.Buffer{}
+	cmd.Stderr = bufio.NewWriter(&stderrBuffer)
+
 	if err := cmd.Run(); err != nil {
+		stderrBytes, _ := ioutil.ReadAll(bufio.NewReader(&stderrBuffer))
+		stderr := string(stderrBytes)
+		if strings.Contains(stderr, "/dev/mem: Operation not permitted") {
+			log.Infof("[HWINFO] there was an error while executing '%s': %s\nProbably 'CONFIG_STRICT_DEVMEM' kernel configuration option is enabled. Please refer to kernel configuration manual.", dmidecodeCmd, stderr)
+			return nil, nil
+		}
 		return nil, errors.Wrap(err, "execute dmidecode")
 	}
 
-	dmi, err := dmidecode.Unmarshal(bufio.NewReader(&buf))
+	dmi, err := dmidecode.Unmarshal(bufio.NewReader(&stdoutBuffer))
 	if err != nil {
 		return nil, errors.Wrap(err, "unmarshal dmi")
 	}
