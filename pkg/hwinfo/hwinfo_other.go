@@ -71,7 +71,8 @@ func listPCIDevices() ([]*pciDeviceInfo, error) {
 		return nil, errors.Wrap(ghwErr, "there were error while retrieving PCI information using ghw")
 	}
 	if len(stderrOutput) > 0 {
-		return nil, errors.Errorf("there were error output while retrieving PCI information using ghw: %s", stderrOutput)
+		// ghw only reports to stderr in case if system files are missing or there was failure while reading it
+		log.Infof("system is not supported: %s", stderrOutput)
 	}
 
 	result := make([]*pciDeviceInfo, 0, len(devices))
