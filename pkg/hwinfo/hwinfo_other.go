@@ -72,7 +72,7 @@ func listPCIDevices() ([]*pciDeviceInfo, error) {
 	}
 	if len(stderrOutput) > 0 {
 		// ghw only reports to stderr in case if system files are missing or there was failure while reading it
-		log.Infof("system is not supported: %s", stderrOutput)
+		log.Warnf("[HWINFO] got error output while retrieving PCI information using ghw: %s\nProbably the system is not supported or system files unreadable.", stderrOutput)
 	}
 
 	result := make([]*pciDeviceInfo, 0, len(devices))
