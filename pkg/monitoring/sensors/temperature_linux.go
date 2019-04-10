@@ -61,10 +61,10 @@ func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
 		criticalTemp, _ := readTemperatureFromFile(filepath.Join(filepath.Dir(file), baseFileName+"_crit"))
 
 		temperatures = append(temperatures, &TemperatureSensorInfo{
-			SensorName:  fmt.Sprintf("%s:%s:%s", name, label, baseFileName),
-			Temperature: temperature,
-			Critical:    criticalTemp,
-			Unit:        unitCelsius,
+			SensorName:        fmt.Sprintf("%s:%s:%s", name, label, baseFileName),
+			Temperature:       temperature,
+			CriticalThreshold: criticalTemp,
+			Unit:              unitCelsius,
 		})
 	}
 	return temperatures, nil
