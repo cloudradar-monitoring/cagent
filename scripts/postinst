@@ -1,0 +1,12 @@
+#!/bin/sh
+
+PACKAGE="cagent-dev"
+
+# cagent
+ln -s ${SYNOPKG_PKGDEST}/usr/local/bin/cagent /usr/bin/cagent
+
+# config
+mkdir -p /etc/cagent
+
+/usr/bin/cagent -y -s cagent -c /etc/cagent/cagent.conf
+/usr/bin/cagent -t || true
