@@ -86,7 +86,7 @@ func TestHandleAllConfigSetup(t *testing.T) {
 		const sampleConfig = `
 pid = "/pid"
 interval = 1.0
-hub_gzip = true
+hub_gzip = false
 fs_metrics = ['a', 'b']
 `
 
@@ -102,7 +102,7 @@ fs_metrics = ['a', 'b']
 
 		assert.Equal(t, "/pid", config.PidFile)
 		assert.Equal(t, 1.0, config.Interval)
-		assert.Equal(t, true, config.HubGzip)
+		assert.Equal(t, false, config.HubGzip)
 		assert.Equal(t, []string{"a", "b"}, config.FSMetrics)
 	})
 
