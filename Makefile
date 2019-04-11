@@ -21,6 +21,9 @@ run:
 	$(GOBUILD) -o $(BINARY_NAME) -v ./cmd/cagent/...
 	./$(BINARY_NAME)
 
+install:
+	cp cagent $(DESTDIR)/usr/local/bin/cagent > /var/log/cagent.install.log
+
 ci: goreleaser-rm-dist windows-sign
 
 aptly:

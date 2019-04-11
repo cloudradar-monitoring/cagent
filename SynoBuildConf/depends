@@ -1,0 +1,6 @@
+[BuildDependent]
+
+[ReferenceOnly]
+
+[default]
+all="6.1"   # toolkit environment version of specific platform. (all platform use 6.0 toolkit environment)
