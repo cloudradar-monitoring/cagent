@@ -14,6 +14,11 @@ import (
 
 const readTimeout = time.Second * 10
 
+var wmiConnectServerArgs = []interface{}{
+	nil,        // use localhost
+	"root/wmi", // namespace
+}
+
 // WMI class
 // http://wutils.com/wmi/root/wmi/msacpi_thermalzonetemperature/
 type msAcpi_ThermalZoneTemperature struct {
@@ -25,7 +30,8 @@ type msAcpi_ThermalZoneTemperature struct {
 func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
 	var thermalSensors []msAcpi_ThermalZoneTemperature
 	query := wmi.CreateQuery(&thermalSensors, "")
-	err := wmiutil.QueryWithTimeout(readTimeout, query, &thermalSensors, "root/wmi")
+
+	err := wmiutil.QueryWithTimeout(readTimeout, query, &thermalSensors, wmiConnectServerArgs...)
 	if err != nil {
 		l := logger.WithError(err)
 		errText := strings.ToLower(err.Error())
