@@ -260,10 +260,15 @@ func ListUpstartServices() ([]SysVService, error) {
 		// network-interface-security (network-interface/ip6_vti0) start/running
 		// network-interface (dummy0) start/running
 		if strings.HasPrefix(parts[0], "network-interface") {
+			log.WithField("parts0", parts[0]).Infof("Skipping")
 			continue
 		}
 
 		stateParts := strings.Split(strings.TrimSuffix(parts[1], ","), "/")
+
+		if len(stateParts) < 2 {
+			log.WithField("parts1", parts[1]).Infof("Parsing services failed")
+		}
 
 		services = append(services,
 			SysVService{UnitFile: parts[0], State: stateParts[1]},
