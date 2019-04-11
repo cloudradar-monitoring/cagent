@@ -113,6 +113,7 @@ func NewConfig() *Config {
 	cfg := &Config{
 		LogFile:                          defaultLogPath,
 		Interval:                         90,
+		HubGzip:                          true,
 		CPULoadDataGather:                []string{"avg1"},
 		CPUUtilTypes:                     []string{"user", "system", "idle", "iowait"},
 		CPUUtilDataGather:                []string{"avg1"},
