@@ -265,6 +265,11 @@ func ListUpstartServices() ([]SysVService, error) {
 
 		stateParts := strings.Split(strings.TrimSuffix(parts[1], ","), "/")
 
+		if len(stateParts) < 2 {
+			log.WithField("line", strings.Join(parts, " ")).Debug("Parsing services line failed")
+			continue
+		}
+
 		services = append(services,
 			SysVService{UnitFile: parts[0], State: stateParts[1]},
 		)
