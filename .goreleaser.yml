@@ -54,7 +54,7 @@ changelog:
 nfpm:
   # Default: `{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}`
   name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-  maintainer: Roman Khafizianov <cagent@cloudradar.io>
+  maintainer: CloudRadar GmbH <ops@cloudradar.io>
 
   vendor: cloudradar GmbH
   homepage: https://cloudradar.io
@@ -65,6 +65,11 @@ nfpm:
   formats:
   - deb
   - rpm
+
+  dependencies:
+  - dmidecode
+  - usbutils
+  - sudo
 
   # Recommend to install root SSL certificates
   recommends:
