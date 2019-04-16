@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/cloudradar-monitoring/dmidecode"
@@ -63,9 +64,18 @@ func retrieveInfoUsingDmiDecode() (map[string]interface{}, error) {
 		return nil, nil
 	}
 
-	// expecting 'sudo' package is installed and /etc/sudoers.d/cagent-dmidecode is present
-	const dmidecodeCmd = "sudo dmidecode"
-	cmd := exec.Command("/bin/sh", "-c", dmidecodeCmd)
+	var dmidecodeCmd []string
+
+	// run dmidecode as command argument to shell
+	dmidecodeCmd = append(dmidecodeCmd, "-c")
+
+	if runtime.GOOS != "darwin" {
+		// expecting 'sudo' package is installed and /etc/sudoers.d/cagent-dmidecode is present
+		dmidecodeCmd = append(dmidecodeCmd, "sudo")
+	}
+	dmidecodeCmd = append(dmidecodeCmd, "dmidecode")
+
+	cmd := exec.Command("/bin/sh", dmidecodeCmd...)
 
 	stdoutBuffer := bytes.Buffer{}
 	cmd.Stdout = bufio.NewWriter(&stdoutBuffer)
