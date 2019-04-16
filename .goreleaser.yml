@@ -66,6 +66,11 @@ nfpm:
   - deb
   - rpm
 
+  dependencies:
+  - dmidecode
+  - usbutils
+  - sudo
+
   # Recommend to install root SSL certificates
   recommends:
   - ca-certificates
