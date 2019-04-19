@@ -11,6 +11,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func dmidecodeCommand() string {
+	return "dmidecode"
+}
+
 func runSystemProfiler(dataType string) ([]byte, error) {
 	cmd := exec.Command("system_profiler", "-xml", dataType)
 	buf := bytes.Buffer{}
