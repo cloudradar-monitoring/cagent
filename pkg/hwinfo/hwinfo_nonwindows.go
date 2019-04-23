@@ -63,9 +63,7 @@ func retrieveInfoUsingDmiDecode() (map[string]interface{}, error) {
 		return nil, nil
 	}
 
-	// expecting 'sudo' package is installed and /etc/sudoers.d/cagent-dmidecode is present
-	const dmidecodeCmd = "sudo dmidecode"
-	cmd := exec.Command("/bin/sh", "-c", dmidecodeCmd)
+	cmd := exec.Command("/bin/sh", "-c", dmidecodeCommand())
 
 	stdoutBuffer := bytes.Buffer{}
 	cmd.Stdout = bufio.NewWriter(&stdoutBuffer)
@@ -77,7 +75,7 @@ func retrieveInfoUsingDmiDecode() (map[string]interface{}, error) {
 		stderrBytes, _ := ioutil.ReadAll(bufio.NewReader(&stderrBuffer))
 		stderr := string(stderrBytes)
 		if strings.Contains(stderr, "/dev/mem: Operation not permitted") {
-			log.Infof("[HWINFO] there was an error while executing '%s': %s\nProbably 'CONFIG_STRICT_DEVMEM' kernel configuration option is enabled. Please refer to kernel configuration manual.", dmidecodeCmd, stderr)
+			log.Infof("[HWINFO] there was an error while executing '%s': %s\nProbably 'CONFIG_STRICT_DEVMEM' kernel configuration option is enabled. Please refer to kernel configuration manual.", dmidecodeCommand(), stderr)
 			return nil, nil
 		}
 		return nil, errors.Wrap(err, "execute dmidecode")

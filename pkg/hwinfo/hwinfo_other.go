@@ -22,6 +22,11 @@ import (
 
 var lsusbLineRegexp = regexp.MustCompile(`[0-9|a-z|A-Z|.|/|-|:|\[|\]|_|+| ]+`)
 
+func dmidecodeCommand() string {
+	// expecting 'sudo' package is installed and /etc/sudoers.d/cagent-dmidecode is present
+	return "sudo dmidecode"
+}
+
 func captureStderr(funcToExecute func()) (string, error) {
 	r, w, err := os.Pipe()
 	if err != nil {
