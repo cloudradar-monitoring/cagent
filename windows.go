@@ -5,6 +5,7 @@ package cagent
 import (
 	"time"
 
+	"github.com/cloudradar-monitoring/cagent/types"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 	log "github.com/sirupsen/logrus"
@@ -177,8 +178,8 @@ func (ca *Cagent) WindowsUpdatesWatcher() *WindowsUpdateWatcher {
 	return ca.windowsUpdateWatcher
 }
 
-func (wuw *WindowsUpdateWatcher) WindowsUpdates() (MeasurementsMap, error) {
-	results := MeasurementsMap{}
+func (wuw *WindowsUpdateWatcher) WindowsUpdates() (types.MeasurementsMap, error) {
+	results := types.MeasurementsMap{}
 	if wuw.LastFetchedAt.IsZero() {
 		results["updates_available"] = nil
 		results["updates_pending"] = nil

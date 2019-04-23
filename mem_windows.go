@@ -12,12 +12,13 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring"
+	"github.com/cloudradar-monitoring/cagent/types"
 )
 
 const memGetTimeout = time.Second * 10
 
-func (ca *Cagent) MemResults() (MeasurementsMap, *mem.VirtualMemoryStat, error) {
-	results := MeasurementsMap{}
+func (ca *Cagent) MemResults() (types.MeasurementsMap, *mem.VirtualMemoryStat, error) {
+	results := types.MeasurementsMap{}
 
 	var errs []string
 	ctx, cancel := context.WithTimeout(context.Background(), memGetTimeout)

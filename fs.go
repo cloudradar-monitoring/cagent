@@ -9,6 +9,8 @@ import (
 
 	"github.com/shirou/gopsutil/disk"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/types"
 )
 
 const fsGetUsageTimeout = time.Second * 10
@@ -37,8 +39,8 @@ func (ca *Cagent) FSWatcher() *FSWatcher {
 	return ca.fsWatcher
 }
 
-func (fw *FSWatcher) Results() (MeasurementsMap, error) {
-	results := MeasurementsMap{}
+func (fw *FSWatcher) Results() (types.MeasurementsMap, error) {
+	results := types.MeasurementsMap{}
 
 	var errs []string
 	ctx, cancel := context.WithTimeout(context.Background(), fsGetPartitionsTimeout)
