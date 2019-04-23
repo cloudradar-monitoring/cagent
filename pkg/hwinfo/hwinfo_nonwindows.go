@@ -5,10 +5,12 @@ package hwinfo
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/cloudradar-monitoring/dmidecode"
 	"github.com/pkg/errors"
@@ -16,6 +18,57 @@ import (
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
+
+type cpuInfo struct {
+	manufacturer      string
+	manufacturingInfo string
+	description       string
+	coreCount         string
+	coreEnabled       string
+	threadCount       string
+}
+
+var (
+	Timeout    = 3 * time.Second
+	ErrTimeout = errors.New("invoker: command timed out")
+)
+
+type Invoker interface {
+	Command(string, ...string) ([]byte, error)
+	CommandWithContext(context.Context, string, ...string) ([]byte, error)
+}
+
+type Invoke struct{}
+
+func (i Invoke) Command(name string, arg ...string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+	defer cancel()
+	return i.CommandWithContext(ctx, name, arg...)
+}
+
+func (i Invoke) CommandWithContext(ctx context.Context, name string, arg ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, name, arg...)
+
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+
+	if err := cmd.Start(); err != nil {
+		return buf.Bytes(), err
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return buf.Bytes(), err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func RunCommandWithContext(ctx context.Context, name string, arg ...string) ([]byte, error) {
+	var invoke Invoke
+
+	return invoke.CommandWithContext(ctx, name, arg...)
+}
 
 func isCommandAvailable(name string) bool {
 	cmd := exec.Command("/bin/sh", "-c", "command", "-v", name)
@@ -46,6 +99,23 @@ func fetchInventory() (map[string]interface{}, error) {
 	errorCollector.Add(err)
 	if len(displays) > 0 {
 		res["displays.list"] = displays
+	}
+
+	cpus, err := listCPUs()
+	errorCollector.Add(err)
+	if len(cpus) > 0 {
+		encodedCpus := make(map[string]interface{})
+
+		for i := range cpus {
+			encodedCpus[fmt.Sprintf("cpu.%d.manufacturer", i)] = cpus[i].manufacturer
+			encodedCpus[fmt.Sprintf("cpu.%d.manufacturing_info", i)] = cpus[i].manufacturingInfo
+			encodedCpus[fmt.Sprintf("cpu.%d.description", i)] = cpus[i].description
+			encodedCpus[fmt.Sprintf("cpu.%d.core_count", i)] = cpus[i].coreCount
+			encodedCpus[fmt.Sprintf("cpu.%d.core_enabled", i)] = cpus[i].coreEnabled
+			encodedCpus[fmt.Sprintf("cpu.%d.thread_count", i)] = cpus[i].threadCount
+		}
+
+		res = common.MergeStringMaps(res, encodedCpus)
 	}
 
 	dmiDecodeResults, err := retrieveInfoUsingDmiDecode()
@@ -117,20 +187,6 @@ func retrieveInfoUsingDmiDecode() (map[string]interface{}, error) {
 		}
 	} else if err != dmidecode.ErrNotFound {
 		log.WithError(err).Info("[HWINFO] failed fetching memory device info")
-	}
-
-	var reqCPU []dmidecode.ReqProcessor
-	if err = dmi.Get(&reqCPU); err == nil {
-		for i := range reqCPU {
-			res[fmt.Sprintf("cpu.%d.manufacturer", i)] = reqCPU[i].Manufacturer
-			res[fmt.Sprintf("cpu.%d.manufacturing_info", i)] = reqCPU[i].Signature.String()
-			res[fmt.Sprintf("cpu.%d.description", i)] = reqCPU[i].Version
-			res[fmt.Sprintf("cpu.%d.core_count", i)] = reqCPU[i].CoreCount
-			res[fmt.Sprintf("cpu.%d.core_enabled", i)] = reqCPU[i].CoreEnabled
-			res[fmt.Sprintf("cpu.%d.thread_count", i)] = reqCPU[i].ThreadCount
-		}
-	} else if err != dmidecode.ErrNotFound {
-		log.WithError(err).Info("[HWINFO] failed fetching cpu info")
 	}
 
 	return res, nil
