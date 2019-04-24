@@ -5,10 +5,11 @@ package cagent
 import (
 	"time"
 
-	"github.com/cloudradar-monitoring/cagent/types"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/types"
 )
 
 type WindowsUpdateStatus int
