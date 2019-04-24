@@ -6,8 +6,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 type RaidArrays []Raid

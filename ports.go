@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"syscall"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/shirou/gopsutil/net"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 type PortStat struct {
