@@ -8,8 +8,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/top"
-	"github.com/cloudradar-monitoring/cagent/types"
 )
 
 type CPUUtilisationAnalyser struct {
@@ -75,7 +75,7 @@ func (ca *Cagent) CPUUtilisationAnalyser() *CPUUtilisationAnalyser {
 	return ca.cpuUtilisationAnalyser
 }
 
-func (cuan *CPUUtilisationAnalyser) Results() (types.MeasurementsMap, bool, error) {
+func (cuan *CPUUtilisationAnalyser) Results() (common.MeasurementsMap, bool, error) {
 	if cuan.top == nil || !cuan.hasUnclaimedResults && !cuan.topIsRunning {
 		return nil, false, nil
 	}
@@ -83,5 +83,5 @@ func (cuan *CPUUtilisationAnalyser) Results() (types.MeasurementsMap, bool, erro
 	cuan.hasUnclaimedResults = false
 	topProcs := cuan.top.HighestNLoad(cuan.NumberOfProcesses)
 
-	return types.MeasurementsMap{"top": topProcs}, true, nil
+	return common.MeasurementsMap{"top": topProcs}, true, nil
 }

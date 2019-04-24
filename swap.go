@@ -6,16 +6,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/cloudradar-monitoring/cagent/types"
 )
 
 const swapGetTimeout = time.Second * 10
 
-func (ca *Cagent) SwapResults() (types.MeasurementsMap, error) {
-	results := types.MeasurementsMap{}
+func (ca *Cagent) SwapResults() (common.MeasurementsMap, error) {
+	results := common.MeasurementsMap{}
 
 	var errs []string
 	ctx, cancel := context.WithTimeout(context.Background(), swapGetTimeout)

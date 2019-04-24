@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"syscall"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/shirou/gopsutil/net"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/cloudradar-monitoring/cagent/types"
 )
 
 type PortStat struct {
@@ -18,7 +17,7 @@ type PortStat struct {
 }
 
 // PortsResult lists all active connections
-func (ca *Cagent) PortsResult(processList []ProcStat) (types.MeasurementsMap, error) {
+func (ca *Cagent) PortsResult(processList []ProcStat) (common.MeasurementsMap, error) {
 	connections, err := net.Connections("inet")
 	if err != nil {
 		log.Error("[PORTS] could not list connections: ", err.Error())
@@ -54,7 +53,7 @@ func (ca *Cagent) PortsResult(processList []ProcStat) (types.MeasurementsMap, er
 
 	log.Debugf("[PORTS] results: %d", len(ports))
 
-	return types.MeasurementsMap{"list": ports}, nil
+	return common.MeasurementsMap{"list": ports}, nil
 }
 
 func formatNetAddr(addr *net.Addr) string {

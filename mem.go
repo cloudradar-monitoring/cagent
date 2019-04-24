@@ -8,19 +8,18 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/cloudradar-monitoring/cagent/types"
 )
 
 const memGetTimeout = time.Second * 10
 
-func (ca *Cagent) MemResults() (types.MeasurementsMap, *mem.VirtualMemoryStat, error) {
+func (ca *Cagent) MemResults() (common.MeasurementsMap, *mem.VirtualMemoryStat, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), memGetTimeout)
 	defer cancel()
 
-	results := types.MeasurementsMap{
+	results := common.MeasurementsMap{
 		"total_B":           nil,
 		"free_B":            nil,
 		"free_percent":      nil,

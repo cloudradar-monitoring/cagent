@@ -3,10 +3,9 @@ package cagent
 import (
 	"runtime"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/cloudradar-monitoring/cagent/types"
 )
 
 type ProcStat struct {
@@ -47,7 +46,7 @@ func getPossibleProcStates() []string {
 	return fields
 }
 
-func (ca *Cagent) ProcessesResult(memStat *mem.VirtualMemoryStat) (m types.MeasurementsMap, procs []ProcStat, err error) {
+func (ca *Cagent) ProcessesResult(memStat *mem.VirtualMemoryStat) (m common.MeasurementsMap, procs []ProcStat, err error) {
 	states := getPossibleProcStates()
 
 	var systemMemorySize uint64
@@ -63,7 +62,7 @@ func (ca *Cagent) ProcessesResult(memStat *mem.VirtualMemoryStat) (m types.Measu
 	}
 	log.Debugf("[PROC] results: %d", len(procs))
 
-	m = types.MeasurementsMap{"list": procs, "possible_states": states}
+	m = common.MeasurementsMap{"list": procs, "possible_states": states}
 
 	return
 }

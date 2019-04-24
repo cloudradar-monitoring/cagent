@@ -11,11 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/cloudradar-monitoring/cagent/types"
 )
 
 var (
@@ -74,8 +73,8 @@ func Uname() (string, error) {
 	return string(b), err
 }
 
-func (ca *Cagent) HostInfoResults() (types.MeasurementsMap, error) {
-	res := types.MeasurementsMap{}
+func (ca *Cagent) HostInfoResults() (common.MeasurementsMap, error) {
+	res := common.MeasurementsMap{}
 
 	if len(ca.Config.SystemFields) == 0 {
 		return nil, nil

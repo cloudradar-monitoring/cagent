@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cloudradar-monitoring/cagent/types"
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 type Result struct {
-	Timestamp    int64                 `json:"timestamp"`
-	Measurements types.MeasurementsMap `json:"measurements"`
-	Message      interface{}           `json:"message"`
+	Timestamp    int64                  `json:"timestamp"`
+	Measurements common.MeasurementsMap `json:"measurements"`
+	Message      interface{}            `json:"message"`
 }
 
 func floatToIntPercentRoundUP(f float64) int {

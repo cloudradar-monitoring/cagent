@@ -6,9 +6,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/cloudradar-monitoring/cagent/types"
 )
 
 type RaidArrays []Raid
@@ -91,8 +90,8 @@ func parseMdstat(data string) (RaidArrays, error) {
 	return raids, nil
 }
 
-func (ar RaidArrays) Measurements() types.MeasurementsMap {
-	results := types.MeasurementsMap{}
+func (ar RaidArrays) Measurements() common.MeasurementsMap {
+	results := common.MeasurementsMap{}
 
 	for _, raid := range ([]Raid)(ar) {
 		results[raid.Name+".state"] = raid.State
@@ -121,7 +120,7 @@ func (ar RaidArrays) Measurements() types.MeasurementsMap {
 	return results
 }
 
-func (ca *Cagent) RaidState() (types.MeasurementsMap, error) {
+func (ca *Cagent) RaidState() (common.MeasurementsMap, error) {
 	if _, err := os.Stat("/proc/mdstat"); os.IsNotExist(err) {
 		log.Debugf("[RAID] /proc/mdstat is missing. Raid inspection disabled.")
 		return nil, nil
@@ -135,7 +134,7 @@ func (ca *Cagent) RaidState() (types.MeasurementsMap, error) {
 	raidArrays, err := parseMdstat(string(buf))
 
 	if err != nil {
-		return types.MeasurementsMap{}, err
+		return common.MeasurementsMap{}, err
 	}
 
 	return raidArrays.Measurements(), nil

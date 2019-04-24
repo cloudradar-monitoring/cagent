@@ -11,14 +11,14 @@ import (
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring"
-	"github.com/cloudradar-monitoring/cagent/types"
 )
 
 const memGetTimeout = time.Second * 10
 
-func (ca *Cagent) MemResults() (types.MeasurementsMap, *mem.VirtualMemoryStat, error) {
-	results := types.MeasurementsMap{}
+func (ca *Cagent) MemResults() (common.MeasurementsMap, *mem.VirtualMemoryStat, error) {
+	results := common.MeasurementsMap{}
 
 	var errs []string
 	ctx, cancel := context.WithTimeout(context.Background(), memGetTimeout)
