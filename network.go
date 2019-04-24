@@ -8,9 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	utilnet "github.com/shirou/gopsutil/net"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 const netGetCountersTimeout = time.Second * 10

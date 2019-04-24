@@ -7,9 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/shirou/gopsutil/disk"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 const fsGetUsageTimeout = time.Second * 10
