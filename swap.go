@@ -6,9 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 const swapGetTimeout = time.Second * 10

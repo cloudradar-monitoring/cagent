@@ -11,10 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 var (
