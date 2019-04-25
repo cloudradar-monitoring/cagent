@@ -10,6 +10,8 @@ import (
 
 	utilnet "github.com/shirou/gopsutil/net"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 const netGetCountersTimeout = time.Second * 10
@@ -133,7 +135,7 @@ func (nw *NetWatcher) ExcludedInterfacesByName(allInterfaces []utilnet.Interface
 
 // fillEmptyMeasurements used to fill measurements with nil's for all non-excluded interfaces
 // It is called in case measurements are not yet ready or some error happens while retrieving counters
-func (nw *NetWatcher) fillEmptyMeasurements(results MeasurementsMap, interfaces []utilnet.InterfaceStat, excludedInterfacesByName map[string]struct{}) {
+func (nw *NetWatcher) fillEmptyMeasurements(results common.MeasurementsMap, interfaces []utilnet.InterfaceStat, excludedInterfacesByName map[string]struct{}) {
 	for _, netIf := range interfaces {
 		if _, isExcluded := excludedInterfacesByName[netIf.Name]; isExcluded {
 			continue
@@ -146,7 +148,7 @@ func (nw *NetWatcher) fillEmptyMeasurements(results MeasurementsMap, interfaces 
 }
 
 // fillCountersMeasurements used to fill measurements with nil's for all non-excluded interfaces
-func (nw *NetWatcher) fillCountersMeasurements(results MeasurementsMap, interfaces []utilnet.InterfaceStat, excludedInterfacesByName map[string]struct{}) error {
+func (nw *NetWatcher) fillCountersMeasurements(results common.MeasurementsMap, interfaces []utilnet.InterfaceStat, excludedInterfacesByName map[string]struct{}) error {
 	ctx, _ := context.WithTimeout(context.Background(), netGetCountersTimeout)
 	counters, err := utilnet.IOCountersWithContext(ctx, true)
 	if err != nil {
@@ -210,8 +212,8 @@ func (nw *NetWatcher) fillCountersMeasurements(results MeasurementsMap, interfac
 	return nil
 }
 
-func (nw *NetWatcher) Results() (MeasurementsMap, error) {
-	results := MeasurementsMap{}
+func (nw *NetWatcher) Results() (common.MeasurementsMap, error) {
+	results := common.MeasurementsMap{}
 
 	interfaces, err := utilnet.Interfaces()
 	if err != nil {
@@ -230,7 +232,7 @@ func (nw *NetWatcher) Results() (MeasurementsMap, error) {
 	return results, nil
 }
 
-func IPAddresses() (MeasurementsMap, error) {
+func IPAddresses() (common.MeasurementsMap, error) {
 	var addresses []string
 
 	// Fetch all interfaces
@@ -255,7 +257,7 @@ INFLOOP:
 		}
 	}
 
-	result := make(MeasurementsMap)
+	result := make(common.MeasurementsMap)
 	v4Count := uint32(1)
 	v6Count := uint32(1)
 

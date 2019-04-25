@@ -8,6 +8,8 @@ import (
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 type WindowsUpdateStatus int
@@ -177,8 +179,8 @@ func (ca *Cagent) WindowsUpdatesWatcher() *WindowsUpdateWatcher {
 	return ca.windowsUpdateWatcher
 }
 
-func (wuw *WindowsUpdateWatcher) WindowsUpdates() (MeasurementsMap, error) {
-	results := MeasurementsMap{}
+func (wuw *WindowsUpdateWatcher) WindowsUpdates() (common.MeasurementsMap, error) {
+	results := common.MeasurementsMap{}
 	if wuw.LastFetchedAt.IsZero() {
 		results["updates_available"] = nil
 		results["updates_pending"] = nil

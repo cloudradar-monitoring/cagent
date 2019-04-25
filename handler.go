@@ -18,12 +18,13 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/hwinfo"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/sensors"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
-	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
+	vmstatTypes "github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
 )
 
 func (ca *Cagent) initHubClientOnce() {
@@ -183,9 +184,9 @@ func (ca *Cagent) PostResultToHub(ctx context.Context, result *Result) error {
 	return nil
 }
 
-func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
+func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
 	var errs []string
-	var measurements = make(MeasurementsMap)
+	var measurements = make(common.MeasurementsMap)
 
 	cpum, err := ca.CPUWatcher().Results()
 	if err != nil {
@@ -258,7 +259,7 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 
 	measurements = measurements.AddWithPrefix("swap.", swap)
 
-	ca.getVMStatMeasurements(func(name string, meas MeasurementsMap, err error) {
+	ca.getVMStatMeasurements(func(name string, meas common.MeasurementsMap, err error) {
 		if err == nil {
 			measurements = measurements.AddWithPrefix("virt."+name+".", meas)
 		} else {
@@ -315,7 +316,7 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 		errs = append(errs, err.Error())
 	}
 
-	measurements = measurements.AddWithPrefix("temperatures.", MeasurementsMap{"list": temperatures})
+	measurements = measurements.AddWithPrefix("temperatures.", common.MeasurementsMap{"list": temperatures})
 
 	cpuUtilisationAnalysisResult, cpuUtilisationAnalysisIsActive, err := ca.CPUUtilisationAnalyser().Results()
 	if err != nil {
@@ -326,7 +327,7 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 	if cpuUtilisationAnalysisIsActive {
 		measurements = measurements.AddWithPrefix(
 			"cpu_utilisation_analysis.",
-			MeasurementsMap{"settings": ca.Config.CPUUtilisationAnalysis},
+			common.MeasurementsMap{"settings": ca.Config.CPUUtilisationAnalysis},
 		)
 	}
 
@@ -341,7 +342,7 @@ func (ca *Cagent) GetAllMeasurements() (MeasurementsMap, error) {
 	return measurements, errors.New(strings.Join(errs, "; "))
 }
 
-func (ca *Cagent) ReportMeasurements(measurements MeasurementsMap, outputFile *os.File) error {
+func (ca *Cagent) ReportMeasurements(measurements common.MeasurementsMap, outputFile *os.File) error {
 	result := &Result{
 		Timestamp:    time.Now().Unix(),
 		Measurements: measurements,
@@ -391,7 +392,7 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, cfg *Config)
 	}
 }
 
-func (ca *Cagent) getVMStatMeasurements(f func(string, MeasurementsMap, error)) {
+func (ca *Cagent) getVMStatMeasurements(f func(string, common.MeasurementsMap, error)) {
 	ca.vmstatLazyInit.Do(func() {
 		if err := vmstat.Init(); err != nil {
 			log.Error("vmstat: cannot instantiate virtual machines API: ", err.Error())
@@ -401,7 +402,7 @@ func (ca *Cagent) getVMStatMeasurements(f func(string, MeasurementsMap, error)) 
 		for _, name := range ca.Config.VirtualMachinesStat {
 			vm, err := vmstat.Acquire(name)
 			if err != nil {
-				if err != types.ErrNotAvailable {
+				if err != vmstatTypes.ErrNotAvailable {
 					log.Warnf("vmstat: Error while acquiring vm provider \"%s\": %s", name, err.Error())
 				}
 			} else {

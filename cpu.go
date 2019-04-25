@@ -13,6 +13,8 @@ import (
 
 	"github.com/shirou/gopsutil/load"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 const measureInterval = time.Second * 10
@@ -342,14 +344,14 @@ func (cw *CPUWatcher) Run() {
 	}
 }
 
-func (cw *CPUWatcher) Results() (MeasurementsMap, error) {
+func (cw *CPUWatcher) Results() (common.MeasurementsMap, error) {
 	var errs []string
 	util, err := cw.UtilAvg.Percentage()
 	if err != nil {
 		log.Errorf("[CPU] Failed to calculate utilisation metrics: " + err.Error())
 		errs = append(errs, err.Error())
 	}
-	results := MeasurementsMap{}
+	results := common.MeasurementsMap{}
 	for d, m := range util {
 		for k, v := range m {
 			if v == -1 {

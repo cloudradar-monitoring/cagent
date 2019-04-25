@@ -14,6 +14,8 @@ import (
 	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 var (
@@ -72,8 +74,8 @@ func Uname() (string, error) {
 	return string(b), err
 }
 
-func (ca *Cagent) HostInfoResults() (MeasurementsMap, error) {
-	res := MeasurementsMap{}
+func (ca *Cagent) HostInfoResults() (common.MeasurementsMap, error) {
+	res := common.MeasurementsMap{}
 
 	if len(ca.Config.SystemFields) == 0 {
 		return nil, nil
