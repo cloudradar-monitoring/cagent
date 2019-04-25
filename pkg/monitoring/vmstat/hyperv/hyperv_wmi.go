@@ -11,6 +11,8 @@ import (
 
 	"github.com/StackExchange/wmi"
 	"github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 var guestNetworkRegexp *regexp.Regexp
@@ -78,8 +80,8 @@ type hypervStat struct {
 
 var hypervPath = "\\Hyper-V Hypervisor Virtual processor(*)\\CPU Wait Time Per Dispatch"
 
-func (im *impl) GetMeasurements() (map[string]interface{}, error) {
-	meas := make(map[string]interface{})
+func (im *impl) GetMeasurements() (common.MeasurementsMap, error) {
+	meas := make(common.MeasurementsMap)
 
 	stat := &hypervStat{
 		List: make(map[string]vmStat),

@@ -2,6 +2,8 @@ package types
 
 import (
 	"errors"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 var (
@@ -17,5 +19,5 @@ type Provider interface {
 
 	Name() string
 	IsAvailable() error
-	GetMeasurements() (map[string]interface{}, error)
+	GetMeasurements() (common.MeasurementsMap, error)
 }
