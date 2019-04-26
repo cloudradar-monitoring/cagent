@@ -111,12 +111,13 @@ func (dw *Watcher) ListContainers() (map[string]interface{}, error) {
 	return map[string]interface{}{"containers": containersResults}, nil
 }
 
+// ContainerNameByID returns the name of a container identified by its id
 func (dw *Watcher) ContainerNameByID(id string) (string, error) {
 	if !isDockerAvailable() {
 		return "", ErrorDockerNotFound
 	}
 
-	out, err := exec.Command("/bin/sh", "-c", "sudo docker inspect --format \"{{ .Name }}\"").Output()
+	out, err := exec.Command("/bin/sh", "-c", "sudo docker inspect --format \"{{ .Name }}\"", id).Output()
 	if err != nil {
 		// looks like docker daemon is down
 		// don not pass the error in case we never succeed with docker command within a session
