@@ -70,6 +70,7 @@ nfpm:
   - dmidecode
   - usbutils
   - sudo
+  - smartmontools
 
   # Recommend to install root SSL certificates
   recommends:
@@ -89,6 +90,7 @@ nfpm:
     "cacert.pem": "/etc/cagent/cacert.pem"
     "pkg-scripts/cagent-dmidecode": "/etc/sudoers.d/cagent-dmidecode"
     "pkg-scripts/cagent-docker": "/etc/sudoers.d/cagent-docker"
+    "pkg-scripts/cagent-smartctl": "/etc/sudoers.d/cagent-smartctl"
 
   scripts:
     preinstall: "pkg-scripts/preinstall.sh"

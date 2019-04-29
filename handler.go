@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -25,6 +26,7 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 	vmstatTypes "github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
+	"github.com/cloudradar-monitoring/cagent/pkg/smart"
 )
 
 func (ca *Cagent) initHubClientOnce() {
@@ -272,7 +274,10 @@ func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
 		if err != nil {
 			errs = append(errs, err.Error())
 		}
-		measurements = measurements.AddInnerWithPrefix("hw.inventory", hwInfo)
+
+		if hwInfo != nil {
+			measurements = measurements.AddInnerWithPrefix("hw.inventory", hwInfo)
+		}
 	})
 
 	if runtime.GOOS == "linux" {
@@ -333,13 +338,26 @@ func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
 
 	if len(errs) == 0 {
 		measurements["cagent.success"] = 1
-
-		return measurements, nil
+	} else {
+		measurements["cagent.success"] = 0
 	}
 
-	measurements["cagent.success"] = 0
+	// measurements fetched below should not affect cagent.success
+	smartMeas, smartErrs := ca.getSMARTMeasurements()
 
-	return measurements, errors.New(strings.Join(errs, "; "))
+	if len(smartMeas) > 0 {
+		measurements = measurements.AddInnerWithPrefix("smartmon", smartMeas)
+	}
+
+	for _, e := range smartErrs {
+		errs = append(errs, e.Error())
+	}
+
+	if len(errs) != 0 {
+		return measurements, errors.New(strings.Join(errs, "; "))
+	}
+
+	return measurements, nil
 }
 
 func (ca *Cagent) ReportMeasurements(measurements common.MeasurementsMap, outputFile *os.File) error {
@@ -415,4 +433,28 @@ func (ca *Cagent) getVMStatMeasurements(f func(string, common.MeasurementsMap, e
 		res, err := p.GetMeasurements()
 		f(name, res, err)
 	}
+}
+
+func (ca *Cagent) getSMARTMeasurements() (common.MeasurementsMap, []error) {
+	// measurements fetched below should not affect cagent.success
+	ca.initSMART.Do(func() {
+		if ca.Config.SMARTMonitoring {
+			if err := smart.DetectTools(); err == nil {
+				ca.smartAvailable = true
+			} else {
+				ca.smartAvailable = false
+				log.Error(err.Error())
+			}
+		} else {
+			ca.smartAvailable = false
+		}
+	})
+
+	if ca.smartAvailable {
+		res, errs := smart.Parse()
+
+		return res, errs
+	}
+
+	return common.MeasurementsMap{}, []error{fmt.Errorf("smartmon: not available")}
 }

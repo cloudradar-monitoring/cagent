@@ -77,6 +77,8 @@ type Config struct {
 	DiscoverAutostartingServicesOnly bool `toml:"discover_autostarting_services_only" comment:"default true"`
 
 	CPUUtilisationAnalysis CPUUtilisationAnalysis `toml:"cpu_utilisation_analysis"`
+
+	SMARTMonitoring bool `toml:"smart_monitoring" comment:"default true"`
 }
 
 type CPUUtilisationAnalysis struct {
@@ -135,6 +137,7 @@ func NewConfig() *Config {
 			ReportProcesses:                5,
 			TrailingProcessAnalysisMinutes: 5,
 		},
+		SMARTMonitoring: true,
 	}
 
 	cfg.MinValuableConfig.IOMode = IOModeHTTP

@@ -34,6 +34,8 @@ type Cagent struct {
 	vmstatLazyInit sync.Once
 	vmWatchers     map[string]types.Provider
 	hwInventory    sync.Once
+	initSMART      sync.Once
+	smartAvailable bool
 
 	rootCAs *x509.CertPool
 
@@ -47,6 +49,7 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 		version:        version,
 		vmWatchers:     make(map[string]types.Provider),
 		dockerWatcher:  &docker.Watcher{},
+		smartAvailable: false,
 	}
 
 	if rootCertsPath != "" {
