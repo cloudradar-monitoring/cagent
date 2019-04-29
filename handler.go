@@ -271,7 +271,6 @@ func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
 
 	ca.hwInventory.Do(func() {
 		hwInfo, err := hwinfo.Inventory()
-
 		if err != nil {
 			errs = append(errs, err.Error())
 		}
