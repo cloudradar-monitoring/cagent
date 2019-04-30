@@ -64,8 +64,8 @@ func listPCIDevices() ([]*pciDeviceInfo, error) {
 	// unfortunately, jaypipes/ghw library sometime writes error message directly to os.Stderr instead of returning from function call.
 	// that's why we will try to capture stderr output and handle it:
 	stderrOutput, err := captureStderr(func() {
-		pciInfo, ghwErr := ghw.PCI()
-		if ghwErr == nil {
+		var pciInfo *ghw.PCIInfo
+		if pciInfo, ghwErr = ghw.PCI(); ghwErr == nil {
 			devices = pciInfo.ListDevices()
 		}
 	})
