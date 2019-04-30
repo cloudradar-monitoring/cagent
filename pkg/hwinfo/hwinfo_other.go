@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -19,6 +18,8 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/vcraescu/go-xrandr"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 var lsusbLineRegexp = regexp.MustCompile(`[0-9|a-z|A-Z|.|/|-|:|\[|\]|_|+| ]+`)
@@ -213,16 +214,16 @@ func listDisplays() ([]*monitorInfo, error) {
 	return results, nil
 }
 
-// this part is extended version of github.com/shirou/gopsutil/cpu/cpu_linux.go
-// it need own implementation as gopsutil does return amount of threads not CPUs
+// this part is an extended version of github.com/shirou/gopsutil/cpu/cpu_linux.go
+// own implementation is required as gopsutil does return amount of threads instead of CPUs
 // and ignores siblings field which is indicating amount of threads
 // /proc/cpuinfo is parsed in following manner
 //   - physical id: actual CPU installed in the socket
 //   - cores:       physical cores per CPU in the socket
 //   - siblings:    amount of threads per CPU in the socket
 // e.g. on HT CPU with 2 cores amount of siblings will be 4
-func listCPUs() ([]cpuInfo, error) {
-	lines, _ := readLines(getEnv("HOST_PROC", "/proc", "cpuinfo"))
+func listCPUs() (map[string]interface{}, error) {
+	lines, _ := common.ReadLines(common.GetEnv("HOST_PROC", "/proc", "cpuinfo"))
 
 	var cpus []cpuStat
 	var processorName string
@@ -241,10 +242,7 @@ func listCPUs() ([]cpuInfo, error) {
 			processorName = value
 		case "processor":
 			if c.CPU >= 0 {
-				err := finishCPUInfo(&c)
-				if err != nil {
-					return nil, err
-				}
+				c.finalize()
 				cpus = append(cpus, c)
 			}
 			c = cpuStat{Cores: 1, ModelName: processorName}
@@ -322,10 +320,7 @@ func listCPUs() ([]cpuInfo, error) {
 	}
 
 	if c.CPU >= 0 {
-		err := finishCPUInfo(&c)
-		if err != nil {
-			return nil, err
-		}
+		c.finalize()
 		cpus = append(cpus, c)
 	}
 
@@ -346,21 +341,28 @@ func listCPUs() ([]cpuInfo, error) {
 		}
 	}
 
-	var cInfo []cpuInfo
-	for _, cpu := range sorted {
-		cInfo = append(cInfo, *cpu)
+	// var cInfo []cpuInfo
+	encodedCpus := make(map[string]interface{})
+
+	for i, cpu := range sorted {
+		encodedCpus[fmt.Sprintf("cpu.%s.manufacturer", i)] = cpu.manufacturer
+		encodedCpus[fmt.Sprintf("cpu.%s.manufacturing_info", i)] = cpu.manufacturingInfo
+		encodedCpus[fmt.Sprintf("cpu.%s.description", i)] = cpu.description
+		encodedCpus[fmt.Sprintf("cpu.%s.core_count", i)] = cpu.coreCount
+		encodedCpus[fmt.Sprintf("cpu.%s.core_enabled", i)] = cpu.coreEnabled
+		encodedCpus[fmt.Sprintf("cpu.%s.thread_count", i)] = cpu.threadCount
 	}
 
-	return cInfo, nil
+	return encodedCpus, nil
 }
 
-func finishCPUInfo(c *cpuStat) error {
+func (c *cpuStat) finalize() {
 	var lines []string
 	var err error
 	var value float64
 
 	if len(c.CoreID) == 0 {
-		lines, err = readLines(sysCPUPath(c.CPU, "topology/core_id"))
+		lines, err = common.ReadLines(sysCPUPath(c.CPU, "topology/core_id"))
 		if err == nil {
 			c.CoreID = lines[0]
 		}
@@ -369,77 +371,23 @@ func finishCPUInfo(c *cpuStat) error {
 	// override the value of c.Mhz with cpufreq/cpuinfo_max_freq regardless
 	// of the value from /proc/cpuinfo because we want to report the maximum
 	// clock-speed of the CPU for c.Mhz, matching the behaviour of Windows
-	lines, err = readLines(sysCPUPath(c.CPU, "cpufreq/cpuinfo_max_freq"))
+	lines, err = common.ReadLines(sysCPUPath(c.CPU, "cpufreq/cpuinfo_max_freq"))
 	// if we encounter errors below such as there are no cpuinfo_max_freq file,
 	// we just ignore. so let Mhz is 0.
 	if err != nil {
-		return nil
+		return
 	}
-	value, err = strconv.ParseFloat(lines[0], 64)
-	if err != nil {
-		return nil
+
+	if value, err = strconv.ParseFloat(lines[0], 64); err != nil {
+		return
 	}
+
 	c.Mhz = value / 1000.0 // value is in kHz
 	if c.Mhz > 9999 {
 		c.Mhz = c.Mhz / 1000.0 // value in Hz
 	}
-	return nil
-}
-
-// ReadLines reads contents from a file and splits them by new lines.
-// A convenience wrapper to ReadLinesOffsetN(filename, 0, -1).
-func readLines(filename string) ([]string, error) {
-	return readLinesOffsetN(filename, 0, -1)
-}
-
-// ReadLines reads contents from file and splits them by new line.
-// The offset tells at which line number to start.
-// The count determines the number of lines to read (starting from offset):
-//   n >= 0: at most n lines
-//   n < 0: whole file
-func readLinesOffsetN(filename string, offset uint, n int) ([]string, error) {
-	f, err := os.Open(filename)
-	if err != nil {
-		return []string{""}, err
-	}
-	defer f.Close()
-
-	var ret []string
-
-	r := bufio.NewReader(f)
-	for i := 0; i < n+int(offset) || n < 0; i++ {
-		line, err := r.ReadString('\n')
-		if err != nil {
-			break
-		}
-		if i < int(offset) {
-			continue
-		}
-		ret = append(ret, strings.Trim(line, "\n"))
-	}
-
-	return ret, nil
 }
 
 func sysCPUPath(cpu int32, relPath string) string {
-	return getEnv("HOST_SYS", "/sys", fmt.Sprintf("devices/system/cpu/cpu%d", cpu), relPath)
-}
-
-func getEnv(key string, dfault string, combineWith ...string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		value = dfault
-	}
-
-	switch len(combineWith) {
-	case 0:
-		return value
-	case 1:
-		return filepath.Join(value, combineWith[0])
-	default:
-		all := make([]string, len(combineWith)+1)
-		all[0] = value
-		copy(all[1:], combineWith)
-		return filepath.Join(all...)
-	}
+	return common.GetEnv("HOST_SYS", "/sys", fmt.Sprintf("devices/system/cpu/cpu%d", cpu), relPath)
 }

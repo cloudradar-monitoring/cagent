@@ -5,12 +5,14 @@ package hwinfo
 import (
 	"bufio"
 	"bytes"
-	"context"
+	"fmt"
 	"os/exec"
 	"strings"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 func dmidecodeCommand() string {
@@ -67,14 +69,14 @@ func listDisplays() ([]*monitorInfo, error) {
 	return result, nil
 }
 
-func listCPUs() ([]cpuInfo, error) {
-	var ret []cpuInfo
+func listCPUs() (map[string]interface{}, error) {
+	var parsedCPUs []cpuInfo
 	sysctl, err := exec.LookPath("/usr/sbin/sysctl")
 	if err != nil {
-		return ret, err
+		return nil, err
 	}
 
-	out, err := RunCommandWithContext(context.Background(), sysctl, "machdep.cpu")
+	out, err := common.RunCommandInBackground(sysctl, "machdep.cpu")
 	if err != nil {
 		return nil, err
 	}
@@ -86,32 +88,47 @@ func listCPUs() ([]cpuInfo, error) {
 			continue
 		}
 
-		if strings.HasPrefix(line, "machdep.cpu.vendor") {
+		switch {
+		case strings.HasPrefix(line, "machdep.cpu.vendor"):
 			c.manufacturer = values[1]
-		} else if strings.HasPrefix(line, "machdep.cpu.brand_string") {
+		case strings.HasPrefix(line, "machdep.cpu.brand_string"):
 			c.description = strings.Join(values[1:], " ")
-		} else if strings.HasPrefix(line, "machdep.cpu.thread_count") {
+		case strings.HasPrefix(line, "machdep.cpu.thread_count"):
 			c.threadCount = values[1]
-		} else if strings.HasPrefix(line, "machdep.cpu.core_count") {
+		case strings.HasPrefix(line, "machdep.cpu.core_count"):
 			c.coreEnabled = values[1]
-		} else if strings.HasPrefix(line, "machdep.cpu.cores_per_package") {
+		case strings.HasPrefix(line, "machdep.cpu.cores_per_package"):
 			c.coreCount = values[1]
-		} else if strings.HasPrefix(line, "machdep.cpu.family") {
+		case strings.HasPrefix(line, "machdep.cpu.family"):
 			if c.manufacturingInfo != "" {
 				c.manufacturingInfo += " "
 			}
 			c.manufacturingInfo += "Family " + values[1]
-		} else if strings.HasPrefix(line, "machdep.cpu.model") {
+		case strings.HasPrefix(line, "machdep.cpu.model"):
 			if c.manufacturingInfo != "" {
 				c.manufacturingInfo += " "
 			}
 			c.manufacturingInfo += "Model " + values[1]
-		} else if strings.HasPrefix(line, "machdep.cpu.stepping") {
+		case strings.HasPrefix(line, "machdep.cpu.stepping"):
 			if c.manufacturingInfo != "" {
 				c.manufacturingInfo += " "
 			}
 			c.manufacturingInfo += "Stepping " + values[1]
 		}
 	}
-	return append(ret, c), nil
+
+	parsedCPUs = append(parsedCPUs, c)
+
+	encodedCpus := make(map[string]interface{})
+
+	for i := range parsedCPUs {
+		encodedCpus[fmt.Sprintf("cpu.%d.manufacturer", i)] = parsedCPUs[i].manufacturer
+		encodedCpus[fmt.Sprintf("cpu.%d.manufacturing_info", i)] = parsedCPUs[i].manufacturingInfo
+		encodedCpus[fmt.Sprintf("cpu.%d.description", i)] = parsedCPUs[i].description
+		encodedCpus[fmt.Sprintf("cpu.%d.core_count", i)] = parsedCPUs[i].coreCount
+		encodedCpus[fmt.Sprintf("cpu.%d.core_enabled", i)] = parsedCPUs[i].coreEnabled
+		encodedCpus[fmt.Sprintf("cpu.%d.thread_count", i)] = parsedCPUs[i].threadCount
+	}
+
+	return encodedCpus, nil
 }
