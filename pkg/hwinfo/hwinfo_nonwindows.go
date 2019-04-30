@@ -60,17 +60,6 @@ func fetchInventory() (map[string]interface{}, error) {
 	cpus, err := listCPUs()
 	errorCollector.Add(err)
 	if cpus != nil {
-		// encodedCpus := make(map[string]interface{})
-
-		// for i := range cpus {
-		// 	encodedCpus[fmt.Sprintf("cpu.%d.manufacturer", i)] = cpus[i].manufacturer
-		// 	encodedCpus[fmt.Sprintf("cpu.%d.manufacturing_info", i)] = cpus[i].manufacturingInfo
-		// 	encodedCpus[fmt.Sprintf("cpu.%d.description", i)] = cpus[i].description
-		// 	encodedCpus[fmt.Sprintf("cpu.%d.core_count", i)] = cpus[i].coreCount
-		// 	encodedCpus[fmt.Sprintf("cpu.%d.core_enabled", i)] = cpus[i].coreEnabled
-		// 	encodedCpus[fmt.Sprintf("cpu.%d.thread_count", i)] = cpus[i].threadCount
-		// }
-
 		res = common.MergeStringMaps(res, cpus)
 	}
 
@@ -146,19 +135,4 @@ func retrieveInfoUsingDmiDecode() (map[string]interface{}, error) {
 	}
 
 	return res, nil
-}
-
-func encodeCPUs(cpus []cpuInfo) map[string]interface{} {
-	encodedCpus := make(map[string]interface{})
-
-	for i := range cpus {
-		encodedCpus[fmt.Sprintf("cpu.%d.manufacturer", i)] = cpus[i].manufacturer
-		encodedCpus[fmt.Sprintf("cpu.%d.manufacturing_info", i)] = cpus[i].manufacturingInfo
-		encodedCpus[fmt.Sprintf("cpu.%d.description", i)] = cpus[i].description
-		encodedCpus[fmt.Sprintf("cpu.%d.core_count", i)] = cpus[i].coreCount
-		encodedCpus[fmt.Sprintf("cpu.%d.core_enabled", i)] = cpus[i].coreEnabled
-		encodedCpus[fmt.Sprintf("cpu.%d.thread_count", i)] = cpus[i].threadCount
-	}
-
-	return encodedCpus
 }
