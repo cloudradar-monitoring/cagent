@@ -15,6 +15,15 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
+type cpuInfo struct {
+	manufacturer      string
+	manufacturingInfo string
+	description       string
+	coreCount         string
+	coreEnabled       string
+	threadCount       string
+}
+
 func dmidecodeCommand() string {
 	return "dmidecode"
 }
