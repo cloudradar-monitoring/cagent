@@ -18,6 +18,7 @@ var (
 	ErrTimeout = errors.New("invoker: command timed out")
 )
 
+// Invoker executes command in context and gathers stdout/stderr output into slice
 type Invoker interface {
 	CommandWithContext(context.Context, string, ...string) ([]byte, error)
 }
