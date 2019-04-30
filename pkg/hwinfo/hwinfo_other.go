@@ -251,11 +251,9 @@ func listCPUs() (map[string]interface{}, error) {
 		case "processor":
 			tryFinalizeCurrentCPU()
 			c = cpuStat{Cores: 1, ModelName: processorName}
-			t, err := strconv.ParseInt(value, 10, 64)
-			if err != nil {
+			if err := c.parseFieldProcessor(value); err != nil {
 				return nil, err
 			}
-			c.CPU = int32(t)
 		case "vendorId", "vendor_id":
 			c.VendorID = value
 		case "cpu family":
@@ -263,24 +261,15 @@ func listCPUs() (map[string]interface{}, error) {
 		case "model":
 			c.Model = value
 		case "model name", "cpu":
-			c.ModelName = value
-			if strings.Contains(value, "POWER8") ||
-				strings.Contains(value, "POWER7") {
-				c.Model = strings.Split(value, " ")[0]
-				c.Family = "POWER"
-				c.VendorID = "IBM"
-			}
+			c.parseFieldModelName(value)
 		case "stepping", "revision":
 			if err := c.parseFieldStepping(key, value); err != nil {
 				return nil, err
 			}
 		case "cpu MHz", "clock":
-			// treat this as the fallback value, thus we ignore error
-			if t, err := strconv.ParseFloat(strings.Replace(value, "MHz", "", 1), 64); err == nil {
-				c.Mhz = t
-			}
+			c.parseFieldClock(value)
 		case "cache size":
-			if err := c.parseFieldCacheSize(key, value); err != nil {
+			if err := c.parseFieldCacheSize(value); err != nil {
 				return nil, err
 			}
 		case "physical id":
@@ -292,13 +281,13 @@ func listCPUs() (map[string]interface{}, error) {
 				return r == ',' || r == ' '
 			})
 		case "cpu cores":
-			if err := c.parseFieldCPUCores(key, value); err != nil {
+			if err := c.parseFieldCPUCores(value); err != nil {
 				return nil, err
 			}
 		case "microcode":
 			c.Microcode = value
 		case "siblings":
-			if err := c.parseFieldSiblings(key, value); err != nil {
+			if err := c.parseFieldSiblings(value); err != nil {
 				return nil, err
 			}
 		}
@@ -306,23 +295,7 @@ func listCPUs() (map[string]interface{}, error) {
 
 	tryFinalizeCurrentCPU()
 
-	sorted := make(map[string]bool)
-	encodedCpus := make(map[string]interface{})
-
-	for _, cpu := range cpus {
-		if _, found := sorted[cpu.PhysicalID]; !found {
-			sorted[cpu.PhysicalID] = true
-
-			encodedCpus[fmt.Sprintf("cpu.%s.manufacturer", cpu.PhysicalID)] = cpu.VendorID
-			encodedCpus[fmt.Sprintf("cpu.%s.manufacturing_info", cpu.PhysicalID)] = fmt.Sprintf("Model %s Family %s Stepping %d", cpu.Model, cpu.Family, cpu.Stepping)
-			encodedCpus[fmt.Sprintf("cpu.%s.description", cpu.PhysicalID)] = cpu.ModelName
-			encodedCpus[fmt.Sprintf("cpu.%s.core_count", cpu.PhysicalID)] = fmt.Sprintf("%d", cpu.Cores)
-			encodedCpus[fmt.Sprintf("cpu.%s.core_enabled", cpu.PhysicalID)] = fmt.Sprintf("%d", cpu.Cores)
-			encodedCpus[fmt.Sprintf("cpu.%s.thread_count", cpu.PhysicalID)] = fmt.Sprintf("%d", cpu.Siblings)
-		}
-	}
-
-	return encodedCpus, nil
+	return encodeCPUs(cpus), nil
 }
 
 func (c *cpuStat) finalize() {
@@ -357,6 +330,33 @@ func (c *cpuStat) finalize() {
 	}
 }
 
+func (c *cpuStat) parseFieldProcessor(value string) error {
+	t, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return err
+	}
+	c.CPU = int32(t)
+
+	return nil
+}
+
+func (c *cpuStat) parseFieldModelName(value string) {
+	c.ModelName = value
+	if strings.Contains(value, "POWER8") ||
+		strings.Contains(value, "POWER7") {
+		c.Model = strings.Split(value, " ")[0]
+		c.Family = "POWER"
+		c.VendorID = "IBM"
+	}
+}
+
+// treat this as the fallback value, thus we ignore error
+func (c *cpuStat) parseFieldClock(value string) {
+	if t, err := strconv.ParseFloat(strings.Replace(value, "MHz", "", 1), 64); err == nil {
+		c.Mhz = t
+	}
+}
+
 func (c *cpuStat) parseFieldStepping(key, value string) error {
 	val := value
 
@@ -374,7 +374,7 @@ func (c *cpuStat) parseFieldStepping(key, value string) error {
 	return nil
 }
 
-func (c *cpuStat) parseFieldSiblings(key, value string) error {
+func (c *cpuStat) parseFieldSiblings(value string) error {
 	t, err := strconv.ParseInt(value, 10, 64)
 
 	if err != nil {
@@ -386,7 +386,7 @@ func (c *cpuStat) parseFieldSiblings(key, value string) error {
 	return nil
 }
 
-func (c *cpuStat) parseFieldCPUCores(key, value string) error {
+func (c *cpuStat) parseFieldCPUCores(value string) error {
 	t, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
 		return err
@@ -397,7 +397,7 @@ func (c *cpuStat) parseFieldCPUCores(key, value string) error {
 	return nil
 }
 
-func (c *cpuStat) parseFieldCacheSize(key, value string) error {
+func (c *cpuStat) parseFieldCacheSize(value string) error {
 	t, err := strconv.ParseInt(strings.Replace(value, " KB", "", 1), 10, 64)
 	if err != nil {
 		return err
@@ -405,6 +405,26 @@ func (c *cpuStat) parseFieldCacheSize(key, value string) error {
 	c.CacheSize = int32(t)
 
 	return nil
+}
+
+func encodeCPUs(cpus []cpuStat) map[string]interface{} {
+	sorted := make(map[string]bool)
+	encodedCpus := make(map[string]interface{})
+
+	for _, cpu := range cpus {
+		if _, found := sorted[cpu.PhysicalID]; !found {
+			sorted[cpu.PhysicalID] = true
+
+			encodedCpus[fmt.Sprintf("cpu.%s.manufacturer", cpu.PhysicalID)] = cpu.VendorID
+			encodedCpus[fmt.Sprintf("cpu.%s.manufacturing_info", cpu.PhysicalID)] = fmt.Sprintf("Model %s Family %s Stepping %d", cpu.Model, cpu.Family, cpu.Stepping)
+			encodedCpus[fmt.Sprintf("cpu.%s.description", cpu.PhysicalID)] = cpu.ModelName
+			encodedCpus[fmt.Sprintf("cpu.%s.core_count", cpu.PhysicalID)] = fmt.Sprintf("%d", cpu.Cores)
+			encodedCpus[fmt.Sprintf("cpu.%s.core_enabled", cpu.PhysicalID)] = fmt.Sprintf("%d", cpu.Cores)
+			encodedCpus[fmt.Sprintf("cpu.%s.thread_count", cpu.PhysicalID)] = fmt.Sprintf("%d", cpu.Siblings)
+		}
+	}
+
+	return encodedCpus
 }
 
 func sysCPUPath(cpu int32, relPath string) string {

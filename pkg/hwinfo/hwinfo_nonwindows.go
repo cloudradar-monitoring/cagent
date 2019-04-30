@@ -17,14 +17,14 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
-type cpuInfo struct {
-	manufacturer      string
-	manufacturingInfo string
-	description       string
-	coreCount         string
-	coreEnabled       string
-	threadCount       string
-}
+// type cpuInfo struct {
+// 	manufacturer      string
+// 	manufacturingInfo string
+// 	description       string
+// 	coreCount         string
+// 	coreEnabled       string
+// 	threadCount       string
+// }
 
 func isCommandAvailable(name string) bool {
 	cmd := exec.Command("/bin/sh", "-c", "command", "-v", name)
