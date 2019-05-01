@@ -5,12 +5,21 @@ package sensors
 import (
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
+var errTemperatureNotAvailable = errors.New("the temperature is not available")
+
+const nouveauDriver = "nouveau" // open-source driver for Nvidia GPU
+
+// ReadTemperatureSensors tries to read temperature sensors via sysfs interface:
+// https://www.kernel.org/doc/Documentation/hwmon/sysfs-interface
 func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
 	var temperatures []*TemperatureSensorInfo
 	files, err := filepath.Glob(getHostSys("/class/hwmon/hwmon*/temp*_*"))
@@ -52,13 +61,15 @@ func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
 		}
 		name := strings.TrimSpace(string(nameBytes))
 
-		temperature, err := readTemperatureFromFile(file)
+		temperature, err := readTemperatureFromFile(name, file)
 		if err != nil {
-			logger.WithError(err).Debugf("could not read temperature from file: %s", file)
+			if err != errTemperatureNotAvailable {
+				logger.WithError(err).Debugf("could not read temperature from file: %s", file)
+			}
 			continue
 		}
 
-		criticalTemp, _ := readTemperatureFromFile(filepath.Join(filepath.Dir(file), baseFileName+"_crit"))
+		criticalTemp, _ := readTemperatureFromFile(name, filepath.Join(filepath.Dir(file), baseFileName+"_crit"))
 
 		temperatures = append(temperatures, &TemperatureSensorInfo{
 			SensorName:        fmt.Sprintf("%s:%s:%s", name, label, baseFileName),
@@ -70,16 +81,23 @@ func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
 	return temperatures, nil
 }
 
-func readTemperatureFromFile(filePath string) (float64, error) {
+func readTemperatureFromFile(sensorName string, filePath string) (float64, error) {
 	fileContent, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return 0, err
 	}
-	temperature, err := strconv.ParseFloat(strings.TrimSpace(string(fileContent)), 64)
+	value, err := strconv.ParseFloat(strings.TrimSpace(string(fileContent)), 64)
 	if err != nil {
 		return 0, err
 	}
-	return temperature / 1000.0, nil
+
+	if sensorName == nouveauDriver && value < 0 {
+		errCode := uint(math.Abs(value))
+		logger.Debugf("temperature for nvidia driver is not available: the driver returned %d", errCode)
+		return 0, errTemperatureNotAvailable
+	}
+
+	return value / 1000.0, nil
 }
 
 func getHostSys(combineWith string) string {
