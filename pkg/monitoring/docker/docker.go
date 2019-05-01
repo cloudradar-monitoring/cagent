@@ -5,6 +5,7 @@ package docker
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os/exec"
 	"strings"
 
@@ -117,7 +118,7 @@ func (dw *Watcher) ContainerNameByID(id string) (string, error) {
 		return "", ErrorDockerNotFound
 	}
 
-	out, err := exec.Command("/bin/sh", "-c", "sudo docker inspect --format \"{{ .Name }}\"", id).Output()
+	out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf("sudo docker inspect --format \"{{ .Name }}\" %s", id)).Output()
 	if err != nil {
 		// looks like docker daemon is down
 		// don not pass the error in case we never succeed with docker command within a session
