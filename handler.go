@@ -373,6 +373,11 @@ func (ca *Cagent) ReportMeasurements(measurements common.MeasurementsMap, output
 		}
 		return nil
 	}
+
+	if ca.Config.Logs.HubFile != "" {
+		ca.prettyPrintMeasurementsToFile(measurements, ca.Config.Logs.HubFile)
+	}
+
 	ctx, cancelFn := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancelFn()
 
@@ -380,6 +385,7 @@ func (ca *Cagent) ReportMeasurements(measurements common.MeasurementsMap, output
 	if err != nil {
 		err = errors.Wrap(err, "failed to POST measurement result to Hub")
 	}
+
 	return err
 }
 
@@ -407,6 +413,22 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, cfg *Config)
 		case <-time.After(secToDuration(ca.Config.Interval)):
 			continue
 		}
+	}
+}
+
+func (ca *Cagent) prettyPrintMeasurementsToFile(measurements common.MeasurementsMap, file string) {
+	fl, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.WithError(err).Error("failed to open hub log file")
+		return
+	}
+
+	defer fl.Close()
+
+	enc := json.NewEncoder(fl)
+	enc.SetIndent("", "    ")
+	if err = enc.Encode(measurements); err != nil {
+		log.WithError(err).Error("failed to JSON encode pretty printed measurement result to log file")
 	}
 }
 
