@@ -38,9 +38,10 @@ type MinValuableConfig struct {
 	HubPassword string   `toml:"hub_password" commented:"true"`
 }
 
-type ConfigsLogs struct {
+type LogsFilesConfig struct {
 	HubFile string `toml:"hub_file,omitempty" comment:"log hub objects send to the hub"`
 }
+
 type Config struct {
 	Interval float64 `toml:"interval" comment:"interval to push metrics to the HUB"`
 
@@ -83,7 +84,7 @@ type Config struct {
 
 	SMARTMonitoring bool `toml:"smart_monitoring" comment:"default true"`
 
-	Logs ConfigsLogs `toml:"logs"`
+	Logs LogsFilesConfig `toml:"logs"`
 }
 
 type CPUUtilisationAnalysis struct {
@@ -143,7 +144,7 @@ func NewConfig() *Config {
 			TrailingProcessAnalysisMinutes: 5,
 		},
 		SMARTMonitoring: true,
-		Logs: ConfigsLogs{
+		Logs: LogsFilesConfig{
 			HubFile: "",
 		},
 	}
