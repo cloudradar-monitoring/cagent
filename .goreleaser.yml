@@ -70,7 +70,6 @@ nfpm:
   - dmidecode
   - usbutils
   - sudo
-  - smartmontools
 
   # Recommend to install root SSL certificates
   recommends:
