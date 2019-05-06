@@ -143,7 +143,7 @@ func NewConfig() *Config {
 			ReportProcesses:                5,
 			TrailingProcessAnalysisMinutes: 5,
 		},
-		SMARTMonitoring: true,
+		SMARTMonitoring: false,
 		Logs: LogsFilesConfig{
 			HubFile: "",
 		},
