@@ -6,7 +6,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -26,7 +25,6 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 	vmstatTypes "github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
-	"github.com/cloudradar-monitoring/cagent/pkg/smart"
 )
 
 func (ca *Cagent) initHubClientOnce() {
@@ -343,14 +341,10 @@ func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
 	}
 
 	// measurements fetched below should not affect cagent.success
-	smartMeas, smartErrs := ca.getSMARTMeasurements()
+	smartMeas := ca.getSMARTMeasurements()
 
 	if len(smartMeas) > 0 {
 		measurements = measurements.AddInnerWithPrefix("smartmon", smartMeas)
-	}
-
-	for _, e := range smartErrs {
-		errs = append(errs, e.Error())
 	}
 
 	if len(errs) != 0 {
@@ -457,26 +451,26 @@ func (ca *Cagent) getVMStatMeasurements(f func(string, common.MeasurementsMap, e
 	}
 }
 
-func (ca *Cagent) getSMARTMeasurements() (common.MeasurementsMap, []error) {
+func (ca *Cagent) getSMARTMeasurements() common.MeasurementsMap {
 	// measurements fetched below should not affect cagent.success
-	ca.initSMART.Do(func() {
-		if ca.Config.SMARTMonitoring {
-			if err := smart.DetectTools(); err == nil {
-				ca.smartAvailable = true
-			} else {
-				ca.smartAvailable = false
-				log.Error(err.Error())
+	if ca.smart != nil {
+		res, errs := ca.smart.Parse()
+
+		if len(errs) > 0 {
+			var errStr []string
+			for _, e := range errs {
+				errStr = append(errStr, e.Error())
 			}
-		} else {
-			ca.smartAvailable = false
+
+			if res == nil {
+				res = make(common.MeasurementsMap)
+			}
+
+			res["messages"] = strings.Join(errStr, "; ")
 		}
-	})
 
-	if ca.smartAvailable {
-		res, errs := smart.Parse()
-
-		return res, errs
+		return res
 	}
 
-	return common.MeasurementsMap{}, []error{fmt.Errorf("smartmon: not available")}
+	return nil
 }

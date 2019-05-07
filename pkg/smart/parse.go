@@ -1,20 +1,30 @@
 package smart
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
+
+type smartctlStatus struct {
+	Status   int `json:"exit_status"`
+	Messages []struct {
+		String string `json:"string"`
+	}
+}
+type smartErrorResult struct {
+	Smartctl smartctlStatus `json:"smartctl"`
+}
 
 type ataSMARTAttributes struct {
 	Table []struct {
@@ -50,12 +60,8 @@ type nvmeSmartHealthInformationLog struct {
 }
 
 type parseResult struct {
-	Smartctl struct {
-		Status   int `json:"exit_status"`
-		Messages []struct {
-			String string `json:"string"`
-		}
-	} `json:"smartctl"`
+	Smartctl smartctlStatus `json:"smartctl"`
+
 	Device struct {
 		Name     string `json:"name"`
 		InfoName string `json:"info_name"`
@@ -82,9 +88,11 @@ type parseResult struct {
 		Hours int `json:"hours"`
 	} `json:"power_on_time"`
 
-	RotationRate      *string `json:"rotation_rate,omitempty"`
-	LogicalBlockSize  *int    `json:"logical_block_size,omitempty"`
-	PhysicalBlockSize *int    `json:"physical_block_size,omitempty"`
+	// RotationRate is of type interface as on Linux can return string
+	// for SSD while on Windows it will be int with value 0
+	RotationRate      interface{} `json:"rotation_rate,omitempty"`
+	LogicalBlockSize  *int        `json:"logical_block_size,omitempty"`
+	PhysicalBlockSize *int        `json:"physical_block_size,omitempty"`
 
 	UserCapacity *struct {
 		Blocks int   `json:"blocks"`
@@ -145,18 +153,9 @@ type parseResult struct {
 
 var smartctlVersionRegexp = regexp.MustCompile(`^smartctl\s(\d.\d)\s(\w|\W)+$`)
 
-func DetectTools() error {
-	buildStr, err := checkTools()
-	if err != nil {
-		return errors.Wrap(err, "while detecting smartctl")
-	}
-
-	return smartctlIsSupportedVersion(buildStr)
-}
-
 // Parse detect hardware disks and parse their S.M.A.R.T
-func Parse() (common.MeasurementsMap, []error) {
-	rawDisksOutput, err := detectDisks()
+func (sm *SMART) Parse() (common.MeasurementsMap, []error) {
+	rawDisksOutput, err := sm.detectDisks()
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -168,7 +167,7 @@ func Parse() (common.MeasurementsMap, []error) {
 
 	var errs []error
 	var jsonOutput []string
-	if jsonOutput, err = smartCtlRun(disks); err != nil {
+	if jsonOutput, err = sm.smartCtlRun(disks); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -177,29 +176,42 @@ func Parse() (common.MeasurementsMap, []error) {
 	return result, append(errs, parseErrors...)
 }
 
-func smartCtlRun(disks []string) ([]string, error) {
+func (sm *SMART) smartCtlRun(disks []string) ([]string, error) {
 	var result []string
 	var errStr string
 
 	for _, disk := range disks {
-		cmd := smartctlPrepare(disk)
-		buf := &bytes.Buffer{}
-		cmd.Stdout = bufio.NewWriter(buf)
+		cmd := sm.smartctlPrepare(disk)
 
+		var err error
+		var output []byte
 		// The exit statuses of smartctl are defined by a bitmask.
 		// If all is well with the disk, the exit status (return value) of smartctl is 0 (all bits turned off).
 		// If a problem occurs, or an error, potential error, or fault is detected, then a non-zero status is returned
 		// https://www.smartmontools.org/browser/trunk/smartmontools/smartctl.8.in
-		if err := cmd.Run(); err != nil {
+		if output, err = cmd.CombinedOutput(); err != nil {
 			if exitErr, ok := err.(*exec.ExitError); ok {
 				if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.ExitStatus() == 1 {
-					errStr += buf.String() + "\n"
+					var errResult smartErrorResult
+					if err = json.Unmarshal(output, &errResult); err == nil {
+						var messages string
+						for _, msg := range errResult.Smartctl.Messages {
+							if messages != "" {
+								messages += ";"
+							}
+							messages += msg.String
+						}
+						if errStr != "" {
+							errStr += "\n"
+						}
+						errStr += messages
+					}
 					continue
 				}
 			}
 		}
 
-		result = append(result, buf.String())
+		result = append(result, string(output))
 	}
 
 	if errStr != "" {
@@ -217,7 +229,7 @@ func smartCtlParse(raw []string) (common.MeasurementsMap, []error) {
 		res := &parseResult{}
 		err := json.Unmarshal([]byte(r), res)
 		if err != nil {
-			errs = append(errs, err)
+			errs = append(errs, errors.Wrap(err, "smart: unmarshal disk"))
 		} else {
 			parsedDisks = append(parsedDisks, res)
 		}
@@ -245,36 +257,40 @@ func smartCtlParse(raw []string) (common.MeasurementsMap, []error) {
 	return marshaledDisks, errs
 }
 
-func smartctlIsSupportedVersion(buildStr string) error {
+func smartctlIsSupportedVersion(buildStr string) (string, error) {
 	if !smartctlVersionRegexp.Match([]byte(buildStr)) {
-		return errors.New("smart: couldn't detect smartctl version")
+		return "", errors.New("smart: couldn't detect smartctl version")
 	}
 
 	ver := smartctlVersionRegexp.FindAllStringSubmatch(buildStr, -1)
 
 	if len(ver) < 1 && len(ver[0]) < 2 {
-		return ErrParseSmartctlVersion
+		return "", ErrParseSmartctlVersion
 	}
 
 	tok := strings.Split(ver[0][1], ".")
 
 	if len(tok) != 2 {
-		return ErrParseSmartctlVersion
+		return "", ErrParseSmartctlVersion
 	}
 
 	var major int
+	var minor int
 	var err error
 
-	major, err = strconv.Atoi(tok[0])
-	if err != nil {
-		return fmt.Errorf("smart: parse smartctl version: %s", err)
+	if major, err = strconv.Atoi(tok[0]); err != nil {
+		return "", fmt.Errorf("smart: parse smartctl version: %s", err)
+	}
+
+	if minor, err = strconv.Atoi(tok[1]); err != nil {
+		return "", fmt.Errorf("smart: parse smartctl version: %s", err)
 	}
 
 	if major >= 7 {
-		return nil
+		return fmt.Sprintf("%d.%d", major, minor), nil
 	}
 
-	return fmt.Errorf("smart: unsupported smartctl version. expected minimum [7.0], actual [%s]", ver[0][1])
+	return "", fmt.Errorf("smart: unsupported smartctl version. expected minimum [7.0], actual [%s]", ver[0][1])
 }
 
 func parseBase(output map[string]interface{}, d *parseResult) string {
@@ -309,15 +325,30 @@ func parseBase(output map[string]interface{}, d *parseResult) string {
 		output["power_on_time_hours"] = d.PowerOnTime.Hours
 	}
 
-	if d.RotationRate == nil || ((d.RotationRate != nil) && (*d.RotationRate == "Solid State Drive")) {
+	switch rt := d.RotationRate.(type) {
+	case nil:
 		output["type_of"] = "SSD"
-	} else {
-		output["type_of"] = "HDD"
-		output["rotation_rate"] = d.RotationRate
+	case string:
+		if rt == "Solid State Drive" || rt == "Solid State Device" {
+			output["type_of"] = "SSD"
+		} else {
+			output["type_of"] = "HDD"
+			output["rotation_rate"] = rt
+		}
+	case int:
+		if rt == 0 {
+			output["type_of"] = "SSD"
+		} else {
+			output["type_of"] = "HDD"
+			output["rotation_rate"] = rt
+		}
+	default:
+		logrus.Warnf("smart: parse type \"%s\" of rotation rate field of disk \"d.Device.Name\"", reflect.TypeOf(d.RotationRate).String())
+		output["type_of"] = "SSD"
 	}
 
 	if d.InterfaceSpeed != nil {
-		output["interface_speed_B"] = int64((d.InterfaceSpeed.Max.BitsPerUnit * d.InterfaceSpeed.Max.UnitsPerSecond) / 8)
+		output["interface_speed_Bps"] = int64((d.InterfaceSpeed.Max.BitsPerUnit * d.InterfaceSpeed.Max.UnitsPerSecond) / 8)
 	}
 
 	return d.Device.Name

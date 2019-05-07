@@ -5,19 +5,20 @@ package smart
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"os/exec"
 
 	log "github.com/sirupsen/logrus"
 )
 
-func detectDisks() (*bytes.Buffer, error) {
-	cmd := exec.Command("/bin/sh", "-c", "sudo smartctl --scan")
+func (sm *SMART) detectDisks() (*bytes.Buffer, error) {
+	cmd := exec.Command("/bin/sh", "-c", fmt.Sprintf("sudo %s --scan", sm.smartctl))
 
 	buf := &bytes.Buffer{}
 	cmd.Stdout = bufio.NewWriter(buf)
 
 	if err := cmd.Run(); err != nil {
-		log.Errorf("smart: execute smartctl.exe: %s", err.Error())
+		log.Errorf("smart: execute smartctl: %s", err.Error())
 		return nil, ErrUnderlyingToolNotFound
 	}
 
