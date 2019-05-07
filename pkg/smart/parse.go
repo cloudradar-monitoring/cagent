@@ -151,20 +151,17 @@ var smartctlVersionRegexp = regexp.MustCompile(`^smartctl\s(\d.\d)\s(\w|\W)+$`)
 func (sm *SMART) Parse() (common.MeasurementsMap, []error) {
 	rawDisksOutput, err := sm.detectDisks()
 	if err != nil {
-		logrus.Error(err.Error())
 		return nil, []error{err}
 	}
 
 	var disks []string
 	if disks, err = parseDisks(rawDisksOutput); err != nil {
-		logrus.Error(err.Error())
 		return nil, []error{err}
 	}
 
 	var errs []error
 	var jsonOutput []string
 	if jsonOutput, err = sm.smartCtlRun(disks); err != nil {
-		logrus.Error(err.Error())
 		errs = append(errs, err)
 	}
 
@@ -179,8 +176,6 @@ func (sm *SMART) smartCtlRun(disks []string) ([]string, error) {
 
 	for _, disk := range disks {
 		cmd := sm.smartctlPrepare(disk)
-		// buf := &bytes.Buffer{}
-		// cmd.Stdout = bufio.NewWriter(buf)
 
 		var err error
 		var output []byte

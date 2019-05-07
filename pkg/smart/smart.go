@@ -1,8 +1,6 @@
 package smart
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 )
 
@@ -46,6 +44,5 @@ func (sm *SMART) detectTools(smartctl string) error {
 	sm.smartctl = path
 	sm.smartctlDetected = true
 
-	fmt.Printf("smartctl path: %s\n", path)
 	return nil
 }
