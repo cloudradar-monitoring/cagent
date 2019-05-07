@@ -48,6 +48,12 @@ func fetchInventory() (map[string]interface{}, error) {
 		res["displays.list"] = displays
 	}
 
+	cpus, err := listCPUs()
+	errorCollector.Add(err)
+	if cpus != nil {
+		res = common.MergeStringMaps(res, cpus)
+	}
+
 	dmiDecodeResults, err := retrieveInfoUsingDmiDecode()
 	errorCollector.Add(err)
 	if len(dmiDecodeResults) > 0 {
@@ -117,20 +123,6 @@ func retrieveInfoUsingDmiDecode() (map[string]interface{}, error) {
 		}
 	} else if err != dmidecode.ErrNotFound {
 		log.WithError(err).Info("[HWINFO] failed fetching memory device info")
-	}
-
-	var reqCPU []dmidecode.ReqProcessor
-	if err = dmi.Get(&reqCPU); err == nil {
-		for i := range reqCPU {
-			res[fmt.Sprintf("cpu.%d.manufacturer", i)] = reqCPU[i].Manufacturer
-			res[fmt.Sprintf("cpu.%d.manufacturing_info", i)] = reqCPU[i].Signature.String()
-			res[fmt.Sprintf("cpu.%d.description", i)] = reqCPU[i].Version
-			res[fmt.Sprintf("cpu.%d.core_count", i)] = reqCPU[i].CoreCount
-			res[fmt.Sprintf("cpu.%d.core_enabled", i)] = reqCPU[i].CoreEnabled
-			res[fmt.Sprintf("cpu.%d.thread_count", i)] = reqCPU[i].ThreadCount
-		}
-	} else if err != dmidecode.ErrNotFound {
-		log.WithError(err).Info("[HWINFO] failed fetching cpu info")
 	}
 
 	return res, nil
