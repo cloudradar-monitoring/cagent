@@ -6,6 +6,6 @@ import (
 	"os/exec"
 )
 
-func smartctlPrepare(disk string) *exec.Cmd {
-	return exec.Command("smartctl.exe", "-j", "-a", disk)
+func (sm *SMART) smartctlPrepare(disk string) *exec.Cmd {
+	return exec.Command("cmd", "/c", sm.smartctl, "-j", "-a", disk)
 }

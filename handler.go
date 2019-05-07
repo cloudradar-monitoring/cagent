@@ -26,7 +26,6 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 	vmstatTypes "github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
-	"github.com/cloudradar-monitoring/cagent/pkg/smart"
 )
 
 func (ca *Cagent) initHubClientOnce() {
@@ -459,21 +458,8 @@ func (ca *Cagent) getVMStatMeasurements(f func(string, common.MeasurementsMap, e
 
 func (ca *Cagent) getSMARTMeasurements() (common.MeasurementsMap, []error) {
 	// measurements fetched below should not affect cagent.success
-	ca.initSMART.Do(func() {
-		if ca.Config.SMARTMonitoring {
-			if err := smart.DetectTools(); err == nil {
-				ca.smartAvailable = true
-			} else {
-				ca.smartAvailable = false
-				log.Error(err.Error())
-			}
-		} else {
-			ca.smartAvailable = false
-		}
-	})
-
-	if ca.smartAvailable {
-		res, errs := smart.Parse()
+	if ca.smart != nil {
+		res, errs := ca.smart.Parse()
 
 		return res, errs
 	}
