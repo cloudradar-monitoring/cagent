@@ -16,6 +16,16 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
+type smartctlStatus struct {
+	Status   int `json:"exit_status"`
+	Messages []struct {
+		String string `json:"string"`
+	}
+}
+type smartErrorResult struct {
+	Smartctl smartctlStatus `json:"smartctl"`
+}
+
 type ataSMARTAttributes struct {
 	Table []struct {
 		ID         int    `json:"id"`
@@ -50,12 +60,8 @@ type nvmeSmartHealthInformationLog struct {
 }
 
 type parseResult struct {
-	Smartctl struct {
-		Status   int `json:"exit_status"`
-		Messages []struct {
-			String string `json:"string"`
-		}
-	} `json:"smartctl"`
+	Smartctl smartctlStatus `json:"smartctl"`
+
 	Device struct {
 		Name     string `json:"name"`
 		InfoName string `json:"info_name"`
@@ -186,10 +192,20 @@ func (sm *SMART) smartCtlRun(disks []string) ([]string, error) {
 		if output, err = cmd.CombinedOutput(); err != nil {
 			if exitErr, ok := err.(*exec.ExitError); ok {
 				if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.ExitStatus() == 1 {
-					if errStr != "" {
-						errStr += "\n"
+					var errResult smartErrorResult
+					if err = json.Unmarshal(output, &errResult); err == nil {
+						var messages string
+						for _, msg := range errResult.Smartctl.Messages {
+							if messages != "" {
+								messages += ";"
+							}
+							messages += msg.String
+						}
+						if errStr != "" {
+							errStr += "\n"
+						}
+						errStr += messages
 					}
-					errStr += string(output)
 					continue
 				}
 			}
@@ -313,7 +329,7 @@ func parseBase(output map[string]interface{}, d *parseResult) string {
 	case nil:
 		output["type_of"] = "SSD"
 	case string:
-		if rt == "Solid State Drive" {
+		if rt == "Solid State Drive" || rt == "Solid State Device" {
 			output["type_of"] = "SSD"
 		} else {
 			output["type_of"] = "HDD"
@@ -332,7 +348,7 @@ func parseBase(output map[string]interface{}, d *parseResult) string {
 	}
 
 	if d.InterfaceSpeed != nil {
-		output["interface_speed_B"] = int64((d.InterfaceSpeed.Max.BitsPerUnit * d.InterfaceSpeed.Max.UnitsPerSecond) / 8)
+		output["interface_speed_Bps"] = int64((d.InterfaceSpeed.Max.BitsPerUnit * d.InterfaceSpeed.Max.UnitsPerSecond) / 8)
 	}
 
 	return d.Device.Name
