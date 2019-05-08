@@ -22,7 +22,7 @@ func checkTools(smartctl string) (string, string, error) {
 	if err := cmd.Run(); err != nil {
 		// where command might not be available or smartmontools bin directory is not present in the PATH
 		if _, err = os.Stat(smartctl); os.IsNotExist(err) {
-			return "", "", errors.Wrap(err, "smart: detect full path of smartctl.exe")
+			return "", "", errors.Wrapf(ErrSmartctlNotFound, "\"%s\"", smartctl)
 		}
 
 		smartctlPathBuf.Write([]byte(smartctl))
@@ -34,7 +34,6 @@ func checkTools(smartctl string) (string, string, error) {
 
 	buf := &bytes.Buffer{}
 	cmd.Stdout = bufio.NewWriter(buf)
-
 	if err := cmd.Run(); err != nil {
 		return "", "", errors.Wrap(err, "smart: cannot get smartctl version string")
 	}

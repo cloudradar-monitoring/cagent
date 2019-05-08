@@ -69,9 +69,9 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 
 	ca.SetLogLevel(ca.Config.LogLevel)
 
-	if ca.Config.SMARTMonitoring {
+	if ca.Config.SMARTMonitoring && ca.Config.SMARTCtl != "" {
 		var err error
-		ca.smart, err = smart.New(smart.SetExecutable(ca.Config.SMARTCtl, true))
+		ca.smart, err = smart.New(smart.SetExecutable(ca.Config.SMARTCtl, false))
 		if err != nil {
 			log.Error(err.Error())
 		}
