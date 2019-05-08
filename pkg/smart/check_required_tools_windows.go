@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -19,7 +20,12 @@ func checkTools(smartctl string) (string, string, error) {
 	smartctlPathBuf := &bytes.Buffer{}
 	cmd.Stdout = bufio.NewWriter(smartctlPathBuf)
 	if err := cmd.Run(); err != nil {
-		return "", "", errors.Wrap(err, "smart: detect full path of smartctl.exe")
+		// where command might not be available or smartmontools bin directory is not present in the PATH
+		if _, err = os.Stat(smartctl); os.IsNotExist(err) {
+			return "", "", errors.Wrap(err, "smart: detect full path of smartctl.exe")
+		}
+
+		smartctlPathBuf.Write([]byte(smartctl))
 	}
 
 	smartctl = strings.TrimRight(smartctlPathBuf.String(), "\r\n")
