@@ -11,7 +11,7 @@ import (
 	"syscall"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
@@ -257,21 +257,21 @@ func smartCtlParse(raw []string) (common.MeasurementsMap, []error) {
 	return marshaledDisks, errs
 }
 
-func smartctlIsSupportedVersion(buildStr string) (string, error) {
+func smartctlParseVersion(buildStr string) (int, int, error) {
 	if !smartctlVersionRegexp.Match([]byte(buildStr)) {
-		return "", errors.New("smart: couldn't detect smartctl version")
+		return 0, 0, errors.New("smart: couldn't detect smartctl version")
 	}
 
 	ver := smartctlVersionRegexp.FindAllStringSubmatch(buildStr, -1)
 
 	if len(ver) < 1 && len(ver[0]) < 2 {
-		return "", ErrParseSmartctlVersion
+		return 0, 0, ErrParseSmartctlVersion
 	}
 
 	tok := strings.Split(ver[0][1], ".")
 
 	if len(tok) != 2 {
-		return "", ErrParseSmartctlVersion
+		return 0, 0, ErrParseSmartctlVersion
 	}
 
 	var major int
@@ -279,18 +279,14 @@ func smartctlIsSupportedVersion(buildStr string) (string, error) {
 	var err error
 
 	if major, err = strconv.Atoi(tok[0]); err != nil {
-		return "", fmt.Errorf("smart: parse smartctl version: %s", err)
+		return 0, 0, fmt.Errorf("smart: parse smartctl version: %s", err)
 	}
 
 	if minor, err = strconv.Atoi(tok[1]); err != nil {
-		return "", fmt.Errorf("smart: parse smartctl version: %s", err)
+		return 0, 0, fmt.Errorf("smart: parse smartctl version: %s", err)
 	}
 
-	if major >= 7 {
-		return fmt.Sprintf("%d.%d", major, minor), nil
-	}
-
-	return "", fmt.Errorf("smart: unsupported smartctl version. expected minimum [7.0], actual [%s]", ver[0][1])
+	return major, minor, nil
 }
 
 func parseBase(output map[string]interface{}, d *parseResult) string {
@@ -343,7 +339,7 @@ func parseBase(output map[string]interface{}, d *parseResult) string {
 			output["rotation_rate"] = rt
 		}
 	default:
-		logrus.Warnf("smart: parse type \"%s\" of rotation rate field of disk \"d.Device.Name\"", reflect.TypeOf(d.RotationRate).String())
+		log.Warnf("smart: parse type \"%s\" of rotation rate field of disk \"d.Device.Name\"", reflect.TypeOf(d.RotationRate).String())
 		output["type_of"] = "SSD"
 	}
 

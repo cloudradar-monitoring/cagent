@@ -1,8 +1,12 @@
 package smart
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 )
+
+const atLeastMajorVersion = 7
 
 type SMART struct {
 	smartctl         string
@@ -37,8 +41,15 @@ func (sm *SMART) detectTools(smartctl string) error {
 		return errors.Wrap(err, "while detecting smartctl")
 	}
 
-	if _, err = smartctlIsSupportedVersion(buildStr); err != nil {
+	var major int
+	var minor int
+
+	if major, minor, err = smartctlParseVersion(buildStr); err != nil {
 		return errors.Wrap(err, "while checking smartctl version")
+	}
+
+	if major < atLeastMajorVersion {
+		return fmt.Errorf("smart: unsupported smartctl version. expected minimum [7.0], actual [%d.%d]", major, minor)
 	}
 
 	sm.smartctl = path
