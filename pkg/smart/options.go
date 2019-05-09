@@ -7,7 +7,7 @@ import (
 // Option callback for connection option
 type Option func(*SMART) error
 
-func SetExecutable(val string, tryDefaultOnFail bool) Option {
+func Executable(val string, tryDefaultOnFail bool) Option {
 	return func(sm *SMART) error {
 		var err error
 		if val == "" && !tryDefaultOnFail {
