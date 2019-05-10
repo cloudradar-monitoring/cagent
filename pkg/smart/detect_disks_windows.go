@@ -10,8 +10,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func detectDisks() (*bytes.Buffer, error) {
-	cmd := exec.Command("smartctl.exe", "--scan")
+func (sm *SMART) detectDisks() (*bytes.Buffer, error) {
+	cmd := exec.Command("cmd", "/c", sm.smartctl, "--scan")
 
 	buf := &bytes.Buffer{}
 	cmd.Stdout = bufio.NewWriter(buf)

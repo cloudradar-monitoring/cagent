@@ -3,16 +3,18 @@
 package smart
 
 import (
+	"fmt"
 	"os/exec"
 	"runtime"
 )
 
-func smartctlPrepare(disk string) *exec.Cmd {
-	smartctlPrefix := "sudo smartctl"
-	if runtime.GOOS == "darwin" {
-		// darwin does not need smartctl to run with sudo rights
-		smartctlPrefix = "smartctl"
+func (sm *SMART) smartctlPrepare(disk string) *exec.Cmd {
+	var smartctlPrefix string
+
+	// on linux smartctl should be invoked with sudo rights
+	if runtime.GOOS == "linux" {
+		smartctlPrefix = "sudo "
 	}
 
-	return exec.Command("/bin/sh", "-c", smartctlPrefix+" -j -a "+disk)
+	return exec.Command("/bin/sh", "-c", fmt.Sprintf("%s%s -j -a %s", smartctlPrefix, sm.smartctl, disk))
 }

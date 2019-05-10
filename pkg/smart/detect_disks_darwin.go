@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func detectDisks() (*bytes.Buffer, error) {
+func (sm *SMART) detectDisks() (*bytes.Buffer, error) {
 	cmd := exec.Command("/bin/sh", "-c", `diskutil list | grep "^/dev/" | grep -v synthesized | grep -v external | grep -v "disk image"`)
 
 	buf := &bytes.Buffer{}

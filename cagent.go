@@ -14,6 +14,7 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
+	"github.com/cloudradar-monitoring/cagent/pkg/smart"
 )
 
 type Cagent struct {
@@ -34,8 +35,7 @@ type Cagent struct {
 	vmstatLazyInit sync.Once
 	vmWatchers     map[string]types.Provider
 	hwInventory    sync.Once
-	initSMART      sync.Once
-	smartAvailable bool
+	smart          *smart.SMART
 
 	rootCAs *x509.CertPool
 
@@ -49,7 +49,6 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 		version:        version,
 		vmWatchers:     make(map[string]types.Provider),
 		dockerWatcher:  &docker.Watcher{},
-		smartAvailable: false,
 	}
 
 	if rootCertsPath != "" {
@@ -69,6 +68,14 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 	}
 
 	ca.SetLogLevel(ca.Config.LogLevel)
+
+	if ca.Config.SMARTMonitoring && ca.Config.SMARTCtl != "" {
+		var err error
+		ca.smart, err = smart.New(smart.Executable(ca.Config.SMARTCtl, false))
+		if err != nil {
+			log.Error(err.Error())
+		}
+	}
 
 	return ca
 }
