@@ -18,6 +18,7 @@ const fsGetPartitionsTimeout = time.Second * 10
 
 type FSWatcher struct {
 	AllowedTypes      map[string]struct{}
+	ExcludePath       map[string]struct{}
 	ExcludedPathCache map[string]bool
 	cagent            *Cagent
 }
@@ -29,11 +30,17 @@ func (ca *Cagent) FSWatcher() *FSWatcher {
 
 	ca.fsWatcher = &FSWatcher{
 		AllowedTypes:      map[string]struct{}{},
+		ExcludePath:       make(map[string]struct{}),
 		ExcludedPathCache: map[string]bool{},
 		cagent:            ca,
 	}
+
 	for _, t := range ca.Config.FSTypeInclude {
 		ca.fsWatcher.AllowedTypes[strings.ToLower(t)] = struct{}{}
+	}
+
+	for _, t := range ca.Config.FSPathExclude {
+		ca.fsWatcher.ExcludePath[strings.ToLower(t)] = struct{}{}
 	}
 
 	return ca.fsWatcher
@@ -49,10 +56,10 @@ func (fw *FSWatcher) Results() (common.MeasurementsMap, error) {
 	partitions, err := disk.PartitionsWithContext(ctx, true)
 
 	if err != nil {
-
 		log.Errorf("[FS] Failed to read partitions: %s", err.Error())
 		errs = append(errs, err.Error())
 	}
+
 	for _, partition := range partitions {
 		if _, typeAllowed := fw.AllowedTypes[strings.ToLower(partition.Fstype)]; !typeAllowed {
 			log.Debugf("[FS] fstype excluded: %s", partition.Fstype)
@@ -60,14 +67,31 @@ func (fw *FSWatcher) Results() (common.MeasurementsMap, error) {
 			continue
 		}
 
-		if pathExcluded, cacheExists := fw.ExcludedPathCache[strings.ToLower(partition.Mountpoint)]; cacheExists {
+		pathExcluded := false
+
+		if fw.cagent.Config.FSPathExcludeRecurse {
+			for path := range fw.ExcludePath {
+				if strings.HasPrefix(partition.Mountpoint, path) {
+					log.Debugf("[FS] mountpoint excluded: %s", partition.Mountpoint)
+					pathExcluded = true
+					break
+				}
+			}
+		}
+
+		if pathExcluded {
+			continue
+		}
+
+		cacheExists := false
+		if pathExcluded, cacheExists = fw.ExcludedPathCache[strings.ToLower(partition.Mountpoint)]; cacheExists {
 			if pathExcluded {
 				log.Debugf("[FS] mountpoint excluded: %s", partition.Fstype)
 
 				continue
 			}
 		} else {
-			pathExcluded := false
+			pathExcluded = false
 			for _, glob := range fw.cagent.Config.FSPathExclude {
 				pathExcluded, _ = filepath.Match(glob, partition.Mountpoint)
 				if pathExcluded {
@@ -83,6 +107,7 @@ func (fw *FSWatcher) Results() (common.MeasurementsMap, error) {
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), fsGetUsageTimeout)
+		// FIXME: inspect for possible resource leak
 		defer cancel()
 
 		usage, err := disk.UsageWithContext(ctx, partition.Mountpoint)
@@ -119,9 +144,9 @@ func (fw *FSWatcher) Results() (common.MeasurementsMap, error) {
 
 	}
 
-	if len(errs) == 0 {
-		return results, nil
+	if len(errs) != 0 {
+		return results, errors.New("FS: " + strings.Join(errs, "; "))
 	}
 
-	return results, errors.New("FS: " + strings.Join(errs, "; "))
+	return results, nil
 }
