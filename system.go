@@ -1,12 +1,10 @@
 package cagent
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"net"
 	"os"
-	"os/exec"
 	"runtime"
 	"strings"
 	"time"
@@ -16,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
+	"github.com/cloudradar-monitoring/cagent/pkg/osinfo"
 )
 
 var (
@@ -24,54 +23,8 @@ var (
 	hostInfoTimeout = 10 * time.Second
 )
 
-type Invoker interface {
-	Command(string, ...string) ([]byte, error)
-	CommandWithContext(context.Context, string, ...string) ([]byte, error)
-}
-
-type Invoke struct{}
-
-func (i Invoke) Command(name string, arg ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), unameTimeout)
-	defer cancel()
-	return i.CommandWithContext(ctx, name, arg...)
-}
-
-func (i Invoke) CommandWithContext(ctx context.Context, name string, arg ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, name, arg...)
-
-	var buf bytes.Buffer
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
-
-	if err := cmd.Start(); err != nil {
-		return buf.Bytes(), err
-	}
-
-	if err := cmd.Wait(); err != nil {
-		return buf.Bytes(), err
-	}
-
-	return buf.Bytes(), nil
-}
-
-var invoke Invoker = Invoke{}
-
 func Uname() (string, error) {
-	if runtime.GOOS == "windows" {
-		info, err := host.Info()
-
-		if err != nil {
-			return "", err
-		}
-		return info.Platform + " " + info.PlatformVersion + " " + info.PlatformFamily, nil
-	}
-	uname, err := exec.LookPath("uname")
-	if err != nil {
-		return "", err
-	}
-	b, err := invoke.Command(uname, "-a")
-	return string(b), err
+	return osinfo.GetOsName()
 }
 
 func (ca *Cagent) HostInfoResults() (common.MeasurementsMap, error) {
@@ -85,7 +38,7 @@ func (ca *Cagent) HostInfoResults() (common.MeasurementsMap, error) {
 	defer cancel()
 
 	info, err := host.InfoWithContext(ctx)
-	errs := []string{}
+	var errs []string
 
 	if err != nil {
 		log.Errorf("[SYSTEM] Failed to read host info: %s", err.Error())
