@@ -29,7 +29,7 @@ jobs:
       - attach_workspace:
           at: /go/src/github.com/cloudradar-monitoring
       - run: make goreleaser-snapshot
-  
+
   build-goreleaser:
     docker:
       - image: cloudradario/go-build:0.0.11
@@ -67,12 +67,26 @@ jobs:
       - attach_workspace:
           at: /go/src/github.com/cloudradar-monitoring
       - run:
-          name: Setup ssh key to access windows signing machine
+          name: Setup ssh key to access aptly server
           command: echo $SSH_KEY | base64 -d > /tmp/id_ssh && chmod 0600 /tmp/id_ssh
       - run:
           name: Update aptly repository
           command: make aptly
-  
+
+  build-createrepo:
+    docker:
+      - image: cloudradario/go-build:0.0.11
+    working_directory: /go/src/github.com/cloudradar-monitoring/cagent
+    steps:
+      - attach_workspace:
+          at: /go/src/github.com/cloudradar-monitoring
+      - run:
+          name: Setup ssh key to access createrepo server
+          command: echo $SSH_KEY | base64 -d > /tmp/id_ssh && chmod 0600 /tmp/id_ssh
+      - run:
+          name: Update createrepo repository
+          command: make createrepo
+
   release-github:
     docker:
       - image: cloudradario/go-build:0.0.11
@@ -154,6 +168,15 @@ workflows:
             branches:
               ignore: /.*/
       - build-aptly:
+          context: cloudradar
+          requires:
+            - build-goreleaser
+          filters:
+            tags:
+              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
+            branches:
+              ignore: /.*/
+      - build-createrepo:
           context: cloudradar
           requires:
             - build-goreleaser
