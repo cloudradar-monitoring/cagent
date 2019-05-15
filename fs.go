@@ -36,7 +36,7 @@ func (ca *Cagent) FSWatcher() *FSWatcher {
 	}
 
 	for _, t := range ca.Config.FSTypeInclude {
-		ca.fsWatcher.AllowedTypes[t] = struct{}{}
+		ca.fsWatcher.AllowedTypes[strings.ToLower(t)] = struct{}{}
 	}
 
 	for _, t := range ca.Config.FSPathExclude {
