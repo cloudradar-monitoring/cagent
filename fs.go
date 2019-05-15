@@ -61,7 +61,7 @@ func (fw *FSWatcher) Results() (common.MeasurementsMap, error) {
 	}
 
 	for _, partition := range partitions {
-		if _, typeAllowed := fw.AllowedTypes[partition.Fstype]; !typeAllowed {
+		if _, typeAllowed := fw.AllowedTypes[strings.ToLower(partition.Fstype)]; !typeAllowed {
 			log.Debugf("[FS] fstype excluded: %s", partition.Fstype)
 
 			continue
