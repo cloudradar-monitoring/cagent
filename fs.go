@@ -36,11 +36,11 @@ func (ca *Cagent) FSWatcher() *FSWatcher {
 	}
 
 	for _, t := range ca.Config.FSTypeInclude {
-		ca.fsWatcher.AllowedTypes[strings.ToLower(t)] = struct{}{}
+		ca.fsWatcher.AllowedTypes[t] = struct{}{}
 	}
 
 	for _, t := range ca.Config.FSPathExclude {
-		ca.fsWatcher.ExcludePath[strings.ToLower(t)] = struct{}{}
+		ca.fsWatcher.ExcludePath[t] = struct{}{}
 	}
 
 	return ca.fsWatcher
@@ -61,7 +61,7 @@ func (fw *FSWatcher) Results() (common.MeasurementsMap, error) {
 	}
 
 	for _, partition := range partitions {
-		if _, typeAllowed := fw.AllowedTypes[strings.ToLower(partition.Fstype)]; !typeAllowed {
+		if _, typeAllowed := fw.AllowedTypes[partition.Fstype]; !typeAllowed {
 			log.Debugf("[FS] fstype excluded: %s", partition.Fstype)
 
 			continue
@@ -84,7 +84,7 @@ func (fw *FSWatcher) Results() (common.MeasurementsMap, error) {
 		}
 
 		cacheExists := false
-		if pathExcluded, cacheExists = fw.ExcludedPathCache[strings.ToLower(partition.Mountpoint)]; cacheExists {
+		if pathExcluded, cacheExists = fw.ExcludedPathCache[partition.Mountpoint]; cacheExists {
 			if pathExcluded {
 				log.Debugf("[FS] mountpoint excluded: %s", partition.Fstype)
 
