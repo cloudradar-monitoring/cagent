@@ -11,6 +11,7 @@ builds:
   - arm
   - arm64
   goarm:
+  - 6
   - 7
   # List of combinations of GOOS + GOARCH + GOARM to ignore.
   ignore:
