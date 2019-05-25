@@ -196,9 +196,7 @@ func ListSysVinitServices() ([]SysVService, error) {
 		return services, ErrorCommandNotFound
 	}
 
-	cmd := exec.Command("service",
-		"--status-all",
-	)
+	cmd := exec.Command("/bin/sh", "-c", "service", "--status-all")
 
 	setPathEnvVar(cmd)
 	var outb bytes.Buffer
