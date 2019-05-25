@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 // Don't use this struct directly.
@@ -64,7 +66,7 @@ func (dw *Watcher) ListContainers() (map[string]interface{}, error) {
 		return nil, ErrorDockerNotFound
 	}
 
-	out, err := exec.Command("/bin/sh", "-c", "sudo docker ps -a --format \"{{ json . }}\"").Output()
+	out, err := exec.Command("/bin/sh", "-c", common.WrapCommandToAdmin("docker ps -a --format \"{{ json . }}\"")).Output()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
 			err = errors.New(ee.Error() + ": " + string(ee.Stderr))
@@ -118,7 +120,7 @@ func (dw *Watcher) ContainerNameByID(id string) (string, error) {
 		return "", ErrorDockerNotFound
 	}
 
-	out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf("sudo docker inspect --format \"{{ .Name }}\" %s", id)).Output()
+	out, err := exec.Command("/bin/sh", "-c", common.WrapCommandToAdmin(fmt.Sprintf("docker inspect --format \"{{ .Name }}\" %s", id))).Output()
 	if err != nil {
 		// looks like docker daemon is down
 		// don not pass the error in case we never succeed with docker command within a session

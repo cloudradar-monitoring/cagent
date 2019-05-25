@@ -21,6 +21,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent"
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 var (
@@ -678,11 +679,11 @@ func configureLogger(ca *cagent.Cagent) {
 func getSystemMangerCommand(manager string, service string, command string) string {
 	switch manager {
 	case "unix-systemv":
-		return "sudo service " + service + " " + command
+		return common.WrapCommandToAdmin("service", service, command)
 	case "linux-upstart":
-		return "sudo initctl " + command + " " + service
+		return common.WrapCommandToAdmin("initctl", command, service)
 	case "linux-systemd":
-		return "sudo systemctl " + command + " " + service + ".service"
+		return common.WrapCommandToAdmin("systemctl", command, fmt.Sprintf("%s.service", service))
 	case "darwin-launchd":
 		switch command {
 		case "stop":
@@ -690,9 +691,9 @@ func getSystemMangerCommand(manager string, service string, command string) stri
 		case "start":
 			command = "load"
 		case "restart":
-			return "sudo launchctl unload " + service + " && sudo launchctl load " + service
+			return common.WrapCommandToAdmin("launchctl", "unload", service) + " && " + common.WrapCommandToAdmin("launchctl", "load", service)
 		}
-		return "sudo launchctl " + command + " " + service
+		return common.WrapCommandToAdmin("launchctl", command, service)
 	case "windows-service":
 		return "sc " + command + " " + service
 	default:

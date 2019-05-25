@@ -14,6 +14,8 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 // SystemdService contains the service's data parsed from systemctl
@@ -188,6 +190,12 @@ var sysVinitServiceRE = regexp.MustCompile(`^\s+\[\s+([\+\-\?]])\s+\]\s+(.*)$`)
 
 // ListSysVinitServices list SysVinit services via `service --status-all`
 func ListSysVinitServices() ([]SysVService, error) {
+	var services []SysVService
+
+	if !common.IsCommandAvailable("service") {
+		return services, ErrorCommandNotFound
+	}
+
 	cmd := exec.Command("service",
 		"--status-all",
 	)
@@ -202,7 +210,6 @@ func ListSysVinitServices() ([]SysVService, error) {
 		return nil, fmt.Errorf("service: %s, %s", err.Error(), string(errOutput))
 	}
 
-	var services []SysVService
 	scanner := bufio.NewScanner(&outb)
 
 	for scanner.Scan() {

@@ -42,8 +42,7 @@ type cpuStat struct {
 }
 
 func dmidecodeCommand() string {
-	// expecting 'sudo' package is installed and /etc/sudoers.d/cagent-dmidecode is present
-	return "sudo dmidecode"
+	return common.WrapCommandToAdmin("dmidecode")
 }
 
 func captureStderr(funcToExecute func()) (string, error) {

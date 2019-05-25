@@ -267,17 +267,6 @@ func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
 		}
 	})
 
-	ca.hwInventory.Do(func() {
-		hwInfo, err := hwinfo.Inventory()
-		if err != nil {
-			errs = append(errs, err.Error())
-		}
-
-		if hwInfo != nil {
-			measurements = measurements.AddInnerWithPrefix("hw.inventory", hwInfo)
-		}
-	})
-
 	if runtime.GOOS == "linux" {
 		raid, err := ca.RaidState()
 		if err != nil {
@@ -299,7 +288,7 @@ func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
 	}
 
 	servicesList, err := services.ListServices(ca.Config.DiscoverAutostartingServicesOnly)
-	if err != nil && err != services.ErrorNotImplementedForOS {
+	if err != nil && err != services.ErrorNotImplementedForOS && err != services.ErrorCommandNotFound {
 		// no need to log because already done inside ListServices()
 		errs = append(errs, err.Error())
 	}
@@ -339,6 +328,17 @@ func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
 	} else {
 		measurements["cagent.success"] = 0
 	}
+
+	ca.hwInventory.Do(func() {
+		hwInfo, err := hwinfo.Inventory()
+		if err != nil {
+			errs = append(errs, err.Error())
+		}
+
+		if hwInfo != nil {
+			measurements = measurements.AddInnerWithPrefix("hw.inventory", hwInfo)
+		}
+	})
 
 	// measurements fetched below should not affect cagent.success
 	smartMeas := ca.getSMARTMeasurements()

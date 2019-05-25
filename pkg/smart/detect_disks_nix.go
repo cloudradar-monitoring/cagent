@@ -9,10 +9,12 @@ import (
 	"os/exec"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 func (sm *SMART) detectDisks() (*bytes.Buffer, error) {
-	cmd := exec.Command("/bin/sh", "-c", fmt.Sprintf("sudo %s --scan", sm.smartctl))
+	cmd := exec.Command("/bin/sh", "-c", common.WrapCommandToAdmin(fmt.Sprintf("%s --scan", sm.smartctl)))
 
 	buf := &bytes.Buffer{}
 	cmd.Stdout = bufio.NewWriter(buf)

@@ -32,7 +32,7 @@ func Inventory() (map[string]interface{}, error) {
 	hw, err := fetchInventory()
 	if err != nil {
 		err = errors.Wrap(err, "[HWINFO]")
-		log.Error(err)
+		log.Info(err)
 		return hw, err
 	}
 
