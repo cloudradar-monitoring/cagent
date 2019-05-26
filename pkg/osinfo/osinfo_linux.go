@@ -31,8 +31,14 @@ var releaseFiles = map[string][]string{
 	"Ubuntu":        {"/etc/lsb-release"},
 }
 
+var osReleaseFile = "/etc/os-release"
+
 var ubuntuDescriptionRegexp = regexp.MustCompile(`(?m)^DISTRIB_DESCRIPTION=\"(.+)\"$`)
 var ubuntuCodenameRegexp = regexp.MustCompile(`(?m)^DISTRIB_CODENAME=(\w+)$`)
+
+var osReleaseID = regexp.MustCompile(`(?m)^ID=\"?(.*[^"])\"?$`)
+var osReleaseName = regexp.MustCompile(`(?m)^NAME=\"?(.*[^"])\"?$`)
+var osReleaseVersion = regexp.MustCompile(`(?m)^VERSION=\"(.+)\"$`)
 
 func uname() (*unix.Utsname, error) {
 	uts := &unix.Utsname{}
@@ -47,6 +53,39 @@ func osName() (string, error) {
 	uts, err := uname()
 	if err != nil {
 		log.WithError(err)
+	}
+
+	// try /etc/os-release first
+	if _, err := os.Stat(osReleaseFile); err == nil {
+		var result string
+
+		var data []byte
+		if data, err = ioutil.ReadFile(osReleaseFile); err != nil {
+			return result, errors.Wrapf(err, "osinfo: couldn't read release info from \"%s\"", osReleaseFile)
+		}
+
+		if osReleaseID.Match(data) {
+			res := osReleaseID.FindAllStringSubmatch(string(data), -1)
+			result = prettyId(res[0][1]) + ": "
+		} else {
+			log.Error("not matched!!!!!!!")
+		}
+
+		if osReleaseName.Match(data) {
+			res := osReleaseName.FindAllStringSubmatch(string(data), -1)
+			result += res[0][1]
+		}
+
+		if osReleaseVersion.Match(data) {
+			res := osReleaseVersion.FindAllStringSubmatch(string(data), -1)
+			result += " " + res[0][1]
+		}
+
+		if uts != nil {
+			result += fmt.Sprintf(" %s", string(uts.Release[:bytes.IndexByte(uts.Release[:], 0)]))
+		}
+
+		return result, nil
 	}
 
 	for dist, files := range releaseFiles {
@@ -94,4 +133,25 @@ func osName() (string, error) {
 	}
 
 	return "", ErrUnknownOSType
+}
+
+func prettyId(id string) string {
+	switch id {
+	case "debian":
+		return "Debian"
+	case "ubuntu":
+		return "Ubuntu"
+	case "centos":
+		return "CentOS"
+	case "rhel":
+		return "Red Hat"
+	case "gentoo":
+		return "Gentoo"
+	case "slackware":
+		return "Slackware"
+	case "fedora":
+		return "Fedora"
+	}
+
+	return id
 }
