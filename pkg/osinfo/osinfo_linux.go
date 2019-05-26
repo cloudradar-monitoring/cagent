@@ -36,7 +36,7 @@ func osName() (string, error) {
 
 			result += ": " + strings.TrimSuffix(string(data), "\n")
 			result = strings.TrimSuffix(result, " ")
-			result = strings.ReplaceAll(result, "\n", " ")
+			result = strings.Replace(result, "\n", " ", -1)
 			if len(files) == 2 {
 				if _, err = os.Stat(files[1]); err == nil {
 					if data, err = ioutil.ReadFile(files[1]); err != nil {
