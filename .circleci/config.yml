@@ -1,10 +1,13 @@
 ---
 version: 2
+docker_job_setup: &docker_job
+  docker:
+    - image: cloudradario/go-build:0.0.13
+  working_directory: /go/src/github.com/cloudradar-monitoring/cagent
+
 jobs:
   get-source:
-    docker:
-      - image: cloudradario/go-build:0.0.13
-    working_directory: /go/src/github.com/cloudradar-monitoring/cagent
+    <<: *docker_job
     steps:
       - checkout
       - persist_to_workspace:
@@ -13,27 +16,21 @@ jobs:
             - cagent
   
   test:
-    docker:
-      - image: cloudradario/go-build:0.0.13
-    working_directory: /go/src/github.com/cloudradar-monitoring/cagent
+    <<: *docker_job
     steps:
       - attach_workspace:
           at: /go/src/github.com/cloudradar-monitoring
       - run: make test
   
   test-goreleaser:
-    docker:
-      - image: cloudradario/go-build:0.0.13
-    working_directory: /go/src/github.com/cloudradar-monitoring/cagent
+    <<: *docker_job
     steps:
       - attach_workspace:
           at: /go/src/github.com/cloudradar-monitoring
       - run: make goreleaser-snapshot
 
   build-goreleaser:
-    docker:
-      - image: cloudradario/go-build:0.0.13
-    working_directory: /go/src/github.com/cloudradar-monitoring/cagent
+    <<: *docker_job
     steps:
       - attach_workspace:
           at: /go/src/github.com/cloudradar-monitoring
@@ -46,9 +43,7 @@ jobs:
             - cagent
   
   build-sign-msi:
-    docker:
-      - image: cloudradario/go-build:0.0.13
-    working_directory: /go/src/github.com/cloudradar-monitoring/cagent
+    <<: *docker_job
     steps:
       - attach_workspace:
           at: /go/src/github.com/cloudradar-monitoring
@@ -60,9 +55,7 @@ jobs:
           command: make windows-sign
   
   build-aptly:
-    docker:
-      - image: cloudradario/go-build:0.0.13
-    working_directory: /go/src/github.com/cloudradar-monitoring/cagent
+    <<: *docker_job
     steps:
       - attach_workspace:
           at: /go/src/github.com/cloudradar-monitoring
@@ -74,9 +67,7 @@ jobs:
           command: make aptly
 
   build-createrepo:
-    docker:
-      - image: cloudradario/go-build:0.0.13
-    working_directory: /go/src/github.com/cloudradar-monitoring/cagent
+    <<: *docker_job
     steps:
       - attach_workspace:
           at: /go/src/github.com/cloudradar-monitoring
@@ -88,9 +79,7 @@ jobs:
           command: make createrepo
 
   release-github:
-    docker:
-      - image: cloudradario/go-build:0.0.13
-    working_directory: /go/src/github.com/cloudradar-monitoring/cagent
+    <<: *docker_job
     steps:
       - run:
           name: Fetch release changelog so we can preserve it when releasing
