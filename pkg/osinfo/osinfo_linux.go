@@ -66,7 +66,7 @@ func osName() (string, error) {
 
 		if osReleaseID.Match(data) {
 			res := osReleaseID.FindAllStringSubmatch(string(data), -1)
-			result = prettyId(res[0][1]) + ": "
+			result = prettyID(res[0][1]) + ": "
 		} else {
 			log.Error("not matched!!!!!!!")
 		}
@@ -135,7 +135,7 @@ func osName() (string, error) {
 	return "", ErrUnknownOSType
 }
 
-func prettyId(id string) string {
+func prettyID(id string) string {
 	switch id {
 	case "debian":
 		return "Debian"
