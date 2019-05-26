@@ -3,7 +3,7 @@ version: 2
 jobs:
   get-source:
     docker:
-      - image: cloudradario/go-build:0.0.11
+      - image: cloudradario/go-build:0.0.13
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       - checkout
@@ -14,7 +14,7 @@ jobs:
   
   test:
     docker:
-      - image: cloudradario/go-build:0.0.11
+      - image: cloudradario/go-build:0.0.13
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       - attach_workspace:
@@ -23,7 +23,7 @@ jobs:
   
   test-goreleaser:
     docker:
-      - image: cloudradario/go-build:0.0.11
+      - image: cloudradario/go-build:0.0.13
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       - attach_workspace:
@@ -32,7 +32,7 @@ jobs:
 
   build-goreleaser:
     docker:
-      - image: cloudradario/go-build:0.0.11
+      - image: cloudradario/go-build:0.0.13
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       - attach_workspace:
@@ -47,7 +47,7 @@ jobs:
   
   build-sign-msi:
     docker:
-      - image: cloudradario/go-build:0.0.11
+      - image: cloudradario/go-build:0.0.13
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       - attach_workspace:
@@ -61,7 +61,7 @@ jobs:
   
   build-aptly:
     docker:
-      - image: cloudradario/go-build:0.0.11
+      - image: cloudradario/go-build:0.0.13
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       - attach_workspace:
@@ -75,7 +75,7 @@ jobs:
 
   build-createrepo:
     docker:
-      - image: cloudradario/go-build:0.0.11
+      - image: cloudradario/go-build:0.0.13
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       - attach_workspace:
@@ -89,7 +89,7 @@ jobs:
 
   release-github:
     docker:
-      - image: cloudradario/go-build:0.0.11
+      - image: cloudradario/go-build:0.0.13
     working_directory: /go/src/github.com/cloudradar-monitoring/cagent
     steps:
       - run:
