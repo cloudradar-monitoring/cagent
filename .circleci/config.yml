@@ -2,7 +2,7 @@
 version: 2
 docker_job_setup: &docker_job
   docker:
-    - image: cloudradario/go-build:0.0.13
+    - image: cloudradario/go-build:0.0.14
   working_directory: /go/src/github.com/cloudradar-monitoring/cagent
 
 jobs:
