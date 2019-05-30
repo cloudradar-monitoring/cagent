@@ -54,8 +54,7 @@ changelog:
     - '^docs:'
     - '^test:'
 nfpm:
-  # Default: `{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}`
-  name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
   maintainer: CloudRadar GmbH <ops@cloudradar.io>
 
   vendor: cloudradar GmbH
