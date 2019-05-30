@@ -5,6 +5,10 @@ docker_job_setup: &docker_job
     - image: cloudradario/go-build:0.0.14
   working_directory: /go/src/github.com/cloudradar-monitoring/cagent
 
+attach_workspace: &workspace
+  attach_workspace:
+    at: /go/src/github.com/cloudradar-monitoring
+
 jobs:
   get-source:
     <<: *docker_job
@@ -14,26 +18,23 @@ jobs:
           root: /go/src/github.com/cloudradar-monitoring
           paths:
             - cagent
-  
+
   test:
     <<: *docker_job
     steps:
-      - attach_workspace:
-          at: /go/src/github.com/cloudradar-monitoring
+      - <<: *workspace
       - run: make test
   
   test-goreleaser:
     <<: *docker_job
     steps:
-      - attach_workspace:
-          at: /go/src/github.com/cloudradar-monitoring
+      - <<: *workspace
       - run: make goreleaser-snapshot
 
   build-goreleaser:
     <<: *docker_job
     steps:
-      - attach_workspace:
-          at: /go/src/github.com/cloudradar-monitoring
+      - <<: *workspace
       - run:
           name: Build binaries
           command: make goreleaser-rm-dist
@@ -45,8 +46,7 @@ jobs:
   build-sign-msi:
     <<: *docker_job
     steps:
-      - attach_workspace:
-          at: /go/src/github.com/cloudradar-monitoring
+      - <<: *workspace
       - run:
           name: Setup ssh key to access windows signing machine
           command: echo $SSH_KEY | base64 -d > /tmp/id_ssh && chmod 0600 /tmp/id_ssh
@@ -57,8 +57,7 @@ jobs:
   build-aptly:
     <<: *docker_job
     steps:
-      - attach_workspace:
-          at: /go/src/github.com/cloudradar-monitoring
+      - <<: *workspace
       - run:
           name: Setup ssh key to access aptly server
           command: echo $SSH_KEY | base64 -d > /tmp/id_ssh && chmod 0600 /tmp/id_ssh
@@ -69,8 +68,7 @@ jobs:
   build-createrepo:
     <<: *docker_job
     steps:
-      - attach_workspace:
-          at: /go/src/github.com/cloudradar-monitoring
+      - <<: *workspace
       - run:
           name: Setup ssh key to access createrepo server
           command: echo $SSH_KEY | base64 -d > /tmp/id_ssh && chmod 0600 /tmp/id_ssh
