@@ -1,0 +1,33 @@
+[{
+    "step_title": "Cagent configuration",
+    "items": [{
+        "type": "textfield",
+        "desc": "Configure cagent authentication for Cloudradar Hub",
+        "subitems": [{
+            "key": "CONFIG_HUB_URL",
+            "desc": "Hub URL",
+            "defaultValue": "https://hub.cloudradar.io/ctrapper/",
+            "validator": {
+                "allowBlank": false,
+                "minLength": 2,
+                "maxLength": 100
+            }
+        },{
+            "key": "CONFIG_HUB_USER",
+            "desc": "Hub Username",
+            "validator": {
+                "allowBlank": false,
+                "minLength": 2,
+                "maxLength": 40
+            }
+        },{
+            "key": "CONFIG_HUB_PASSWORD",
+            "desc": "Hub Password",
+            "validator": {
+                "allowBlank": false,
+                "minLength": 2,
+                "maxLength": 40
+            }
+        }]
+    }]
+}]

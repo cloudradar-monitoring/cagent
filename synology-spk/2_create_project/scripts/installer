@@ -1,0 +1,150 @@
+#!/bin/sh
+
+# Package
+PACKAGE="cagent"
+DNAME="Cagent"
+
+TEMP_STORAGE_DIR="${SYNOPKG_TEMP_UPGRADE_FOLDER}"
+INSTALL_DIR="/usr/local/${PACKAGE}"
+APP_DIR="${INSTALL_DIR}/cagent"
+SSS="/var/packages/${DNAME}/scripts/start-stop-status"
+PATH="${INSTALL_DIR}:${PATH}"
+
+SERVICETOOL="/usr/syno/bin/servicetool"
+FWPORTS="/var/packages/${DNAME}/scripts/${PACKAGE}.sc"
+
+FILE_CREATE_LOG="${APP_DIR}/wizard_create_log"
+LOG_FILE="/var/log/cagent.log"
+PACKAGE_LOG="/var/log/synopkg.log"
+
+preinst ()
+{
+    exit 0
+}
+
+postinst ()
+{
+    # Link
+    ln -s ${SYNOPKG_PKGDEST} ${INSTALL_DIR}
+
+    # to create log at each start 
+    if [ "${wizard_create_log}" == "true" ]; then
+        touch ${FILE_CREATE_LOG}
+    fi
+
+    # Add firewall config
+    ${SERVICETOOL} --install-configure-file --package ${FWPORTS} >> /dev/null
+
+    # install default config
+    mkdir -p /etc/cagent
+    cp -f ${APP_DIR}/cagent.default.conf /etc/cagent/cagent.conf
+
+    # apply config values from WIZARD_UIFILES/install_uifile
+    sed -i "s#CONFIG_HUB_URL#${CONFIG_HUB_URL}#g" /etc/cagent/cagent.conf
+    sed -i "s#CONFIG_HUB_USER#${CONFIG_HUB_USER}#g" /etc/cagent/cagent.conf
+    sed -i "s#CONFIG_HUB_PASSWORD#${CONFIG_HUB_PASSWORD}#g" /etc/cagent/cagent.conf
+
+    mkdir -p /var/log/cagent
+    chown cagent:cagent /var/log/cagent
+
+    exit 0
+}
+
+preuninst ()
+{
+    # Stop the package
+    ${SSS} stop > /dev/null
+
+    # Remove firewall config
+    if [ "${SYNOPKG_PKG_STATUS}" == "UNINSTALL" ]; then
+        ${SERVICETOOL} --remove-configure-file --package ${PACKAGE}.sc >> /dev/null
+    fi
+
+    exit 0
+}
+
+postuninst ()
+{
+    # Remove link
+    rm -f ${INSTALL_DIR}
+
+    # remove log file
+    rm -f ${LOG_FILE}
+
+    exit 0
+}
+
+preupgrade ()
+{
+    # Stop the package
+    ${SSS} stop > /dev/null
+
+    ret=0
+    # backup the data
+    log "Backup data" ${SYNOPKG_OLD_PKGVER}
+    for dir in ${APP_DIR}/*/ ; do
+        logBegin "rsync ${dir%*/} to ${TEMP_STORAGE_DIR}/" ${SYNOPKG_OLD_PKGVER}
+        rsync -a ${dir%*/} ${TEMP_STORAGE_DIR}/
+        error_code=$?
+        logEnd "rsync ${dir%*/} to ${TEMP_STORAGE_DIR}/" $error_code ${SYNOPKG_OLD_PKGVER}
+        if [ ! "$error_code" -eq "0" ]; then
+            $ret=1
+            echo "Could not backup data $dir. Please ensure there is sufficient space." >> $SYNOPKG_TEMP_LOGFILE
+        fi
+    done
+    if [ -f ${FILE_CREATE_LOG} ]; then
+        cp -a ${FILE_CREATE_LOG} ${TEMP_STORAGE_DIR}
+    fi
+
+    exit $ret
+}
+
+postupgrade ()
+{
+    ret=0
+    # restore the data
+    log "Restore data" ${SYNOPKG_PKGVER}
+    for dir in ${TEMP_STORAGE_DIR}/*/ ; do
+        logBegin "rsync ${dir%*/} to ${APP_DIR}/" ${SYNOPKG_PKGVER}
+        rsync -a ${dir%*/} ${APP_DIR}/
+        error_code=$?
+        logEnd "rsync ${dir%*/} to ${APP_DIR}/" $error_code ${SYNOPKG_PKGVER}
+        if [ ! "$error_code" -eq "0" ]; then
+            $ret=1
+            echo "Could not restore data from $dir. " >> $SYNOPKG_TEMP_LOGFILE
+        fi
+    done
+    if [ -f ${TEMP_STORAGE_DIR}/wizard_create_log ]; then
+        logBegin "copy ${TEMP_STORAGE_DIR}/wizard_create_log to ${APP_DIR}/" ${SYNOPKG_PKGVER}
+        cp -a ${TEMP_STORAGE_DIR}/wizard_create_log ${APP_DIR}/
+        logEnd "copy ${TEMP_STORAGE_DIR}/wizard_create_log to ${APP_DIR}/" $? ${SYNOPKG_PKGVER}
+    fi
+
+    if [ ! "$ret" -eq "0" ]; then
+        echo "Data restore failed. Please uninstall, perform new installation and restore data manually from your backup." >> $SYNOPKG_TEMP_LOGFILE
+    fi
+
+    exit $ret
+}
+
+log ()
+{
+    msg=$1
+    version=$2
+    echo "$(date +"%Y/%m/%d %T") upgrade Cagent $version $msg" >> ${PACKAGE_LOG}
+}
+
+logBegin ()
+{
+    msg=$1
+    version=$2
+    echo "$(date +"%Y/%m/%d %T") upgrade Cagent $version Begin $msg" >> ${PACKAGE_LOG}
+}
+
+logEnd ()
+{
+   msg=$1
+   code=$2
+   version=$3
+   echo "$(date +"%Y/%m/%d %T") upgrade Cagent $version End $msg ret=[$code]" >> ${PACKAGE_LOG}
+}

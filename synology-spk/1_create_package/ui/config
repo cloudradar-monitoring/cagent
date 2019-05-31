@@ -1,0 +1,12 @@
+{
+    ".url": {
+        "io.cloudradar.cagent": {
+            "type": "url",
+            "allUsers": true,
+            "title": "Cagent",
+            "desc": "Monitoring agent",
+            "icon": "cagent-{0}.png",
+            "grantPrivilege": "local"
+        }
+    }
+}

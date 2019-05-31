@@ -75,3 +75,10 @@ windows-sign:
 	# Add files to Github release
 	github-release upload --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --name "cagent_${CIRCLE_TAG}_Windows_386.msi" --file "/go/src/github.com/cloudradar-monitoring/cagent/dist/cagent_386.msi"
 	github-release upload --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --name "cagent_${CIRCLE_TAG}_Windows_x86_64.msi" --file "/go/src/github.com/cloudradar-monitoring/cagent/dist/cagent_64.msi"
+
+synology-spk:
+	cd synology-spk && ./create_spk.sh ${CIRCLE_TAG}
+	# Add files to Github release
+	github-release upload --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --name "cagent_${CIRCLE_TAG}_synology_amd64.spk" --file "/go/src/github.com/cloudradar-monitoring/cagent/synology-spk/cagent-amd64.spk"
+	github-release upload --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --name "cagent_${CIRCLE_TAG}_synology_armv7.spk" --file "/go/src/github.com/cloudradar-monitoring/cagent/synology-spk/cagent-armv7.spk"
+	github-release upload --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --name "cagent_${CIRCLE_TAG}_synology_armv8.spk" --file "/go/src/github.com/cloudradar-monitoring/cagent/synology-spk/cagent-armv8.spk"
