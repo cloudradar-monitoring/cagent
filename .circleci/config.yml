@@ -76,6 +76,14 @@ jobs:
           name: Update createrepo repository
           command: make createrepo
 
+  build-synology-spk:
+    <<: *docker_job
+    steps:
+      - <<: *workspace
+      - run:
+          name: Build Synology packages
+          command: make synology-spk
+
   release-github:
     <<: *docker_job
     steps:
@@ -176,6 +184,16 @@ workflows:
           context: cloudradar
           requires:
             - build-sign-msi
+            - build-synology-spk
+          filters:
+            tags:
+              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$/
+            branches:
+              ignore: /.*/
+      - build-synology-spk:
+          context: cloudradar
+          requires:
+            - build-goreleaser
           filters:
             tags:
               only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$/

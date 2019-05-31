@@ -1,0 +1,99 @@
+#!/bin/sh
+#
+# with WIZARD_FILES select log file or not
+#
+
+# Package
+PACKAGE="cagent"
+DNAME="Cagent"
+
+# Others
+INSTALL_DIR="/usr/local/${PACKAGE}"
+DIR_cagent="${INSTALL_DIR}/cagent"
+cagent="${DIR_cagent}/cagent"
+PID_FILE="${DIR_cagent}/cagent.pid"
+LOG_FILE="${DIR_cagent}/cagent.log"
+
+FILE_CREATE_LOG="${DIR_cagent}/wizard_create_log"
+
+export HOME=${DIR_cagent}
+export USER=cagent
+export USERNAME=cagent
+
+start_daemon ()
+{
+    cd ${DIR_cagent}
+    if [ -e ${FILE_CREATE_LOG} ]; then
+        ${cagent} > ${LOG_FILE} 2>&1 &
+    else
+        ${cagent} > /dev/null 2>&1 &
+    fi
+    echo $! > ${PID_FILE}
+}
+
+stop_daemon ()
+{
+    kill `cat ${PID_FILE}`
+    wait_for_status 1 20 || kill -9 `cat ${PID_FILE}`
+    rm -f ${PID_FILE}
+}
+
+daemon_status ()
+{
+    if [ -f ${PID_FILE} ] && kill -0 `cat ${PID_FILE}` > /dev/null 2>&1; then
+        return
+    fi
+    rm -f ${PID_FILE}
+    return 1
+}
+
+wait_for_status ()
+{
+    counter=$2
+    while [ ${counter} -gt 0 ]; do
+        daemon_status
+        [ $? -eq $1 ] && return
+        let counter=counter-1
+        sleep 1
+    done
+    return 1
+}
+
+
+case $1 in
+    start)
+        if daemon_status; then
+            echo ${DNAME} is already running
+        else
+            echo Starting ${DNAME} ...
+            start_daemon
+        fi
+        ;;
+    stop)
+        if daemon_status; then
+            echo Stopping ${DNAME} ...
+            stop_daemon
+        else
+            echo ${DNAME} is not running
+        fi
+        ;;
+    restart)
+        stop_daemon
+        start_daemon
+        ;;
+    status)
+        if daemon_status; then
+            echo ${DNAME} is running
+            exit 0
+        else
+            echo ${DNAME} is not running
+            exit 1
+        fi
+        ;;
+    log)
+        echo ${LOG_FILE}
+        ;;
+    *)
+        exit 1
+        ;;
+esac
