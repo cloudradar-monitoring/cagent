@@ -1,4 +1,5 @@
 .idea
-cmd/cagent/cagent
+cagent
+cagent.exe
 .DS_Store
 dist
