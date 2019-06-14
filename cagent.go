@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
@@ -63,6 +64,21 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 				if ok {
 					ca.rootCAs = certPool
 				}
+			}
+		}
+	}
+
+	if ca.Config.LogFile != "" {
+		err := addLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+		if err != nil {
+			logrus.Error("Can't write logs to file: ", err.Error())
+		}
+	} else {
+		// If a logfile is specified, syslog must be disabled and logs are written to that file and nowhere else.
+		if ca.Config.LogSyslog != "" {
+			err := addSyslogHook(ca.Config.LogSyslog)
+			if err != nil {
+				logrus.Error("Can't set up syslog: ", err.Error())
 			}
 		}
 	}
