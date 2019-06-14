@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
@@ -58,7 +57,7 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 
 			b, err := ioutil.ReadFile(rootCertsPath)
 			if err != nil {
-				log.WithError(err).Warnln("Failed to read cacert.pem")
+				logrus.WithError(err).Warnln("Failed to read cacert.pem")
 			} else {
 				ok := certPool.AppendCertsFromPEM(b)
 				if ok {
@@ -69,6 +68,7 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 	}
 
 	if ca.Config.LogFile != "" {
+		logrus.Debug("Adding log file hook", ca.Config.LogFile)
 		err := addLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 		if err != nil {
 			logrus.Error("Can't write logs to file: ", err.Error())
@@ -76,6 +76,7 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 	} else {
 		// If a logfile is specified, syslog must be disabled and logs are written to that file and nowhere else.
 		if ca.Config.LogSyslog != "" {
+			logrus.Debug("Adding syslog hook", ca.Config.LogSyslog)
 			err := addSyslogHook(ca.Config.LogSyslog)
 			if err != nil {
 				logrus.Error("Can't set up syslog: ", err.Error())
@@ -83,7 +84,7 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 		}
 	}
 
-	tfmt := log.TextFormatter{FullTimestamp: true}
+	tfmt := logrus.TextFormatter{FullTimestamp: true}
 	if runtime.GOOS == "windows" {
 		tfmt.DisableColors = true
 	}
@@ -96,7 +97,7 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 		var err error
 		ca.smart, err = smart.New(smart.Executable(ca.Config.SMARTCtl, false))
 		if err != nil {
-			log.Error(err.Error())
+			logrus.Error(err.Error())
 		}
 	}
 
@@ -117,7 +118,7 @@ func (ca *Cagent) userAgent() string {
 func (ca *Cagent) Shutdown() error {
 	for name, p := range ca.vmWatchers {
 		if err := vmstat.Release(p); err != nil {
-			log.WithFields(log.Fields{
+			logrus.WithFields(logrus.Fields{
 				"name": name,
 			}).WithError(err).Warnln("unable to release vm provider")
 		}
