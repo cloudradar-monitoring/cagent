@@ -83,6 +83,13 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 		}
 	}
 
+	tfmt := log.TextFormatter{FullTimestamp: true}
+	if runtime.GOOS == "windows" {
+		tfmt.DisableColors = true
+	}
+
+	logrus.SetFormatter(&tfmt)
+
 	ca.SetLogLevel(ca.Config.LogLevel)
 
 	if ca.Config.SMARTMonitoring && ca.Config.SMARTCtl != "" {
