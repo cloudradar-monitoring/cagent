@@ -76,9 +76,6 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 			logrus.Error(err.Error())
 		}
 	}
-	logrus.Debug("DEBUG MESSAGE")
-	logrus.Info("INFO MESSAGE")
-	logrus.Warn("WARNING MESSAGE")
 
 	return ca
 }

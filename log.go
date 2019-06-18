@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/sirupsen/logrus"
 )
@@ -100,10 +99,7 @@ func (ca *Cagent) SetLogLevel(lvl LogLevel) {
 }
 
 func (ca *Cagent) configureLogger() {
-	tfmt := logrus.TextFormatter{FullTimestamp: true}
-	if runtime.GOOS == "windows" {
-		tfmt.DisableColors = true
-	}
+	tfmt := logrus.TextFormatter{FullTimestamp: true, DisableColors: true}
 
 	logrus.SetFormatter(&tfmt)
 
