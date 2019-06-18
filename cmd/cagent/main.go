@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"os/user"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -78,6 +77,7 @@ func main() {
 	flagServiceStartPtr := flag.Bool("service_start", false, "start cagent as system service")
 	flagServiceStopPtr := flag.Bool("service_stop", false, "stop cagent if running as system service")
 	flagServiceRestartPtr := flag.Bool("service_restart", false, "restart cagent within system service")
+	flagServiceUpgradePtr := flag.Bool("service_upgrade", false, "upgrade cagent service unit configuration")
 
 	if runtime.GOOS == "windows" {
 		settingsPtr = flag.Bool("x", false, "open the settings UI")
@@ -143,8 +143,9 @@ func main() {
 		runUnderOsServiceManager(ca)
 	}
 
+	handleFlagServiceUpgrade(ca, *cfgPathPtr, flagServiceUpgradePtr, serviceInstallUserPtr)
 	handleFlagServiceUninstall(ca, *serviceUninstallPtr)
-	handleFlagServiceInstall(ca, systemManager, serviceInstallUserPtr, serviceInstallPtr, *cfgPathPtr, assumeYesPtr)
+	handleFlagServiceInstall(ca, serviceInstallUserPtr, serviceInstallPtr, *cfgPathPtr, assumeYesPtr)
 	handleFlagDaemonizeMode(*daemonizeModePtr)
 
 	output := handleFlagOutput(*outputFilePtr, *oneRunOnlyModePtr)
@@ -196,13 +197,12 @@ func handleServiceCommand(ca *cagent.Cagent, check, start, stop, restart bool) {
 
 	svc, err := getServiceFromFlags(ca, "", "")
 	if err != nil {
-		log.Fatalln(err)
+		log.WithError(err).Fatalln("can't find service")
 	}
 
 	var status service.Status
-
 	if status, err = svc.Status(); err != nil {
-		log.Fatalln(err)
+		log.WithError(err).Fatalln("can't get service status")
 	}
 
 	if check {
@@ -225,6 +225,9 @@ func handleServiceCommand(ca *cagent.Cagent, check, start, stop, restart bool) {
 		}
 
 		fmt.Println("stopped")
+		os.Exit(0)
+	} else if stop {
+		fmt.Println("service is not running")
 		os.Exit(0)
 	}
 
@@ -380,9 +383,34 @@ func handleFlagServiceUninstall(ca *cagent.Cagent, serviceUninstallPtr bool) {
 	os.Exit(0)
 }
 
+func handleFlagServiceUpgrade(
+	ca *cagent.Cagent,
+	cfgPath string,
+	serviceUpgradeFlag *bool,
+	serviceInstallUserPtr *string,
+) {
+	if serviceUpgradeFlag == nil || !*serviceUpgradeFlag {
+		return
+	}
+
+	installUser := ""
+	if serviceInstallUserPtr != nil {
+		installUser = *serviceInstallUserPtr
+	}
+
+	systemService, err := getServiceFromFlags(ca, cfgPath, installUser)
+	if err != nil {
+		log.WithError(err).Fatalln("Failed to get system service")
+	}
+
+	updateServiceConfig(ca, installUser)
+	tryUpgradeServiceUnit(systemService)
+
+	os.Exit(0)
+}
+
 func handleFlagServiceInstall(
 	ca *cagent.Cagent,
-	systemManager service.System,
 	serviceInstallUserPtr *string,
 	serviceInstallPtr *bool,
 	cfgPath string,
@@ -403,69 +431,12 @@ func handleFlagServiceInstall(
 
 	s, err := getServiceFromFlags(ca, cfgPath, username)
 	if err != nil {
-		log.Fatalln(err)
+		log.WithError(err).Fatalln("can't find service")
 	}
 
-	if runtime.GOOS != "windows" {
-		userName := *serviceInstallUserPtr
-		u, err := user.Lookup(userName)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"user": userName,
-			}).WithError(err).Fatalln("Failed to find the user")
-		}
-
-		svcConfig.UserName = userName
-		// we need to chown log file with user who will run service
-		// because installer can be run under root so the log file will be also created under root
-		err = chownFile(ca.Config.LogFile, u)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"user": userName,
-			}).WithError(err).Warnln("Failed to chown log file")
-		}
-	}
-	const maxAttempts = 3
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		err = s.Install()
-		// Check error case where the service already exists
-		if err != nil && strings.Contains(err.Error(), "already exists") {
-			if attempt == maxAttempts {
-				log.Fatalf("Giving up after %d attempts", maxAttempts)
-			}
-
-			var osSpecificNote string
-			if runtime.GOOS == "windows" {
-				osSpecificNote = " Windows Services Manager application must be closed before proceeding!"
-			}
-
-			fmt.Printf("cagent service(%s) already installed: %s\n", systemManager.String(), err.Error())
-			if *assumeYesPtr || askForConfirmation("Do you want to overwrite it?"+osSpecificNote) {
-				log.Info("Trying to override old service unit...")
-				err = s.Stop()
-				if err != nil {
-					log.WithError(err).Warnln("Failed to stop the service")
-				}
-
-				// lets try to uninstall despite of this error
-				err := s.Uninstall()
-				if err != nil {
-					log.WithError(err).Fatalln("Failed to uninstall the service")
-				}
-			}
-		} else if err != nil {
-			log.WithError(err).Fatalf("Cagent service(%s) installation failed", systemManager.String())
-		} else {
-			// service installation was successful so we can exit the loop
-			break
-		}
-	}
-
-	log.Infof("Cagent service(%s) has been installed. Starting...", systemManager.String())
-	err = s.Start()
-	if err != nil {
-		log.WithError(err).Warningf("Cagent service(%s) startup failed", systemManager.String())
-	}
+	updateServiceConfig(ca, username)
+	tryInstallService(s, assumeYesPtr)
+	tryStartService(s)
 
 	log.Infof("Log file located at: %s", ca.Config.LogFile)
 	log.Infof("Config file located at: %s", cfgPath)
@@ -552,7 +523,7 @@ func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 
 		systemManager := service.ChosenSystem()
 		if status == service.StatusRunning || status == service.StatusStopped {
-			restartCmdSpec := getSystemMangerCommand(systemManager.String(), svcConfig.Name, "restart")
+			restartCmdSpec := getSystemManagerCommand(systemManager.String(), svcConfig.Name, "restart")
 			log.WithFields(log.Fields{
 				"restartCmd": restartCmdSpec,
 			}).Infoln("Fix the config and then restart the service")
@@ -589,22 +560,6 @@ func rerunDetached() error {
 
 	cmd.Process.Release()
 	return nil
-}
-
-func chownFile(filePath string, u *user.User) error {
-	uid, err := strconv.Atoi(u.Uid)
-	if err != nil {
-		err = errors.Wrapf(err, "UID(%s) to int conversion failed", u.Uid)
-		return err
-	}
-
-	gid, err := strconv.Atoi(u.Gid)
-	if err != nil {
-		err = errors.Wrapf(err, "GID(%s) to int conversion failed", u.Gid)
-		return err
-	}
-
-	return os.Chown(filePath, uid, gid)
 }
 
 type serviceWrapper struct {
@@ -653,7 +608,7 @@ func getServiceFromFlags(ca *cagent.Cagent, configPath, userName string) (servic
 	return service.New(prg, svcConfig)
 }
 
-func getSystemMangerCommand(manager string, service string, command string) string {
+func getSystemManagerCommand(manager string, service string, command string) string {
 	switch manager {
 	case "unix-systemv":
 		return "sudo service " + service + " " + command

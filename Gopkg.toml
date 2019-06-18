@@ -40,6 +40,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/kardianos/service"
+  source = "github.com/cloudradar-monitoring/service"
 
 [[constraint]]
   name = "github.com/shirou/gopsutil"

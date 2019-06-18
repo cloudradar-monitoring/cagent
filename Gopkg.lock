@@ -96,19 +96,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:caf6db28595425c0e0f2301a00257d11712f65c1878e12cffc42f6b9a9cf3f23"
-  name = "github.com/kardianos/osext"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "ae77be60afb1dcacde03767a8c37337fad28ac14"
-
-[[projects]]
-  branch = "master"
-  digest = "1:291ac1338e8f57e48e217c86865308799d9d0331001f9743bb39c63083a16304"
+  digest = "1:24c9941f352ab380934ac07beb2e6e242c90e183fd741809e51f4ddff6c5fd6e"
   name = "github.com/kardianos/service"
   packages = ["."]
   pruneopts = "UT"
-  revision = "8f267d80f2eb68998661a325c0e53fca4485e626"
+  revision = "2f74dc2f291196299187ff7b1d84b471a844112a"
+  source = "github.com/cloudradar-monitoring/service"
 
 [[projects]]
   digest = "1:31e761d97c76151dde79e9d28964a812c46efc5baee4085b86f68f0c654450de"
