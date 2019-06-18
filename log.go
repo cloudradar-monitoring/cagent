@@ -106,7 +106,6 @@ func (ca *Cagent) configureLogger() {
 	ca.SetLogLevel(ca.Config.LogLevel)
 
 	if ca.Config.LogFile != "" {
-		logrus.Debug("Adding log file hook", ca.Config.LogFile)
 		err := addLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 		if err != nil {
 			logrus.Error("Can't write logs to file: ", err.Error())
@@ -115,7 +114,6 @@ func (ca *Cagent) configureLogger() {
 
 	// If a logfile is specified, syslog must be disabled and logs are written to that file and nowhere else.
 	if ca.Config.LogSyslog != "" {
-		logrus.Debug("Adding syslog hook", ca.Config.LogSyslog)
 		err := addSyslogHook(ca.Config.LogSyslog)
 		if err != nil {
 			logrus.Error("Can't set up syslog: ", err.Error())
