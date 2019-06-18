@@ -45,8 +45,9 @@ type LogsFilesConfig struct {
 type Config struct {
 	Interval float64 `toml:"interval" comment:"interval to push metrics to the HUB"`
 
-	PidFile string `toml:"pid" comment:"pid file location"`
-	LogFile string `toml:"log,omitempty" required:"false" comment:"log file location"`
+	PidFile   string `toml:"pid" comment:"pid file location"`
+	LogFile   string `toml:"log,omitempty" required:"false" comment:"log file location"`
+	LogSyslog string `toml:"log_syslog" comment:"\"local\" for local unix socket or URL e.g. \"udp://localhost:514\" for remote syslog server"`
 
 	MinValuableConfig
 

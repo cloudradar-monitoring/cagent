@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
@@ -57,7 +57,7 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 
 			b, err := ioutil.ReadFile(rootCertsPath)
 			if err != nil {
-				log.WithError(err).Warnln("Failed to read cacert.pem")
+				logrus.WithError(err).Warnln("Failed to read cacert.pem")
 			} else {
 				ok := certPool.AppendCertsFromPEM(b)
 				if ok {
@@ -67,13 +67,13 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 		}
 	}
 
-	ca.SetLogLevel(ca.Config.LogLevel)
+	ca.configureLogger()
 
 	if ca.Config.SMARTMonitoring && ca.Config.SMARTCtl != "" {
 		var err error
 		ca.smart, err = smart.New(smart.Executable(ca.Config.SMARTCtl, false))
 		if err != nil {
-			log.Error(err.Error())
+			logrus.Error(err.Error())
 		}
 	}
 
@@ -94,7 +94,7 @@ func (ca *Cagent) userAgent() string {
 func (ca *Cagent) Shutdown() error {
 	for name, p := range ca.vmWatchers {
 		if err := vmstat.Release(p); err != nil {
-			log.WithFields(log.Fields{
+			logrus.WithFields(logrus.Fields{
 				"name": name,
 			}).WithError(err).Warnln("unable to release vm provider")
 		}

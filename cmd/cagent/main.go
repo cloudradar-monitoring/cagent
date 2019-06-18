@@ -127,8 +127,6 @@ func main() {
 	handleFlagTest(*testConfigPtr, ca)
 	handleFlagSettings(settingsPtr, ca)
 
-	configureLogger(ca)
-
 	if len(*outputFilePtr) == 0 && cfg.IOMode == cagent.IOModeFile {
 		*outputFilePtr = cfg.OutFile
 	}
@@ -653,26 +651,6 @@ func getServiceFromFlags(ca *cagent.Cagent, configPath, userName string) (servic
 	}
 
 	return service.New(prg, svcConfig)
-}
-
-// configureLogger configure log format and hook output to file if required by config
-func configureLogger(ca *cagent.Cagent) {
-	tfmt := log.TextFormatter{FullTimestamp: true}
-	if runtime.GOOS == "windows" {
-		tfmt.DisableColors = true
-	}
-
-	log.SetFormatter(&tfmt)
-
-	if len(ca.Config.LogFile) > 0 {
-		err := cagent.AddLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"logFile": ca.Config.LogFile,
-			}).WithError(err).Errorln("Failed to setup log file")
-		}
-	}
-
 }
 
 func getSystemMangerCommand(manager string, service string, command string) string {
