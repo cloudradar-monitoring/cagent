@@ -12,6 +12,8 @@ import (
 	lSyslog "github.com/sirupsen/logrus/hooks/syslog"
 )
 
+const udpPort = "514"
+
 func addSyslogHook(syslogURL string) error {
 
 	var network, raddr string
@@ -25,7 +27,7 @@ func addSyslogHook(syslogURL string) error {
 		raddr = u.Host
 
 		if u.Port() == "" {
-			raddr += ":;514"
+			raddr += ":;" + udpPort
 		}
 	}
 
