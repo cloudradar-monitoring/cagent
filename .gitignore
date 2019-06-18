@@ -1,5 +1,7 @@
 .idea
-cagent
-cagent.exe
+cmd/cagent/cagent
+synology-spk/1_create_package/cagent/cagent
+/cagent
+/cagent.exe
 .DS_Store
 dist
