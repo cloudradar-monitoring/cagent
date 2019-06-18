@@ -67,31 +67,7 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 		}
 	}
 
-	if ca.Config.LogFile != "" {
-		logrus.Debug("Adding log file hook", ca.Config.LogFile)
-		err := addLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
-		if err != nil {
-			logrus.Error("Can't write logs to file: ", err.Error())
-		}
-	} else {
-		// If a logfile is specified, syslog must be disabled and logs are written to that file and nowhere else.
-		if ca.Config.LogSyslog != "" {
-			logrus.Debug("Adding syslog hook", ca.Config.LogSyslog)
-			err := addSyslogHook(ca.Config.LogSyslog)
-			if err != nil {
-				logrus.Error("Can't set up syslog: ", err.Error())
-			}
-		}
-	}
-
-	tfmt := logrus.TextFormatter{FullTimestamp: true}
-	if runtime.GOOS == "windows" {
-		tfmt.DisableColors = true
-	}
-
-	logrus.SetFormatter(&tfmt)
-
-	ca.SetLogLevel(ca.Config.LogLevel)
+	ca.configureLogger()
 
 	if ca.Config.SMARTMonitoring && ca.Config.SMARTCtl != "" {
 		var err error
@@ -100,6 +76,9 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 			logrus.Error(err.Error())
 		}
 	}
+	logrus.Debug("DEBUG MESSAGE")
+	logrus.Info("INFO MESSAGE")
+	logrus.Warn("WARNING MESSAGE")
 
 	return ca
 }

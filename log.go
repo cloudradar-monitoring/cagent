@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/sirupsen/logrus"
 )
@@ -48,6 +49,7 @@ type logrusFileHook struct {
 }
 
 func addLogFileHook(file string, flag int, chmod os.FileMode) error {
+
 	dir := filepath.Dir(file)
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
@@ -95,4 +97,39 @@ func (hook *logrusFileHook) Levels() []logrus.Level {
 func (ca *Cagent) SetLogLevel(lvl LogLevel) {
 	ca.Config.LogLevel = lvl
 	logrus.SetLevel(lvl.LogrusLevel())
+}
+
+func (ca *Cagent) configureLogger() {
+	tfmt := logrus.TextFormatter{FullTimestamp: true}
+	if runtime.GOOS == "windows" {
+		tfmt.DisableColors = true
+	}
+
+	logrus.SetFormatter(&tfmt)
+
+	ca.SetLogLevel(ca.Config.LogLevel)
+
+	if ca.Config.LogFile != "" {
+		logrus.Debug("Adding log file hook", ca.Config.LogFile)
+		err := addLogFileHook(ca.Config.LogFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+		if err != nil {
+			logrus.Error("Can't write logs to file: ", err.Error())
+		}
+	}
+
+	// If a logfile is specified, syslog must be disabled and logs are written to that file and nowhere else.
+	if ca.Config.LogSyslog != "" {
+		logrus.Debug("Adding syslog hook", ca.Config.LogSyslog)
+		err := addSyslogHook(ca.Config.LogSyslog)
+		if err != nil {
+			logrus.Error("Can't set up syslog: ", err.Error())
+		}
+	}
+
+	// sets standard logging to /dev/null
+	devNull, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		logrus.Error("err", err)
+	}
+	logrus.SetOutput(devNull)
 }

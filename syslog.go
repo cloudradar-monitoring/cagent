@@ -29,7 +29,7 @@ func addSyslogHook(syslogURL string) error {
 		}
 	}
 
-	hook, err := lSyslog.NewSyslogHook(network, raddr, syslog.LOG_DEBUG, "frontman")
+	hook, err := lSyslog.NewSyslogHook(network, raddr, syslog.LOG_WARNING, "frontman")
 
 	if err != nil {
 		return err
