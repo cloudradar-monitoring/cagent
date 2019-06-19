@@ -47,9 +47,9 @@ jobs:
     <<: *docker_job
     steps:
       - <<: *workspace
-      - run:
-          name: Setup ssh key to access windows signing machine
-          command: echo $SSH_KEY | base64 -d > /tmp/id_ssh && chmod 0600 /tmp/id_ssh
+      - add_ssh_keys:
+          fingerprints:
+            - "b3:b7:b0:59:57:1a:bc:82:6c:3c:91:d6:23:19:f2:08"
       - run: 
           name: Sign msi files
           command: make windows-sign
@@ -58,9 +58,9 @@ jobs:
     <<: *docker_job
     steps:
       - <<: *workspace
-      - run:
-          name: Setup ssh key to access aptly server
-          command: echo $SSH_KEY | base64 -d > /tmp/id_ssh && chmod 0600 /tmp/id_ssh
+      - add_ssh_keys:
+          fingerprints:
+            - "c9:66:a8:10:ba:e3:a7:f5:65:41:e8:05:fe:ba:94:fc"
       - run:
           name: Update aptly repository
           command: make aptly
@@ -69,9 +69,9 @@ jobs:
     <<: *docker_job
     steps:
       - <<: *workspace
-      - run:
-          name: Setup ssh key to access createrepo server
-          command: echo $SSH_KEY | base64 -d > /tmp/id_ssh && chmod 0600 /tmp/id_ssh
+      - add_ssh_keys:
+          fingerprints:
+            - "c9:66:a8:10:ba:e3:a7:f5:65:41:e8:05:fe:ba:94:fc"
       - run:
           name: Update createrepo repository
           command: make createrepo
