@@ -96,11 +96,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:24c9941f352ab380934ac07beb2e6e242c90e183fd741809e51f4ddff6c5fd6e"
+  digest = "1:c064c47b3b2e6ef140c0c661851e7be3e851f064bf1a3fcbdf047102573ca5b4"
   name = "github.com/kardianos/service"
   packages = ["."]
   pruneopts = "UT"
-  revision = "2f74dc2f291196299187ff7b1d84b471a844112a"
+  revision = "c1c4306577988c5b299c64af2f0ccea15d1f7d54"
   source = "github.com/cloudradar-monitoring/service"
 
 [[projects]]

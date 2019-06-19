@@ -230,7 +230,7 @@ func (s *systemd) Status() (Status, error) {
 	if err == ErrNotInstalled {
 		// fallback to other means of identifying state:
 		exitCode, out, err = runWithOutput("systemctl", "show", "--property=ActiveState", s.Name)
-		if exitCode == 0 && err != nil {
+		if err != nil {
 			return StatusUnknown, err
 		}
 
