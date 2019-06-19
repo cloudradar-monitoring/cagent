@@ -77,10 +77,15 @@ const (
 	optionSessionCreateDefault = false
 	optionLogOutput            = "LogOutput"
 	optionLogOutputDefault     = false
+	optionEnabled              = "Enabled"
+	optionEnabledDefault       = true
 
 	optionRunWait      = "RunWait"
 	optionReloadSignal = "ReloadSignal"
 	optionPIDFile      = "PIDFile"
+	optionRestart      = "Restart"
+
+	optionSuccessExitStatus = "SuccessExitStatus"
 
 	optionSystemdScript = "SystemdScript"
 	optionSysvScript    = "SysvScript"
@@ -111,7 +116,13 @@ type Config struct {
 	Executable string
 
 	// Array of service dependencies.
-	// Not yet implemented on Linux or OS X.
+	// Not yet fully implemented on Linux or OS X:
+	//  1. Support linux-systemd dependencies, just put each full line as the
+	//     element of the string array, such as
+	//     "After=network.target syslog.target"
+	//     "Requires=syslog.target"
+	//     Note, such lines will be directly appended into the [Unit] of
+	//     the generated service config file, will not check their correctness.
 	Dependencies []string
 
 	// The following fields are not supported on Windows.
@@ -133,6 +144,11 @@ type Config struct {
 	//    - ReloadSignal  string () [USR1, ...]     - Signal to send on reaload.
 	//    - PIDFile       string () [/run/prog.pid] - Location of the PID file.
 	//    - LogOutput     bool   (false)            - Redirect StdErr & StdOut to files.
+	//    - Restart       string (always)           - How shall service be restarted.
+	//    - SuccessExitStatus string ()             - The list of exit status that shall be considered as successful,
+	//                                                in addition to the default ones.
+	//  * SysV and Systemd only
+	//    - Enabled       bool   (true) - Enable service just after installation.
 	Option KeyValue
 }
 
@@ -346,6 +362,10 @@ type Service interface {
 	// String displays the name of the service. The display name if present,
 	// otherwise the name.
 	String() string
+
+	// Platform displays the name of the system that manages the service.
+	// In most cases this will be the same as service.Platform().
+	Platform() string
 
 	// Status returns the current service status.
 	Status() (Status, error)
