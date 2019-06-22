@@ -221,33 +221,37 @@ func (s *systemd) Run() (err error) {
 }
 
 func (s *systemd) Status() (Status, error) {
-	exitCode, out, err := runWithOutput("systemctl", "is-active", s.Name)
-	if exitCode == 0 && err != nil {
+	exitCode, _, _ := runWithOutput("systemctl", "is-failed", s.Name)
+	if exitCode == 0 {
+		return StatusUnknown, errors.New("service in failed state")
+	}
+
+	// fallback to other means of identifying state:
+	exitCode, out, err := runWithOutput("systemctl", "show", "--property=LoadState,ActiveState", s.Name)
+	if err != nil {
 		return StatusUnknown, err
 	}
 
-	result, err := resolveStatusFromSystemctlOutput(out)
-	if err == ErrNotInstalled {
-		// fallback to other means of identifying state:
-		exitCode, out, err = runWithOutput("systemctl", "show", "--property=ActiveState", s.Name)
-		if err != nil {
-			return StatusUnknown, err
-		}
-
-		outputLines := strings.Split(strings.TrimSpace(out), "\n")
-		if len(outputLines) != 1 {
-			return StatusUnknown, fmt.Errorf("unexpected output from 'systemctl show' command: %s", out)
-		}
-
-		activeStateLine := strings.Split(outputLines[0], "=")
-		if len(activeStateLine) != 2 {
-			return StatusUnknown, fmt.Errorf("unexpected output from 'systemctl show' command: %s", activeStateLine)
-		}
-
-		return resolveStatusFromSystemctlOutput(activeStateLine[1])
+	outputLines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(outputLines) != 2 {
+		return StatusUnknown, fmt.Errorf("unexpected output from 'systemctl show' command: %s", out)
 	}
 
-	return result, err
+	loadStateLine := strings.Split(outputLines[0], "=")
+	if len(loadStateLine) != 2 {
+		return StatusUnknown, fmt.Errorf("unexpected output from 'systemctl show' command: %s", loadStateLine)
+	}
+
+	if strings.HasPrefix(loadStateLine[1], "not-found") {
+		return StatusUnknown, ErrNotInstalled
+	}
+
+	activeStateLine := strings.Split(outputLines[1], "=")
+	if len(activeStateLine) != 2 {
+		return StatusUnknown, fmt.Errorf("unexpected output from 'systemctl show' command: %s", activeStateLine)
+	}
+
+	return resolveStatusFromSystemctlOutput(activeStateLine[1])
 }
 
 func resolveStatusFromSystemctlOutput(out string) (Status, error) {
@@ -256,8 +260,6 @@ func resolveStatusFromSystemctlOutput(out string) (Status, error) {
 		return StatusRunning, nil
 	case strings.HasPrefix(out, "inactive"):
 		return StatusStopped, nil
-	case strings.HasPrefix(out, "failed"):
-		return StatusUnknown, errors.New("service in failed state")
 	default:
 		return StatusUnknown, ErrNotInstalled
 	}

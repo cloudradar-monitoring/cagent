@@ -201,7 +201,7 @@ func handleServiceCommand(ca *cagent.Cagent, check, start, stop, restart bool) {
 	}
 
 	var status service.Status
-	if status, err = svc.Status(); err != nil {
+	if status, err = svc.Status(); err != nil && err != service.ErrNotInstalled {
 		log.WithError(err).Fatalln("can't get service status")
 	}
 
