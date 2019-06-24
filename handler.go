@@ -314,12 +314,13 @@ func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
 
 	measurements = measurements.AddWithPrefix("docker.", containersList)
 
-	temperatures, err := sensors.ReadTemperatureSensors()
-	if err != nil {
-		errs = append(errs, err.Error())
+	if ca.Config.TemperatureMonitoring {
+		temperatures, err := sensors.ReadTemperatureSensors()
+		if err != nil {
+			errs = append(errs, err.Error())
+		}
+		measurements = measurements.AddWithPrefix("temperatures.", common.MeasurementsMap{"list": temperatures})
 	}
-
-	measurements = measurements.AddWithPrefix("temperatures.", common.MeasurementsMap{"list": temperatures})
 
 	cpuUtilisationAnalysisResult, cpuUtilisationAnalysisIsActive, err := ca.CPUUtilisationAnalyser().Results()
 	if err != nil {
