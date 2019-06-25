@@ -558,7 +558,10 @@ func rerunDetached() error {
 		"PID": cmd.Process.Pid,
 	}).Infoln("Cagent will continue in background...")
 
-	cmd.Process.Release()
+	err = cmd.Process.Release()
+	if err != nil {
+		log.WithError(err).Warn("wasn't able to release process resources")
+	}
 	return nil
 }
 

@@ -18,7 +18,6 @@ import (
 )
 
 var (
-	unameTimeout    = 5 * time.Second
 	cpuInfoTimeout  = 10 * time.Second
 	hostInfoTimeout = 10 * time.Second
 )

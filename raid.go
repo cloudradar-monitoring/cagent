@@ -22,7 +22,7 @@ type Raid struct {
 	Active  []int
 }
 
-var failed = regexp.MustCompile("\\[([U_]+)\\]")
+var failed = regexp.MustCompile(`\[([U_]+)\]`)
 
 func (r Raid) GetFailedAndMissingPhysicalDevices() (failedDevices []string, missingDevicesCount int) {
 	for _, deviceIndex := range r.Failed {
@@ -45,7 +45,7 @@ func (r Raid) GetActivePhysicalDevices() []string {
 	return activeDevices
 }
 
-func parseMdstat(data string) (RaidArrays, error) {
+func parseMdstat(data string) RaidArrays {
 	raids := []Raid{}
 	lines := strings.Split(data, "\n")
 
@@ -88,7 +88,7 @@ func parseMdstat(data string) (RaidArrays, error) {
 
 		raids = append(raids, raid)
 	}
-	return raids, nil
+	return raids
 }
 
 func (ar RaidArrays) Measurements() common.MeasurementsMap {
@@ -132,11 +132,6 @@ func (ca *Cagent) RaidState() (common.MeasurementsMap, error) {
 		return nil, err
 	}
 
-	raidArrays, err := parseMdstat(string(buf))
-
-	if err != nil {
-		return common.MeasurementsMap{}, err
-	}
-
+	raidArrays := parseMdstat(string(buf))
 	return raidArrays.Measurements(), nil
 }

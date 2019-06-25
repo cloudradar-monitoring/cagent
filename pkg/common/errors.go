@@ -10,7 +10,7 @@ type ErrorCollector struct {
 	errs []error
 }
 
-// Add adds error to collection
+// Add adds error to collection if err is not nil
 func (c *ErrorCollector) Add(err error) {
 	if err != nil {
 		c.errs = append(c.errs, err)
