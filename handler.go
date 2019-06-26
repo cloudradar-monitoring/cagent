@@ -185,94 +185,55 @@ func (ca *Cagent) PostResultToHub(ctx context.Context, result *Result) error {
 }
 
 func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
-	var errs []string
+	var errCollector = common.ErrorCollector{}
 	var measurements = make(common.MeasurementsMap)
 
 	cpum, err := ca.CPUWatcher().Results()
-	if err != nil {
-		// no need to log because already done inside cpu.Results()
-		errs = append(errs, err.Error())
-	}
-
+	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("cpu.", cpum)
 
 	info, err := ca.HostInfoResults()
-	if err != nil {
-		// no need to log because already done inside HostInfoResults()
-		errs = append(errs, err.Error())
-	}
-
+	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("system.", info)
 
 	ipResults, err := IPAddresses()
-	if err != nil {
-		errs = append(errs, err.Error())
-	}
-
+	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("system.", ipResults)
 
 	fsResults, err := ca.FSWatcher().Results()
-	if err != nil {
-		// no need to log because already done inside fs.Results()
-		errs = append(errs, err.Error())
-	}
-
+	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("fs.", fsResults)
 
 	netResults, err := ca.NetWatcher().Results()
-	if err != nil {
-		// no need to log because already done inside net.Results()
-		errs = append(errs, err.Error())
-	}
-
+	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("net.", netResults)
 
 	mem, memStat, err := ca.MemResults()
-	if err != nil {
-		// no need to log because already done inside MemResults()
-		errs = append(errs, err.Error())
-	}
-
+	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("mem.", mem)
 
 	proc, processList, err := ca.ProcessesResult(memStat)
-	if err != nil {
-		// no need to log because already done inside ProcessesResult()
-		errs = append(errs, err.Error())
-	}
-
+	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("proc.", proc)
 
 	ports, err := ca.PortsResult(processList)
-	if err != nil {
-		// no need to log because already done inside PortsResult()
-		errs = append(errs, err.Error())
-	}
-
+	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("listeningports.", ports)
 
 	swap, err := ca.SwapResults()
-	if err != nil {
-		// no need to log because already done inside MemResults()
-		errs = append(errs, err.Error())
-	}
-
+	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("swap.", swap)
 
 	ca.getVMStatMeasurements(func(name string, meas common.MeasurementsMap, err error) {
 		if err == nil {
 			measurements = measurements.AddWithPrefix("virt."+name+".", meas)
-		} else {
-			errs = append(errs, err.Error())
 		}
+		errCollector.Add(err)
 	})
 
 	ca.hwInventory.Do(func() {
 		hwInfo, err := hwinfo.Inventory()
-		if err != nil {
-			errs = append(errs, err.Error())
-		}
-
+		errCollector.Add(err)
 		if hwInfo != nil {
 			measurements = measurements.AddInnerWithPrefix("hw.inventory", hwInfo)
 		}
@@ -280,53 +241,36 @@ func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
 
 	if runtime.GOOS == "linux" {
 		raid, err := ca.RaidState()
-		if err != nil {
-			// no need to log because already done inside RaidState()
-			errs = append(errs, err.Error())
-		}
-
+		errCollector.Add(err)
 		measurements = measurements.AddWithPrefix("raid.", raid)
 	}
 
 	if runtime.GOOS == "windows" {
 		wu, err := ca.WindowsUpdatesWatcher().WindowsUpdates()
-		if err != nil {
-			// no need to log because already done inside MemResults()
-			errs = append(errs, err.Error())
-		}
-
+		errCollector.Add(err)
 		measurements = measurements.AddWithPrefix("windows_update.", wu)
 	}
 
 	servicesList, err := services.ListServices(ca.Config.DiscoverAutostartingServicesOnly)
-	if err != nil && err != services.ErrorNotImplementedForOS {
-		// no need to log because already done inside ListServices()
-		errs = append(errs, err.Error())
+	if err != services.ErrorNotImplementedForOS {
+		errCollector.Add(err)
 	}
-
 	measurements = measurements.AddWithPrefix("services.", servicesList)
 
 	containersList, err := ca.dockerWatcher.ListContainers()
-	if err != nil && err != docker.ErrorNotImplementedForOS && err != docker.ErrorDockerNotFound {
-		// no need to log because already done inside ListContainers()
-		errs = append(errs, err.Error())
+	if err != docker.ErrorNotImplementedForOS && err != docker.ErrorDockerNotFound {
+		errCollector.Add(err)
 	}
-
 	measurements = measurements.AddWithPrefix("docker.", containersList)
 
 	if ca.Config.TemperatureMonitoring {
 		temperatures, err := sensors.ReadTemperatureSensors()
-		if err != nil {
-			errs = append(errs, err.Error())
-		}
+		errCollector.Add(err)
 		measurements = measurements.AddWithPrefix("temperatures.", common.MeasurementsMap{"list": temperatures})
 	}
 
 	cpuUtilisationAnalysisResult, cpuUtilisationAnalysisIsActive, err := ca.CPUUtilisationAnalyser().Results()
-	if err != nil {
-		// no need to log because already done inside
-		errs = append(errs, err.Error())
-	}
+	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("cpu_utilisation_analysis.", cpuUtilisationAnalysisResult)
 	if cpuUtilisationAnalysisIsActive {
 		measurements = measurements.AddWithPrefix(
@@ -335,10 +279,10 @@ func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
 		)
 	}
 
-	if len(errs) == 0 {
-		measurements["cagent.success"] = 1
-	} else {
+	if errCollector.HasErrors() {
 		measurements["cagent.success"] = 0
+	} else {
+		measurements["cagent.success"] = 1
 	}
 
 	// measurements fetched below should not affect cagent.success
@@ -348,8 +292,8 @@ func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
 		measurements = measurements.AddInnerWithPrefix("smartmon", smartMeas)
 	}
 
-	if len(errs) != 0 {
-		return measurements, errors.New(strings.Join(errs, "; "))
+	if errCollector.HasErrors() {
+		return measurements, errCollector.Combine()
 	}
 
 	return measurements, nil

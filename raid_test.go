@@ -124,11 +124,7 @@ unused devices: <none>`, common.MeasurementsMap{
 			"md1.type":                      "raid1"}, false}}
 
 	for _, tt := range tests {
-		got, err := parseMdstat(tt.data)
-		if (err != nil) != tt.wantErr {
-			t.Errorf("%q. parseMdstat() error = %v, wantErr %v", tt.name, err, tt.wantErr)
-			continue
-		}
+		got := parseMdstat(tt.data)
 		measurements := got.Measurements()
 		if !reflect.DeepEqual(measurements, tt.want) {
 			t.Errorf("%q. parseMdstat() = %v, want %v", tt.name, measurements, tt.want)

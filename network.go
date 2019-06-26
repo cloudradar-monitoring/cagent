@@ -149,7 +149,9 @@ func (nw *NetWatcher) fillEmptyMeasurements(results common.MeasurementsMap, inte
 
 // fillCountersMeasurements used to fill measurements with nil's for all non-excluded interfaces
 func (nw *NetWatcher) fillCountersMeasurements(results common.MeasurementsMap, interfaces []utilnet.InterfaceStat, excludedInterfacesByName map[string]struct{}) error {
-	ctx, _ := context.WithTimeout(context.Background(), netGetCountersTimeout)
+	ctx, cancelFn := context.WithTimeout(context.Background(), netGetCountersTimeout)
+	defer cancelFn()
+
 	counters, err := utilnet.IOCountersWithContext(ctx, true)
 	if err != nil {
 		// fill empty measurements for not-excluded interfaces
