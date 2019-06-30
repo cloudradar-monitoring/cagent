@@ -17,6 +17,9 @@ import (
 const (
 	IOModeFile = "file"
 	IOModeHTTP = "http"
+
+	minIntervalValue          = 30.0
+	minHeartbeatIntervalValue = 5.0
 )
 
 var DefaultCfgPath string
@@ -43,7 +46,8 @@ type LogsFilesConfig struct {
 }
 
 type Config struct {
-	Interval float64 `toml:"interval" comment:"interval to push metrics to the HUB"`
+	Interval          float64 `toml:"interval" comment:"interval to push metrics to the HUB"`
+	HeartbeatInterval float64 `toml:"heartbeat" comment:"send a heartbeat without metrics to the HUB every X seconds"`
 
 	PidFile   string `toml:"pid" comment:"pid file location"`
 	LogFile   string `toml:"log,omitempty" required:"false" comment:"log file location"`
@@ -126,6 +130,7 @@ func NewConfig() *Config {
 	cfg := &Config{
 		LogFile:                          defaultLogPath,
 		Interval:                         90,
+		HeartbeatInterval:                15,
 		HubGzip:                          true,
 		CPULoadDataGather:                []string{"avg1"},
 		CPUUtilTypes:                     []string{"user", "system", "idle", "iowait"},
@@ -312,6 +317,14 @@ func (cfg *Config) validate() error {
 		if _, err := url.Parse(cfg.HubProxy); err != nil {
 			return fmt.Errorf("failed to parse 'hub_proxy' URL")
 		}
+	}
+
+	if cfg.Interval < minIntervalValue {
+		return fmt.Errorf("interval value must be >= %.1f", minIntervalValue)
+	}
+
+	if cfg.HeartbeatInterval < minHeartbeatIntervalValue {
+		return fmt.Errorf("heartbeat value must be >= %.1f", minHeartbeatIntervalValue)
 	}
 
 	return nil
