@@ -6,11 +6,13 @@ if [ -z "$1" ]
     exit
 fi
 
-# inject version number in package info
-sed -i.bak "s/{PKG_VERSION}/$1/g" 2_create_project/INFO
-rm 2_create_project/INFO.bak
 
 # ARMv7
+sed -i.bak "s/{PKG_VERSION}/$1/g" 2_create_project/INFO
+rm 2_create_project/INFO.bak
+sed -i.bak "s/{PKG_ARCH}/noarch/g" 2_create_project/INFO
+rm 2_create_project/INFO.bak
+
 GOOS=linux GOARCH=arm GOARM=7 go build github.com/cloudradar-monitoring/cagent/cmd/cagent/...
 mv -f cagent 1_create_package/cagent
 
@@ -23,7 +25,15 @@ mv cagent.spk ../cagent-armv7.spk
 rm -f package.tgz
 cd ..
 
+git checkout 2_create_project/INFO
+
+
 # ARMv8
+sed -i.bak "s/{PKG_VERSION}/$1/g" 2_create_project/INFO
+rm 2_create_project/INFO.bak
+sed -i.bak "s/{PKG_ARCH}/noarch/g" 2_create_project/INFO
+rm 2_create_project/INFO.bak
+
 GOOS=linux GOARCH=arm64 go build github.com/cloudradar-monitoring/cagent/cmd/cagent/...
 mv -f cagent 1_create_package/cagent
 
@@ -36,7 +46,15 @@ mv cagent.spk ../cagent-armv8.spk
 rm -f package.tgz
 cd ..
 
+git checkout 2_create_project/INFO
+
+
 # AMD64
+sed -i.bak "s/{PKG_VERSION}/$1/g" 2_create_project/INFO
+rm 2_create_project/INFO.bak
+sed -i.bak "s/{PKG_ARCH}/x86_64 cedarview bromolow broadwell/g" 2_create_project/INFO
+rm 2_create_project/INFO.bak
+
 GOOS=linux GOARCH=amd64 go build github.com/cloudradar-monitoring/cagent/cmd/cagent/...
 mv -f cagent 1_create_package/cagent
 
@@ -49,5 +67,4 @@ mv cagent.spk ../cagent-amd64.spk
 rm -f package.tgz
 cd ..
 
-# restore local modifications
 git checkout 2_create_project/INFO
