@@ -30,15 +30,17 @@ func TestNewMinimumConfig(t *testing.T) {
 
 func TestTryUpdateConfigFromFile(t *testing.T) {
 	config := Config{
-		PidFile:   "fooPID",
-		Interval:  1.5,
-		HubGzip:   false,
-		FSMetrics: []string{"a"},
+		PidFile:           "fooPID",
+		Interval:          1.5,
+		HeartbeatInterval: 12.5,
+		HubGzip:           false,
+		FSMetrics:         []string{"a"},
 	}
 
 	const sampleConfig = `
 pid = "/pid"
 interval = 1.0
+heartbeat = 10.0
 hub_gzip = true
 fs_metrics = ['a', 'b']
 `
@@ -55,6 +57,7 @@ fs_metrics = ['a', 'b']
 
 	assert.Equal(t, "/pid", config.PidFile)
 	assert.Equal(t, 1.0, config.Interval)
+	assert.Equal(t, 10.0, config.HeartbeatInterval)
 	assert.Equal(t, true, config.HubGzip)
 	assert.Equal(t, []string{"a", "b"}, config.FSMetrics)
 }
@@ -85,7 +88,8 @@ func TestHandleAllConfigSetup(t *testing.T) {
 	t.Run("config-file-does-exist", func(t *testing.T) {
 		const sampleConfig = `
 pid = "/pid"
-interval = 1.0
+interval = 100.0
+heartbeat = 10.0
 hub_gzip = false
 fs_metrics = ['a', 'b']
 `
@@ -101,7 +105,8 @@ fs_metrics = ['a', 'b']
 		assert.Nil(t, err)
 
 		assert.Equal(t, "/pid", config.PidFile)
-		assert.Equal(t, 1.0, config.Interval)
+		assert.Equal(t, 100.0, config.Interval)
+		assert.Equal(t, 10.0, config.HeartbeatInterval)
 		assert.Equal(t, false, config.HubGzip)
 		assert.Equal(t, []string{"a", "b"}, config.FSMetrics)
 	})
@@ -130,5 +135,47 @@ fs_metrics = ['a', 'b']
 		if !assert.ObjectsAreEqual(*mvc, *loadedMVC) {
 			t.Errorf("expected %+v, got %+v", *mvc, *loadedMVC)
 		}
+	})
+
+	t.Run("invalid-interval-value-specified", func(t *testing.T) {
+		const sampleConfig = `
+pid = "/pid"
+interval = 29.9
+heartbeat = 15.0
+hub_gzip = false
+fs_metrics = ['a', 'b']
+`
+
+		tmpFile, err := ioutil.TempFile("", "")
+		assert.Nil(t, err)
+		defer os.Remove(tmpFile.Name())
+
+		err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0755)
+		assert.Nil(t, err)
+
+		_, err = HandleAllConfigSetup(tmpFile.Name())
+		assert.Error(t, err)
+
+	})
+
+	t.Run("invalid-heartbeat-value-specified", func(t *testing.T) {
+		const sampleConfig = `
+pid = "/pid"
+interval = 50.0
+heartbeat = 0.0
+hub_gzip = false
+fs_metrics = ['a', 'b']
+`
+
+		tmpFile, err := ioutil.TempFile("", "")
+		assert.Nil(t, err)
+		defer os.Remove(tmpFile.Name())
+
+		err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0755)
+		assert.Nil(t, err)
+
+		_, err = HandleAllConfigSetup(tmpFile.Name())
+		assert.Error(t, err)
+
 	})
 }

@@ -62,16 +62,8 @@ func (ca *Cagent) initHubClientOnce() {
 	})
 }
 
-// CheckHubCredentials performs credentials check for a Hub config, returning errors that reference
-// field names as in source config. Since config may be filled from file or UI, the field names can be different.
-// Consider also localization of UI, we want to decouple credential checking logic from their actual view in UI.
-//
-// Examples:
-// * for TOML: CheckHubCredentials(ctx, "hub_url", "hub_user", "hub_password")
-// * for WinUI: CheckHubCredentials(ctx, "URL", "User", "Password")
-func (ca *Cagent) CheckHubCredentials(ctx context.Context, fieldHubURL, fieldHubUser, fieldHubPassword string) error {
-	ca.initHubClientOnce()
-
+// validateHubURL performs Hub URL validation, that reference field name as in source config.
+func (ca *Cagent) validateHubURL(fieldHubURL string) error {
 	if len(ca.Config.HubURL) == 0 {
 		return newEmptyFieldError(fieldHubURL)
 	} else if u, err := url.Parse(ca.Config.HubURL); err != nil {
@@ -81,6 +73,23 @@ func (ca *Cagent) CheckHubCredentials(ctx context.Context, fieldHubURL, fieldHub
 		err := errors.Errorf("wrong scheme '%s', URL must start with http:// or https://", u.Scheme)
 		return newFieldError(fieldHubURL, err)
 	}
+	return nil
+}
+
+// CheckHubCredentials performs credentials check for a Hub config, returning errors that reference
+// field names as in source config. Since config may be filled from file or UI, the field names can be different.
+// Consider also localization of UI, we want to decouple credential checking logic from their actual view in UI.
+//
+// Examples:
+// * for TOML: CheckHubCredentials(ctx, "hub_url", "hub_user", "hub_password")
+// * for WinUI: CheckHubCredentials(ctx, "URL", "User", "Password")
+func (ca *Cagent) CheckHubCredentials(ctx context.Context, fieldHubURL, fieldHubUser, fieldHubPassword string) error {
+	ca.initHubClientOnce()
+	err := ca.validateHubURL(fieldHubURL)
+	if err != nil {
+		return err
+	}
+
 	req, _ := http.NewRequest("HEAD", ca.Config.HubURL, nil)
 	req.Header.Add("User-Agent", ca.userAgent())
 	if len(ca.Config.HubUser) > 0 {
@@ -107,7 +116,7 @@ func (ca *Cagent) checkClientError(resp *http.Response, err error, fieldHubUser,
 		return err
 	}
 	_, _ = io.Copy(ioutil.Discard, resp.Body)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if resp.StatusCode == http.StatusUnauthorized {
 		if len(ca.Config.HubUser) == 0 {
 			return newEmptyFieldError(fieldHubUser)
@@ -134,16 +143,11 @@ func newFieldError(name string, err error) error {
 
 func (ca *Cagent) PostResultToHub(ctx context.Context, result *Result) error {
 	ca.initHubClientOnce()
-
-	if len(ca.Config.HubURL) == 0 {
-		return newEmptyFieldError("hub_url")
-	} else if u, err := url.Parse(ca.Config.HubURL); err != nil {
-		err = errors.WithStack(err)
-		return newFieldError("hub_url", err)
-	} else if u.Scheme != "http" && u.Scheme != "https" {
-		err := errors.Errorf("wrong scheme '%s', URL must start with http:// or https://", u.Scheme)
-		return newFieldError("hub_url", err)
+	err := ca.validateHubURL("hub_url")
+	if err != nil {
+		return err
 	}
+
 	b, err := json.Marshal(result)
 	if err != nil {
 		err = errors.Wrap(err, "failed to serialize result")
@@ -353,6 +357,56 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, cfg *Config)
 			continue
 		}
 	}
+}
+
+func (ca *Cagent) RunHeartbeat(interrupt, stop chan struct{}, cfg *Config) {
+	for {
+		err := ca.sendHeartbeat()
+		if err != nil {
+			log.WithError(err).Error("failed to send heartbeat to Hub")
+		}
+
+		select {
+		case <-interrupt:
+			return
+		case <-stop:
+			return
+		case <-time.After(secToDuration(ca.Config.HeartbeatInterval)):
+			continue
+		}
+	}
+}
+
+func (ca *Cagent) sendHeartbeat() error {
+	ca.initHubClientOnce()
+	err := ca.validateHubURL("hub_url")
+	if err != nil {
+		return err
+	}
+
+	// no need to wait more than heartbeat interval
+	ctx, cancelFn := context.WithTimeout(context.Background(), secToDuration(ca.Config.HeartbeatInterval))
+	defer cancelFn()
+
+	req, err := http.NewRequest("GET", ca.Config.HubURL, nil)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	req.Header.Add("User-Agent", ca.userAgent())
+	if len(ca.Config.HubUser) > 0 {
+		req.SetBasicAuth(ca.Config.HubUser, ca.Config.HubPassword)
+	}
+	req = req.WithContext(ctx)
+	resp, err := ca.hubClient.Do(req)
+	if err = ca.checkClientError(resp, err, "hub_user", "hub_password"); err != nil {
+		if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
+			log.WithError(err).Debugf("unexpected HTTP status code was returned to heartbeat request: %d", resp.StatusCode)
+		} else {
+			return errors.WithStack(err)
+		}
+	}
+	log.Infof("sent! %d", resp.StatusCode)
+	return err
 }
 
 func (ca *Cagent) prettyPrintMeasurementsToFile(measurements common.MeasurementsMap, file string) {

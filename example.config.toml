@@ -15,6 +15,11 @@ hub_proxy = "" # HTTP proxy to use with HUB
 hub_proxy_user = "" # requires hub_proxy to be set
 hub_proxy_password = "" # requires hub_proxy_user to be set
 
+# interval to push metrics to the HUB
+interval = 60.0
+# send a heartbeat without metrics to the Hub every X seconds
+heartbeat = 15.0
+
 # CPU
 cpu_load_data_gathering_mode = ['avg1','avg5','avg15'] # default ['avg1']
 cpu_utilisation_gathering_mode = ['avg1','avg5','avg15'] # default ['avg1']
