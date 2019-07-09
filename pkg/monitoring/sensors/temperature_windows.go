@@ -3,13 +3,15 @@
 package sensors
 
 import (
+	"fmt"
 	"math"
 	"strings"
 	"time"
 
 	"github.com/StackExchange/wmi"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/wmi"
+	"github.com/cloudradar-monitoring/cagent/pkg/hwinfolib"
+	wmiutil "github.com/cloudradar-monitoring/cagent/pkg/wmi"
 )
 
 const readTimeout = time.Second * 10
@@ -27,7 +29,75 @@ type msAcpi_ThermalZoneTemperature struct {
 	InstanceName       string
 }
 
+// ReadTemperatureSensors tries to read sensor info from hwinfo.dll if it's available. Fallbacks to WMI class msAcpi_ThermalZoneTemperature
 func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
+	loaded, err := hwinfolib.TryLoadLibrary()
+	if err != nil {
+		logger.WithError(err).Debug("error while loading hwinfo lib")
+	}
+
+	if loaded {
+		results, err := readTemperatureFromHwinfoLib()
+		if err != nil {
+			logger.WithError(err).Error("cannot read temperature from hwinfo lib")
+			return results, nil
+		}
+		return results, nil
+	}
+
+	return readWMITemperatureSensors()
+}
+
+// Shutdown frees resources
+func Shutdown() {
+	err := hwinfolib.DeInit()
+	if err != nil {
+		logger.WithError(err).Debugf("while trying to DeInit the hwinfo lib")
+	}
+}
+
+func readTemperatureFromHwinfoLib() ([]*TemperatureSensorInfo, error) {
+	devicesCount, err := hwinfolib.GetNumberOfDetectedSensors()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*TemperatureSensorInfo, 0)
+
+	for deviceIndex := 0; deviceIndex < devicesCount; deviceIndex++ {
+		err = hwinfolib.ReadDataFromSensor(deviceIndex)
+		if err != nil {
+			logger.WithError(err).Debugf("while trying to ReadDataFromSensor %d", deviceIndex)
+			continue
+		}
+		deviceName, err := hwinfolib.GetSensorName(deviceIndex)
+		if err != nil {
+			logger.WithError(err).Debugf("while trying to GetSensorName %d", deviceIndex)
+			continue
+		}
+
+		for sensorIndex := 0; sensorIndex < 512; sensorIndex++ {
+			sensorName, temperature, err := hwinfolib.GetTemperature(deviceIndex, sensorIndex)
+			if err != nil {
+				logger.WithError(err).Debugf("while trying to GetTemperature (%s) %d, %d", deviceName, deviceIndex, sensorIndex)
+				continue
+			}
+			if sensorName == "" {
+				continue
+			}
+
+			result = append(result, &TemperatureSensorInfo{
+				SensorName:  fmt.Sprintf("%s - %s", deviceName, sensorName),
+				Temperature: temperature,
+				Unit:        unitCelsius,
+			})
+		}
+	}
+
+	return result, nil
+}
+
+func readWMITemperatureSensors() ([]*TemperatureSensorInfo, error) {
 	var thermalSensors []msAcpi_ThermalZoneTemperature
 	query := wmi.CreateQuery(&thermalSensors, "")
 
@@ -36,7 +106,7 @@ func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
 		l := logger.WithError(err)
 		errText := strings.ToLower(err.Error())
 		if strings.Contains(errText, "not supported") {
-			l.Debugf("not supported by BIOS or driver required")
+			l.Debugf("not supported by BIOS or driver is required")
 			return nil, nil
 		}
 		l.Error("failed to read temperature sensors")

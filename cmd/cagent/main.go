@@ -168,6 +168,7 @@ func main() {
 
 	go ca.RunHeartbeat(interruptChan, doneChan, cfg)
 	go func() {
+		defer ca.Shutdown()
 		ca.Run(output, interruptChan, cfg)
 		doneChan <- struct{}{}
 	}()
@@ -579,6 +580,7 @@ func (sw *serviceWrapper) Start(s service.Service) error {
 
 	go sw.Cagent.RunHeartbeat(sw.InterruptChan, sw.DoneChan, sw.Cagent.Config)
 	go func() {
+		defer sw.Cagent.Shutdown()
 		sw.Cagent.Run(nil, sw.InterruptChan, sw.Cagent.Config)
 		sw.DoneChan <- struct{}{}
 	}()
