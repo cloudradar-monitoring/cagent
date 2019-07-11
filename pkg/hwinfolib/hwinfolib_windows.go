@@ -53,7 +53,7 @@ func TryLoadLibrary() (bool, error) {
 		return true, nil
 	}
 
-	dll, err := syscall.LoadLibrary("hwinfo.dll")
+	dll, err := syscall.LoadLibrary("hwinfo-adapter.dll")
 	if err != nil {
 		return false, err
 	}
