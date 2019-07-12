@@ -50,7 +50,7 @@ jobs:
       - add_ssh_keys:
           fingerprints:
             - "b3:b7:b0:59:57:1a:bc:82:6c:3c:91:d6:23:19:f2:08"
-            - "62:fc:82:6a:5e:48:9f:2f:4d:9a:32:00:27:f6:b2:6f"
+            - "53:d2:08:dc:1a:4e:9e:29:00:d4:ba:1e:b7:5d:16:25"
       - run: 
           name: Sign msi files
           command: make windows-sign
