@@ -60,7 +60,7 @@ jobs:
       - <<: *workspace
       - add_ssh_keys:
           fingerprints:
-            - "c9:66:a8:10:ba:e3:a7:f5:65:41:e8:05:fe:ba:94:fc"
+            - "53:d2:08:dc:1a:4e:9e:29:00:d4:ba:1e:b7:5d:16:25"
       - run:
           name: Update aptly repository
           command: make aptly
@@ -71,7 +71,7 @@ jobs:
       - <<: *workspace
       - add_ssh_keys:
           fingerprints:
-            - "c9:66:a8:10:ba:e3:a7:f5:65:41:e8:05:fe:ba:94:fc"
+            - "53:d2:08:dc:1a:4e:9e:29:00:d4:ba:1e:b7:5d:16:25"
       - run:
           name: Update createrepo repository
           command: make createrepo
