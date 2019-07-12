@@ -22,10 +22,11 @@ import (
 	"github.com/cloudradar-monitoring/cagent"
 )
 
+// variables set on build. Example:
+// go build -o cagent -ldflags="-X main.version=$(git --git-dir=src/github.com/cloudradar-monitoring/cagent/.git describe --always --long --dirty --tag)" github.com/cloudradar-monitoring/cagent/cmd/cagent
 var (
-	// set on build:
-	// go build -o cagent -ldflags="-X main.version=$(git --git-dir=src/github.com/cloudradar-monitoring/cagent/.git describe --always --long --dirty --tag)" github.com/cloudradar-monitoring/cagent/cmd/cagent
-	version string
+	version     string
+	licenseInfo = "released under MIT license. https://github.com/cloudradar-monitoring/cagent/"
 )
 
 var svcConfig = &service.Config{
@@ -168,6 +169,7 @@ func main() {
 
 	go ca.RunHeartbeat(interruptChan, doneChan, cfg)
 	go func() {
+		defer ca.Shutdown()
 		ca.Run(output, interruptChan, cfg)
 		doneChan <- struct{}{}
 	}()
@@ -187,7 +189,7 @@ func main() {
 
 func handleFlagVersion(versionFlag bool) {
 	if versionFlag {
-		fmt.Printf("cagent v%s released under MIT license. https://github.com/cloudradar-monitoring/cagent/\n", version)
+		fmt.Printf("cagent v%s %s\n", version, licenseInfo)
 		os.Exit(0)
 	}
 }
@@ -579,6 +581,7 @@ func (sw *serviceWrapper) Start(s service.Service) error {
 
 	go sw.Cagent.RunHeartbeat(sw.InterruptChan, sw.DoneChan, sw.Cagent.Config)
 	go func() {
+		defer sw.Cagent.Shutdown()
 		sw.Cagent.Run(nil, sw.InterruptChan, sw.Cagent.Config)
 		sw.DoneChan <- struct{}{}
 	}()

@@ -18,6 +18,11 @@ var errTemperatureNotAvailable = errors.New("the temperature is not available")
 
 const nouveauDriver = "nouveau" // open-source driver for Nvidia GPU
 
+// Shutdown frees resources
+func Shutdown() {
+
+}
+
 // ReadTemperatureSensors tries to read temperature sensors via sysfs interface:
 // https://www.kernel.org/doc/Documentation/hwmon/sysfs-interface
 func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {

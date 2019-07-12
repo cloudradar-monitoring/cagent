@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/sensors"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
 	"github.com/cloudradar-monitoring/cagent/pkg/smart"
@@ -91,7 +92,9 @@ func (ca *Cagent) userAgent() string {
 	return fmt.Sprintf("Cagent v%s %s %s", ca.version, runtime.GOOS, runtime.GOARCH)
 }
 
-func (ca *Cagent) Shutdown() error {
+func (ca *Cagent) Shutdown() {
+	defer sensors.Shutdown()
+
 	for name, p := range ca.vmWatchers {
 		if err := vmstat.Release(p); err != nil {
 			logrus.WithFields(logrus.Fields{
@@ -101,6 +104,4 @@ func (ca *Cagent) Shutdown() error {
 
 		delete(ca.vmWatchers, name)
 	}
-
-	return nil
 }

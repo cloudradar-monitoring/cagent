@@ -1,6 +1,6 @@
 package sensors
 
-import log "github.com/sirupsen/logrus"
+import "github.com/sirupsen/logrus"
 
 const unitCelsius = "centigrade"
 
@@ -11,4 +11,4 @@ type TemperatureSensorInfo struct {
 	Unit              string  `json:"unit"`
 }
 
-var logger = log.WithField("package", "sensors")
+var logger = logrus.WithField("package", "sensors")
