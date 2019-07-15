@@ -359,7 +359,7 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, cfg *Config)
 	}
 }
 
-func (ca *Cagent) RunHeartbeat(interrupt, stop chan struct{}, cfg *Config) {
+func (ca *Cagent) RunHeartbeat(interrupt chan struct{}, cfg *Config) {
 	for {
 		err := ca.sendHeartbeat()
 		if err != nil {
@@ -368,8 +368,6 @@ func (ca *Cagent) RunHeartbeat(interrupt, stop chan struct{}, cfg *Config) {
 
 		select {
 		case <-interrupt:
-			return
-		case <-stop:
 			return
 		case <-time.After(secToDuration(ca.Config.HeartbeatInterval)):
 			continue
