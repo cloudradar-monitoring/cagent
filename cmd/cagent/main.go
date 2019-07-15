@@ -166,11 +166,13 @@ func main() {
 		syscall.SIGTERM)
 	interruptChan := make(chan struct{})
 	doneChan := make(chan struct{})
+	heartbeatInterruptChan := make(chan struct{})
 
-	go ca.RunHeartbeat(interruptChan, doneChan, cfg)
+	go ca.RunHeartbeat(heartbeatInterruptChan, cfg)
 	go func() {
 		defer ca.Shutdown()
 		ca.Run(output, interruptChan, cfg)
+		heartbeatInterruptChan <- struct{}{}
 		doneChan <- struct{}{}
 	}()
 
@@ -578,11 +580,13 @@ type serviceWrapper struct {
 func (sw *serviceWrapper) Start(s service.Service) error {
 	sw.InterruptChan = make(chan struct{})
 	sw.DoneChan = make(chan struct{})
+	heartbeatInterruptChan := make(chan struct{})
 
-	go sw.Cagent.RunHeartbeat(sw.InterruptChan, sw.DoneChan, sw.Cagent.Config)
+	go sw.Cagent.RunHeartbeat(heartbeatInterruptChan, sw.Cagent.Config)
 	go func() {
 		defer sw.Cagent.Shutdown()
 		sw.Cagent.Run(nil, sw.InterruptChan, sw.Cagent.Config)
+		heartbeatInterruptChan <- struct{}{}
 		sw.DoneChan <- struct{}{}
 	}()
 
