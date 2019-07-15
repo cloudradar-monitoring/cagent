@@ -109,8 +109,9 @@ windows-sign:
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH}:/cygdrive/C/Users/hero/ci/cagent_32.msi ${PROJECT_DIR}/dist/cagent_proprietary_386.msi
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH}:/cygdrive/C/Users/hero/ci/cagent_64.msi ${PROJECT_DIR}/dist/cagent_proprietary_64.msi
 	# Upload proprietary MSI files to cloudradar package server
-	scp -P 24480 -oStrictHostKeyChecking=no ${PROJECT_DIR}/dist/cagent_proprietary_386.msi cr@repo.cloudradar.io:/var/repos/cloudradar/windows/cagent/cagent-plus_${CIRCLE_TAG}_Windows_386.msi
-	scp -P 24480 -oStrictHostKeyChecking=no ${PROJECT_DIR}/dist/cagent_proprietary_64.msi cr@repo.cloudradar.io:/var/repos/cloudradar/windows/cagent/cagent-plus_${CIRCLE_TAG}_Windows_64.msi
+	chmod a+r ${PROJECT_DIR}/dist/cagent_proprietary_386.msi ${PROJECT_DIR}/dist/cagent_proprietary_64.msi
+	scp -P 24480 -oStrictHostKeyChecking=no -p ${PROJECT_DIR}/dist/cagent_proprietary_386.msi cr@repo.cloudradar.io:/var/repos/cloudradar/windows/cagent/cagent-plus_${CIRCLE_TAG}_Windows_386.msi
+	scp -P 24480 -oStrictHostKeyChecking=no -p ${PROJECT_DIR}/dist/cagent_proprietary_64.msi cr@repo.cloudradar.io:/var/repos/cloudradar/windows/cagent/cagent-plus_${CIRCLE_TAG}_Windows_64.msi
 
 synology-spk:
 	cd synology-spk && ./create_spk.sh ${CIRCLE_TAG}
