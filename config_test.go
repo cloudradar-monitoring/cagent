@@ -3,6 +3,7 @@ package cagent
 import (
 	"io/ioutil"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -178,4 +179,36 @@ fs_metrics = ['a', 'b']
 		assert.Error(t, err)
 
 	})
+}
+
+func TestVirtualNetworkInterfacesExcludedByDefault(t *testing.T) {
+	cfg := NewConfig()
+
+	toBeExcluded := []string{"vnet", "vnet0", "vnet2", "virbr", "virbr0", "virbr11", "vmnet", "vmnet1"}
+	for _, ifName := range toBeExcluded {
+		excluded := false
+		for _, reString := range cfg.NetInterfaceExcludeRegex {
+			re, err := regexp.Compile(reString)
+			assert.NoError(t, err)
+			if re.Match([]byte(ifName)) {
+				excluded = true
+				break
+			}
+		}
+		assert.True(t, excluded, ifName+" excluded")
+	}
+
+	notToBeExcluded := []string{"docker", "docker0", "eth0", "eno0", "eth", "eno", "br-426c8e07f670", "wlo1", "lo"}
+	for _, ifName := range notToBeExcluded {
+		excluded := false
+		for _, reString := range cfg.NetInterfaceExcludeRegex {
+			re, err := regexp.Compile(reString)
+			assert.NoError(t, err)
+			if re.Match([]byte(ifName)) {
+				excluded = true
+				break
+			}
+		}
+		assert.False(t, excluded, ifName+" excluded")
+	}
 }
