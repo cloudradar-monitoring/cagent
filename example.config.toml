@@ -32,7 +32,7 @@ fs_metrics = ['free_B','free_percent','used_B','used_percent','total_B','inodes_
 
 # Network
 net_interface_exclude = ['utun', 'awdl']
-net_interface_exclude_regex = ["en[1-9]"] # default [], default on windows: ["Pseudo-Interface"]
+net_interface_exclude_regex = ["en[1-9]"] # default ["^vnet(.*)$", "^virbr(.*)$", "^vmnet(.*)$", "^vEthernet(.*)$"], default on windows: ["Pseudo-Interface"]
 net_interface_exclude_disconnected = true # default true
 net_interface_exclude_loopback = true # default true
 net_metrics = ['in_B_per_s', 'out_B_per_s', 'errors_per_s','dropped_per_s'] # default['in_B_per_s', 'out_B_per_s']

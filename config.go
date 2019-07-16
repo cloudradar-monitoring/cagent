@@ -71,7 +71,7 @@ type Config struct {
 	FSMetrics []string `toml:"fs_metrics" comment:"default ['free_B','free_percent','total_B']"`
 
 	NetInterfaceExclude             []string `toml:"net_interface_exclude" commented:"true"`
-	NetInterfaceExcludeRegex        []string `toml:"net_interface_exclude_regex" comment:"default [], default on windows: [\"Pseudo-Interface\"]"`
+	NetInterfaceExcludeRegex        []string `toml:"net_interface_exclude_regex" comment:"default [\"^vnet(.*)$\", \"^virbr(.*)$\", \"^vmnet(.*)$\", \"^vEthernet(.*)$\"]. On Windows, also \"Pseudo-Interface\" is added to list"`
 	NetInterfaceExcludeDisconnected bool     `toml:"net_interface_exclude_disconnected" comment:"default true"`
 	NetInterfaceExcludeLoopback     bool     `toml:"net_interface_exclude_loopback" comment:"default true"`
 
@@ -142,7 +142,7 @@ func NewConfig() *Config {
 		NetMetrics:                       []string{"in_B_per_s", "out_B_per_s"},
 		NetInterfaceExcludeDisconnected:  true,
 		NetInterfaceExclude:              []string{},
-		NetInterfaceExcludeRegex:         []string{},
+		NetInterfaceExcludeRegex:         []string{"^vnet(.*)$", "^virbr(.*)$", "^vmnet(.*)$", "^vEthernet(.*)$"},
 		NetInterfaceExcludeLoopback:      true,
 		SystemFields:                     []string{"uname", "os_kernel", "os_family", "os_arch", "cpu_model", "fqdn", "memory_total_B"},
 		HardwareInventory:                true,
@@ -166,7 +166,7 @@ func NewConfig() *Config {
 
 	if runtime.GOOS == "windows" {
 		cfg.WindowsUpdatesWatcherInterval = 3600
-		cfg.NetInterfaceExcludeRegex = []string{"Pseudo-Interface"}
+		cfg.NetInterfaceExcludeRegex = append(cfg.NetInterfaceExcludeRegex, "Pseudo-Interface")
 		cfg.CPULoadDataGather = []string{}
 		cfg.CPUUtilTypes = []string{"user", "system", "idle"}
 		cfg.VirtualMachinesStat = []string{"hyper-v"}
