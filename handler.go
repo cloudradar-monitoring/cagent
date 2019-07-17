@@ -21,6 +21,7 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/hwinfo"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/networking"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/sensors"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
@@ -200,7 +201,7 @@ func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
 	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("system.", info)
 
-	ipResults, err := IPAddresses()
+	ipResults, err := networking.IPAddresses()
 	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("system.", ipResults)
 
@@ -208,7 +209,7 @@ func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
 	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("fs.", fsResults)
 
-	netResults, err := ca.NetWatcher().Results()
+	netResults, err := ca.GetNetworkWatcher().Results()
 	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("net.", netResults)
 
