@@ -160,6 +160,7 @@ func (nw *NetWatcher) fillCountersMeasurements(results common.MeasurementsMap, i
 		lastIOCounterByName[lastIOCounter.Name] = lastIOCounter
 	}
 
+	linkSpeedProvider := newLinkSpeedProvider()
 	for _, ioCounter := range counters {
 		// iterate over all counters
 		// each ioCounter corresponds to the specific interface with name ioCounter.Name
@@ -192,6 +193,20 @@ func (nw *NetWatcher) fillCountersMeasurements(results common.MeasurementsMap, i
 				results[metric+"."+ioCounter.Name] = common.FloatToIntRoundUP(float64(droppedSinceLastMeasurement) / secondsSinceLastMeasurement)
 			}
 		}
+
+		currLinkSpeed := float64(ioCounter.BytesRecv-previousIOCounter.BytesRecv+ioCounter.BytesSent-previousIOCounter.BytesSent) / secondsSinceLastMeasurement
+		maxAvailableLinkSpeed, err := linkSpeedProvider.GetMaxAvailableLinkSpeed(ioCounter.Name)
+		if err != nil {
+			logrus.WithError(err).Debugf("[NET] cannot get max available link speed for %s. Skipping net_util_percent metric...", ioCounter.Name)
+			continue
+		}
+
+		if maxAvailableLinkSpeed < currLinkSpeed {
+			logrus.Warnf("[NET] got invalid value for max available interface speed: %.3f. net_util_percent metric...", maxAvailableLinkSpeed)
+			continue
+		}
+
+		results["net_util_percent."+ioCounter.Name] = common.RoundToTwoDecimalPlaces((currLinkSpeed / maxAvailableLinkSpeed) * 100)
 	}
 
 	return nil

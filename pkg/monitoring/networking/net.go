@@ -10,6 +10,11 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
+type linkSpeedProvider interface {
+	// GetMaxAvailableLinkSpeed returns link speed in bytes per second
+	GetMaxAvailableLinkSpeed(ifName string) (float64, error)
+}
+
 func IPAddresses() (common.MeasurementsMap, error) {
 	var addresses []string
 
