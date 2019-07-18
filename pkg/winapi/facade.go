@@ -38,7 +38,7 @@ func GetProcessCommandLine(pid uint32) (string, error) {
 		}
 	}()
 
-	pbi, err := GetProcessBasicInformation(handle)
+	pbi, err := getProcessBasicInformation(handle)
 	if err != nil {
 		return "", err
 	}
