@@ -12,15 +12,23 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/troian/toml"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 const (
 	IOModeFile = "file"
 	IOModeHTTP = "http"
 
+	OperationModeFull      = "full"
+	OperationModeMinimal   = "minimal"
+	OperationModeHeartbeat = "heartbeat"
+
 	minIntervalValue          = 30.0
 	minHeartbeatIntervalValue = 5.0
 )
+
+var operationModes = []string{OperationModeFull, OperationModeMinimal, OperationModeHeartbeat}
 
 var DefaultCfgPath string
 var defaultLogPath string
@@ -46,6 +54,7 @@ type LogsFilesConfig struct {
 }
 
 type Config struct {
+	OperationMode     string  `toml:"operation_mode" comment:"operation_mode, possible values:\n\"full\": perform all checks unless disabled individually through other config option. Default.\n\"minimal\": perform just the checks for CPU utilization, CPU Load, Memory Usage, and Disk fill levels.\n\"heartbeat\": Just send the heartbeat according to the heartbeat interval."`
 	Interval          float64 `toml:"interval" comment:"interval to push metrics to the HUB"`
 	HeartbeatInterval float64 `toml:"heartbeat" comment:"send a heartbeat without metrics to the HUB every X seconds"`
 
@@ -129,6 +138,7 @@ func init() {
 func NewConfig() *Config {
 	cfg := &Config{
 		LogFile:                          defaultLogPath,
+		OperationMode:                    OperationModeFull,
 		Interval:                         90,
 		HeartbeatInterval:                15,
 		HubGzip:                          true,
@@ -325,6 +335,10 @@ func (cfg *Config) validate() error {
 
 	if cfg.HeartbeatInterval < minHeartbeatIntervalValue {
 		return fmt.Errorf("heartbeat value must be >= %.1f", minHeartbeatIntervalValue)
+	}
+
+	if !common.StrInSlice(cfg.OperationMode, operationModes) {
+		return fmt.Errorf("invalid operation_mode supplied. Must be one of %v", operationModes)
 	}
 
 	return nil
