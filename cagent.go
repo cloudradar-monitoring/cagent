@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/networking"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/sensors"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
@@ -29,7 +30,7 @@ type Cagent struct {
 	cpuUtilisationAnalyser *CPUUtilisationAnalyser
 
 	fsWatcher            *FSWatcher
-	netWatcher           *NetWatcher
+	netWatcher           *networking.NetWatcher
 	windowsUpdateWatcher *WindowsUpdateWatcher // nolint: structcheck,megacheck
 	dockerWatcher        *docker.Watcher
 

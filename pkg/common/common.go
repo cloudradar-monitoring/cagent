@@ -68,6 +68,10 @@ func RoundToTwoDecimalPlaces(v float64) float64 {
 	return math.Round(v*100) / 100
 }
 
+func FloatToIntRoundUP(f float64) int {
+	return int(f + 0.5)
+}
+
 // GetEnv retrieves the environment variable key. If it does not exist it returns the default.
 func GetEnv(key string, dfault string, combineWith ...string) string {
 	value := os.Getenv(key)
