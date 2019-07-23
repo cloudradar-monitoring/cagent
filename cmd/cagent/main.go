@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/kardianos/service"
@@ -164,29 +165,23 @@ func main() {
 		syscall.SIGHUP,
 		syscall.SIGINT,
 		syscall.SIGTERM)
-	interruptChan := make(chan struct{})
-	doneChan := make(chan struct{})
 	heartbeatInterruptChan := make(chan struct{})
+	interruptChan := make(chan struct{})
 
-	go ca.RunHeartbeat(heartbeatInterruptChan, cfg)
-	go func() {
-		defer ca.Shutdown()
-		ca.Run(output, interruptChan, cfg)
-		heartbeatInterruptChan <- struct{}{}
-		doneChan <- struct{}{}
-	}()
+	defer ca.Shutdown()
 
-	//  Handle interrupts
-	select {
-	case sig := <-sigc:
-		log.WithFields(log.Fields{
-			"signal": sig.String(),
-		}).Infoln("Finishing the batch and exit...")
-		interruptChan <- struct{}{}
-		os.Exit(0)
-	case <-doneChan:
-		os.Exit(0)
+	go ca.RunHeartbeat(heartbeatInterruptChan)
+	if ca.Config.OperationMode != cagent.OperationModeHeartbeat {
+		go ca.Run(output, interruptChan)
 	}
+
+	// Handle interrupts
+	sig := <-sigc
+	log.WithField("signal", sig.String()).Infoln("Finishing the batch and exit...")
+	if ca.Config.OperationMode != cagent.OperationModeHeartbeat {
+		interruptChan <- struct{}{}
+	}
+	heartbeatInterruptChan <- struct{}{}
 }
 
 func handleFlagVersion(versionFlag bool) {
@@ -340,7 +335,7 @@ func handleFlagOutput(outputFile string, oneRunOnlyMode bool) *os.File {
 
 func handleFlagOneRunOnlyMode(ca *cagent.Cagent, oneRunOnlyMode bool, output *os.File) {
 	if oneRunOnlyMode {
-		err := ca.RunOnce(output)
+		err := ca.RunOnce(output, true)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -572,31 +567,43 @@ func rerunDetached() error {
 }
 
 type serviceWrapper struct {
-	Cagent        *cagent.Cagent
-	InterruptChan chan struct{}
-	DoneChan      chan struct{}
+	Cagent                 *cagent.Cagent
+	InterruptChan          chan struct{}
+	HeartbeatInterruptChan chan struct{}
+	WG                     sync.WaitGroup
 }
 
 func (sw *serviceWrapper) Start(s service.Service) error {
 	sw.InterruptChan = make(chan struct{})
-	sw.DoneChan = make(chan struct{})
-	heartbeatInterruptChan := make(chan struct{})
+	sw.WG = sync.WaitGroup{}
+	sw.HeartbeatInterruptChan = make(chan struct{})
 
-	go sw.Cagent.RunHeartbeat(heartbeatInterruptChan, sw.Cagent.Config)
+	sw.WG.Add(1)
 	go func() {
-		defer sw.Cagent.Shutdown()
-		sw.Cagent.Run(nil, sw.InterruptChan, sw.Cagent.Config)
-		heartbeatInterruptChan <- struct{}{}
-		sw.DoneChan <- struct{}{}
+		defer sw.WG.Done()
+		sw.Cagent.RunHeartbeat(sw.HeartbeatInterruptChan)
 	}()
+
+	if sw.Cagent.Config.OperationMode != cagent.OperationModeHeartbeat {
+		sw.WG.Add(1)
+		go func() {
+			defer sw.WG.Done()
+			sw.Cagent.Run(nil, sw.InterruptChan)
+		}()
+	}
 
 	return nil
 }
 
 func (sw *serviceWrapper) Stop(s service.Service) error {
-	sw.InterruptChan <- struct{}{}
+	defer sw.Cagent.Shutdown()
+
 	log.Println("Finishing the batch and stop the service...")
-	<-sw.DoneChan
+	if sw.Cagent.Config.OperationMode != cagent.OperationModeHeartbeat {
+		sw.InterruptChan <- struct{}{}
+	}
+	sw.HeartbeatInterruptChan <- struct{}{}
+	sw.WG.Wait()
 	return nil
 }
 

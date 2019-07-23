@@ -15,7 +15,12 @@ hub_proxy = "" # HTTP proxy to use with HUB
 hub_proxy_user = "" # requires hub_proxy to be set
 hub_proxy_password = "" # requires hub_proxy_user to be set
 
-# interval to push metrics to the HUB
+# operation_mode, possible values:
+# "full": perform all checks unless disabled individually through other config option. Default.
+# "minimal": perform just the checks for CPU utilization, CPU Load, Memory Usage, and Disk fill levels.
+# "heartbeat": Just send the heartbeat according to the heartbeat interval.
+operation_mode = "full"
+# interval to push metrics to the HUB, will be ignored if the mode is set to "heartbeat"
 interval = 60.0
 # send a heartbeat without metrics to the Hub every X seconds
 heartbeat = 15.0

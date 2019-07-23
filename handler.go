@@ -189,7 +189,7 @@ func (ca *Cagent) PostResultToHub(ctx context.Context, result *Result) error {
 	return nil
 }
 
-func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
+func (ca *Cagent) CollectMeasurements(full bool) (common.MeasurementsMap, error) {
 	var errCollector = common.ErrorCollector{}
 	var measurements = make(common.MeasurementsMap)
 
@@ -197,82 +197,13 @@ func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
 	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("cpu.", cpum)
 
-	info, err := ca.HostInfoResults()
-	errCollector.Add(err)
-	measurements = measurements.AddWithPrefix("system.", info)
-
-	ipResults, err := networking.IPAddresses()
-	errCollector.Add(err)
-	measurements = measurements.AddWithPrefix("system.", ipResults)
-
 	fsResults, err := ca.FSWatcher().Results()
 	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("fs.", fsResults)
 
-	netResults, err := ca.GetNetworkWatcher().Results()
-	errCollector.Add(err)
-	measurements = measurements.AddWithPrefix("net.", netResults)
-
 	mem, memStat, err := ca.MemResults()
 	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("mem.", mem)
-
-	proc, processList, err := ca.ProcessesResult(memStat)
-	errCollector.Add(err)
-	measurements = measurements.AddWithPrefix("proc.", proc)
-
-	ports, err := ca.PortsResult(processList)
-	errCollector.Add(err)
-	measurements = measurements.AddWithPrefix("listeningports.", ports)
-
-	swap, err := ca.SwapResults()
-	errCollector.Add(err)
-	measurements = measurements.AddWithPrefix("swap.", swap)
-
-	ca.getVMStatMeasurements(func(name string, meas common.MeasurementsMap, err error) {
-		if err == nil {
-			measurements = measurements.AddWithPrefix("virt."+name+".", meas)
-		}
-		errCollector.Add(err)
-	})
-
-	ca.hwInventory.Do(func() {
-		hwInfo, err := hwinfo.Inventory()
-		errCollector.Add(err)
-		if hwInfo != nil {
-			measurements = measurements.AddInnerWithPrefix("hw.inventory", hwInfo)
-		}
-	})
-
-	if runtime.GOOS == "linux" {
-		raid, err := ca.RaidState()
-		errCollector.Add(err)
-		measurements = measurements.AddWithPrefix("raid.", raid)
-	}
-
-	if runtime.GOOS == "windows" {
-		wu, err := ca.WindowsUpdatesWatcher().WindowsUpdates()
-		errCollector.Add(err)
-		measurements = measurements.AddWithPrefix("windows_update.", wu)
-	}
-
-	servicesList, err := services.ListServices(ca.Config.DiscoverAutostartingServicesOnly)
-	if err != services.ErrorNotImplementedForOS {
-		errCollector.Add(err)
-	}
-	measurements = measurements.AddWithPrefix("services.", servicesList)
-
-	containersList, err := ca.dockerWatcher.ListContainers()
-	if err != docker.ErrorNotImplementedForOS && err != docker.ErrorDockerNotFound {
-		errCollector.Add(err)
-	}
-	measurements = measurements.AddWithPrefix("docker.", containersList)
-
-	if ca.Config.TemperatureMonitoring {
-		temperatures, err := sensors.ReadTemperatureSensors()
-		errCollector.Add(err)
-		measurements = measurements.AddWithPrefix("temperatures.", common.MeasurementsMap{"list": temperatures})
-	}
 
 	cpuUtilisationAnalysisResult, cpuUtilisationAnalysisIsActive, err := ca.CPUUtilisationAnalyser().Results()
 	errCollector.Add(err)
@@ -284,18 +215,89 @@ func (ca *Cagent) GetAllMeasurements() (common.MeasurementsMap, error) {
 		)
 	}
 
+	if full {
+		info, err := ca.HostInfoResults()
+		errCollector.Add(err)
+		measurements = measurements.AddWithPrefix("system.", info)
+
+		ipResults, err := networking.IPAddresses()
+		errCollector.Add(err)
+		measurements = measurements.AddWithPrefix("system.", ipResults)
+
+		netResults, err := ca.GetNetworkWatcher().Results()
+		errCollector.Add(err)
+		measurements = measurements.AddWithPrefix("net.", netResults)
+
+		proc, processList, err := ca.ProcessesResult(memStat)
+		errCollector.Add(err)
+		measurements = measurements.AddWithPrefix("proc.", proc)
+
+		ports, err := ca.PortsResult(processList)
+		errCollector.Add(err)
+		measurements = measurements.AddWithPrefix("listeningports.", ports)
+
+		swap, err := ca.SwapResults()
+		errCollector.Add(err)
+		measurements = measurements.AddWithPrefix("swap.", swap)
+
+		ca.getVMStatMeasurements(func(name string, meas common.MeasurementsMap, err error) {
+			if err == nil {
+				measurements = measurements.AddWithPrefix("virt."+name+".", meas)
+			}
+			errCollector.Add(err)
+		})
+
+		ca.hwInventory.Do(func() {
+			hwInfo, err := hwinfo.Inventory()
+			errCollector.Add(err)
+			if hwInfo != nil {
+				measurements = measurements.AddInnerWithPrefix("hw.inventory", hwInfo)
+			}
+		})
+
+		if runtime.GOOS == "linux" {
+			raid, err := ca.RaidState()
+			errCollector.Add(err)
+			measurements = measurements.AddWithPrefix("raid.", raid)
+		}
+
+		if runtime.GOOS == "windows" {
+			wu, err := ca.WindowsUpdatesWatcher().WindowsUpdates()
+			errCollector.Add(err)
+			measurements = measurements.AddWithPrefix("windows_update.", wu)
+		}
+
+		servicesList, err := services.ListServices(ca.Config.DiscoverAutostartingServicesOnly)
+		if err != services.ErrorNotImplementedForOS {
+			errCollector.Add(err)
+		}
+		measurements = measurements.AddWithPrefix("services.", servicesList)
+
+		containersList, err := ca.dockerWatcher.ListContainers()
+		if err != docker.ErrorNotImplementedForOS && err != docker.ErrorDockerNotFound {
+			errCollector.Add(err)
+		}
+		measurements = measurements.AddWithPrefix("docker.", containersList)
+
+		if ca.Config.TemperatureMonitoring {
+			temperatures, err := sensors.ReadTemperatureSensors()
+			errCollector.Add(err)
+			measurements = measurements.AddWithPrefix("temperatures.", common.MeasurementsMap{"list": temperatures})
+		}
+
+		smartMeas := ca.getSMARTMeasurements()
+		if len(smartMeas) > 0 {
+			measurements = measurements.AddInnerWithPrefix("smartmon", smartMeas)
+		}
+	}
+
 	if errCollector.HasErrors() {
 		measurements["cagent.success"] = 0
 	} else {
 		measurements["cagent.success"] = 1
 	}
 
-	// measurements fetched below should not affect cagent.success
-	smartMeas := ca.getSMARTMeasurements()
-
-	if len(smartMeas) > 0 {
-		measurements = measurements.AddInnerWithPrefix("smartmon", smartMeas)
-	}
+	measurements["operation_mode"] = ca.Config.OperationMode
 
 	if errCollector.HasErrors() {
 		return measurements, errCollector.Combine()
@@ -333,20 +335,20 @@ func (ca *Cagent) ReportMeasurements(measurements common.MeasurementsMap, output
 	return err
 }
 
-func (ca *Cagent) RunOnce(outputFile *os.File) error {
-	measurements, err := ca.GetAllMeasurements()
+func (ca *Cagent) RunOnce(outputFile *os.File, full bool) error {
+	measurements, err := ca.CollectMeasurements(full)
 	if err != nil {
 		// don't need to log or return it here – just add the message to report
-		// it is already logged (down into the GetAllMeasurements)
+		// it is already logged (down into the CollectMeasurements)
 		measurements["message"] = err.Error()
 	}
 
 	return ca.ReportMeasurements(measurements, outputFile)
 }
 
-func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, cfg *Config) {
+func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 	for {
-		err := ca.RunOnce(outputFile)
+		err := ca.RunOnce(outputFile, ca.Config.OperationMode == OperationModeFull)
 		if err != nil {
 			log.Error(err)
 		}
@@ -360,7 +362,7 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}, cfg *Config)
 	}
 }
 
-func (ca *Cagent) RunHeartbeat(interrupt chan struct{}, cfg *Config) {
+func (ca *Cagent) RunHeartbeat(interrupt chan struct{}) {
 	for {
 		err := ca.sendHeartbeat()
 		if err != nil {
@@ -404,7 +406,7 @@ func (ca *Cagent) sendHeartbeat() error {
 			return errors.WithStack(err)
 		}
 	}
-	log.Infof("sent! %d", resp.StatusCode)
+	log.Debugf("Heartbeat sent. Status: %d", resp.StatusCode)
 	return err
 }
 
