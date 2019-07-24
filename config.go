@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -84,7 +85,8 @@ type Config struct {
 	NetInterfaceExcludeDisconnected bool     `toml:"net_interface_exclude_disconnected" comment:"default true"`
 	NetInterfaceExcludeLoopback     bool     `toml:"net_interface_exclude_loopback" comment:"default true"`
 
-	NetMetrics []string `toml:"net_metrics" comment:"default['in_B_per_s', 'out_B_per_s']"`
+	NetMetrics           []string `toml:"net_metrics" comment:"default['in_B_per_s', 'out_B_per_s']"`
+	NetInterfaceMaxSpeed string   `toml:"net_interface_max_speed" comment:"If the value is not specified, cagent will try to query the maximum speed of the network cards to calculate the bandwidth usage (default)\nDepending on the network card type this is not always reliable.\nSome virtual network cards, for example, report a maximum speed lower than the real speed.\nYou can set a fixed value by using <number of Bytes per second> + <K, M or G as a quantifier>.\nExamples: \"125M\" (equals 1 GigaBit), \"12.5M\" (equals 100 MegaBits), \"12.5G\" (equals 100 GigaBit)"`
 
 	SystemFields []string `toml:"system_fields" comment:"default ['uname','os_kernel','os_family','os_arch','cpu_model','fqdn','memory_total_B']"`
 
@@ -318,6 +320,36 @@ func GenerateDefaultConfigFile(mvc *MinValuableConfig, configFilePath string) er
 	return err
 }
 
+func (cfg *Config) GetParsedNetInterfaceMaxSpeed() (uint64, error) {
+	v := cfg.NetInterfaceMaxSpeed
+	if v == "" {
+		return 0, nil
+	}
+	if len(v) < 2 {
+		return 0, fmt.Errorf("can't parse")
+	}
+
+	valueStr, unit := v[0:len(v)-1], v[len(v)-1]
+	value, err := strconv.ParseFloat(valueStr, 0)
+	if err != nil {
+		return 0, err
+	}
+	if value <= 0.0 {
+		return 0, fmt.Errorf("should be >= 0.0")
+	}
+
+	switch unit {
+	case 'K':
+		return uint64(value * 1000), nil
+	case 'M':
+		return uint64(value * 1000 * 1000), nil
+	case 'G':
+		return uint64(value * 1000 * 1000 * 1000), nil
+	}
+
+	return 0, fmt.Errorf("unsupported unit: %c", unit)
+}
+
 func (cfg *Config) validate() error {
 	if cfg.HubProxy != "" {
 		if !strings.HasPrefix(cfg.HubProxy, "http") {
@@ -339,6 +371,11 @@ func (cfg *Config) validate() error {
 
 	if !common.StrInSlice(cfg.OperationMode, operationModes) {
 		return fmt.Errorf("invalid operation_mode supplied. Must be one of %v", operationModes)
+	}
+
+	_, err := cfg.GetParsedNetInterfaceMaxSpeed()
+	if err != nil {
+		return fmt.Errorf("invalid net_interface_max_speed value supplied: %s", err.Error())
 	}
 
 	return nil
