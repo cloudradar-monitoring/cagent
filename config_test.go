@@ -212,3 +212,55 @@ func TestVirtualNetworkInterfacesExcludedByDefault(t *testing.T) {
 		assert.False(t, excluded, ifName+" excluded")
 	}
 }
+
+func TestGetParsedNetworkInterfaceMaxSpeed(t *testing.T) {
+	cfg := NewConfig()
+
+	t.Run("default-value-empty", func(t *testing.T) {
+		val, err := cfg.GetParsedNetInterfaceMaxSpeed()
+		assert.NoError(t, err)
+		assert.Zero(t, val)
+	})
+
+	type expectedOut struct {
+		val   uint64
+		isErr bool
+	}
+	var m = map[string]expectedOut{
+		"": {0, false},
+
+		"0":    {0, true},
+		"0.0":  {0, true},
+		"0M":   {0, true},
+		"0.0M": {0, true},
+		"1":    {0, true},
+		"1.1":  {0, true},
+		"1D":   {0, true},
+		"1m":   {0, true},
+		"1.1D": {0, true},
+		"M":    {0, true},
+		"D":    {0, true},
+		"MM":   {0, true},
+		"10MM": {0, true},
+		"-5M":  {0, true},
+
+		"1K":    {1000, false},
+		"1M":    {1000 * 1000, false},
+		"1G":    {1000 * 1000 * 1000, false},
+		"125M":  {1000 * 1000 * 125, false},
+		"12.5M": {1000 * 1000 * 12.5, false},
+		"25G":   {1000 * 1000 * 1000 * 25, false},
+	}
+
+	for strVal, expected := range m {
+		cfg.NetInterfaceMaxSpeed = strVal
+		val, err := cfg.GetParsedNetInterfaceMaxSpeed()
+		if expected.isErr {
+			assert.Error(t, err, "for input %s. %v", strVal, err)
+		} else {
+			assert.NoError(t, err, "for input %s. %v", strVal, err)
+		}
+
+		assert.Equal(t, expected.val, val, "for input %s: %d vs %d", strVal, expected.val, val)
+	}
+}

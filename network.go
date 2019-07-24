@@ -9,6 +9,7 @@ func (ca *Cagent) GetNetworkWatcher() *networking.NetWatcher {
 		return ca.netWatcher
 	}
 
+	maxSpeed, _ := ca.Config.GetParsedNetInterfaceMaxSpeed()
 	ca.netWatcher = networking.NewWatcher(
 		networking.NetWatcherConfig{
 			NetInterfaceExclude:             ca.Config.NetInterfaceExclude,
@@ -16,6 +17,7 @@ func (ca *Cagent) GetNetworkWatcher() *networking.NetWatcher {
 			NetInterfaceExcludeDisconnected: ca.Config.NetInterfaceExcludeDisconnected,
 			NetInterfaceExcludeLoopback:     ca.Config.NetInterfaceExcludeLoopback,
 			NetMetrics:                      ca.Config.NetMetrics,
+			NetInterfaceMaxSpeed:            maxSpeed,
 		},
 	)
 	return ca.netWatcher

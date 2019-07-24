@@ -1,7 +1,6 @@
 package networking
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -13,14 +12,13 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
-const netGetCountersTimeout = time.Second * 10
-
 type NetWatcherConfig struct {
 	NetInterfaceExclude             []string
 	NetInterfaceExcludeRegex        []string
 	NetInterfaceExcludeDisconnected bool
 	NetInterfaceExcludeLoopback     bool
 	NetMetrics                      []string
+	NetInterfaceMaxSpeed            uint64
 }
 
 type NetWatcher struct {
@@ -132,10 +130,7 @@ func (nw *NetWatcher) fillEmptyMeasurements(results common.MeasurementsMap, inte
 
 // fillCountersMeasurements used to fill measurements with nil's for all non-excluded interfaces
 func (nw *NetWatcher) fillCountersMeasurements(results common.MeasurementsMap, interfaces []utilnet.InterfaceStat, excludedInterfacesByName map[string]struct{}) error {
-	ctx, cancelFn := context.WithTimeout(context.Background(), netGetCountersTimeout)
-	defer cancelFn()
-
-	counters, err := utilnet.IOCountersWithContext(ctx, true)
+	counters, err := getNetworkIOCounters()
 	if err != nil {
 		// fill empty measurements for not-excluded interfaces
 		nw.fillEmptyMeasurements(results, interfaces, excludedInterfacesByName)
@@ -195,15 +190,19 @@ func (nw *NetWatcher) fillCountersMeasurements(results common.MeasurementsMap, i
 		}
 
 		currLinkSpeed := float64(ioCounter.BytesRecv-previousIOCounter.BytesRecv+ioCounter.BytesSent-previousIOCounter.BytesSent) / secondsSinceLastMeasurement
-		maxAvailableLinkSpeed, err := linkSpeedProvider.GetMaxAvailableLinkSpeed(ioCounter.Name)
-		if err != nil {
-			logrus.WithError(err).Debugf("[NET] cannot get max available link speed for %s. Skipping net_util_percent metric...", ioCounter.Name)
-			continue
+
+		maxAvailableLinkSpeed := float64(nw.config.NetInterfaceMaxSpeed)
+		if maxAvailableLinkSpeed == 0 {
+			maxAvailableLinkSpeed, err = linkSpeedProvider.GetMaxAvailableLinkSpeed(ioCounter.Name)
+			if err != nil {
+				logrus.WithError(err).Debugf("[NET] cannot get max available link speed for %s. Skipping net_util_percent metric...", ioCounter.Name)
+				continue
+			}
 		}
 
 		if maxAvailableLinkSpeed < currLinkSpeed {
-			logrus.Warnf("[NET] got invalid value for max available interface speed: %.3f. net_util_percent metric...", maxAvailableLinkSpeed)
-			continue
+			// some network adapters can report incorrect link speed value
+			maxAvailableLinkSpeed = currLinkSpeed
 		}
 
 		results["net_util_percent."+ioCounter.Name] = common.RoundToTwoDecimalPlaces((currLinkSpeed / maxAvailableLinkSpeed) * 100)
