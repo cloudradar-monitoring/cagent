@@ -54,7 +54,7 @@ type LogsFilesConfig struct {
 }
 
 type Config struct {
-	OperationMode     string  `toml:"operation_mode" comment:"operation_mode, possible values:\n\"full\": perform all checks unless disabled individually through other config option. Default.\n\"minimal\": perform just the checks for CPU utilization, CPU Load, Memory Usage, and Disk fill levels.\n\"heartbeat\": Just send the heartbeat according to the heartbeat interval."`
+	OperationMode     string  `toml:"operation_mode" comment:"operation_mode, possible values:\n\"full\": perform all checks unless disabled individually through other config option. Default.\n\"minimal\": perform just the checks for CPU utilization, CPU Load, Memory Usage, and Disk fill levels.\n\"heartbeat\": Just send the heartbeat according to the heartbeat interval.\nApplies only to io_mode = http, ignored on the command line."`
 	Interval          float64 `toml:"interval" comment:"interval to push metrics to the HUB"`
 	HeartbeatInterval float64 `toml:"heartbeat" comment:"send a heartbeat without metrics to the HUB every X seconds"`
 
