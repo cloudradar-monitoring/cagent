@@ -78,10 +78,10 @@ type SystemProcessInformation struct {
 	KernelTime                   int64         // LARGE_INTEGER
 	ImageName                    unicodeString // UNICODE_STRING
 	BasePriority                 kPriority     // KPRIORITY
-	UniqueProcessId              uintptr       // HANDLE
-	InheritedFromUniqueProcessId uintptr       // HANDLE
+	UniqueProcessID              uintptr       // HANDLE
+	InheritedFromUniqueProcessID uintptr       // HANDLE
 	HandleCount                  uint32        // ULONG
-	SessionId                    uint32        // ULONG
+	SessionID                    uint32        // ULONG
 	UniqueProcessKey             *uint32       // ULONG_PTR
 	PeakVirtualSize              uintptr       // SIZE_T
 	VirtualSize                  uintptr       // SIZE_T
@@ -119,7 +119,7 @@ type systemThreadInformation struct {
 	CreateTime      int64       // LARGE_INTEGER
 	WaitTime        uint32      // ULONG
 	StartAddress    uintptr     // PVOID
-	ClientId        clientID    // CLIENT_ID
+	ClientID        clientID    // CLIENT_ID
 	Priority        kPriority   // KPRIORITY
 	BasePriority    int32       // LONG
 	ContextSwitches uint32      // ULONG
@@ -134,7 +134,7 @@ type processBasicInformation struct {
 	AffinityMask                 uintptr
 	BasePriority                 int32
 	UniqueProcessID              uintptr
-	InheritedFromUniqueProcessId uintptr
+	InheritedFromUniqueProcessID uintptr
 }
 
 // SERVICE_DELAYED_AUTO_START_INFO

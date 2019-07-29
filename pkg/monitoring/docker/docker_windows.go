@@ -8,10 +8,10 @@ func New() (*Watcher, error) {
 	return nil, ErrorNotImplementedForOS
 }
 
-func (_ *Watcher) ListContainers() (map[string]interface{}, error) {
+func (*Watcher) ListContainers() (map[string]interface{}, error) {
 	return nil, ErrorNotImplementedForOS
 }
 
-func (_ *Watcher) ContainerNameByID(_ string) (string, error) {
+func (*Watcher) ContainerNameByID(_ string) (string, error) {
 	return "", ErrorNotImplementedForOS
 }

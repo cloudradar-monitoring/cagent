@@ -18,13 +18,11 @@ import (
 const memGetTimeout = time.Second * 10
 
 func (ca *Cagent) MemResults() (common.MeasurementsMap, *mem.VirtualMemoryStat, error) {
-	results := common.MeasurementsMap{}
-
 	var errs []string
 	ctx, cancel := context.WithTimeout(context.Background(), memGetTimeout)
 	defer cancel()
 
-	results = map[string]interface{}{
+	results := map[string]interface{}{
 		"total_B":           nil,
 		"free_B":            nil,
 		"free_percent":      nil,

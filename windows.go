@@ -132,7 +132,7 @@ func windowsUpdates() (available int, pending int, lastTimeUpdated time.Time, er
 
 		resultCode, err := oleutil.GetProperty(item, "ResultCode")
 		if err != nil {
-			// On Win10 machine returns "Exception occured." after 75 updates so it looks like some undocumented internal limit.
+			// On Win10 machine returns "Exception occurred." after 75 updates so it looks like some undocumented internal limit.
 			// We only need the last ones to found "Pending" updates so just ignore this error
 			continue
 		}

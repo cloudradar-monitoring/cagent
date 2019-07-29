@@ -37,8 +37,9 @@ import (
 	"syscall"
 	"unsafe"
 
-	"golang.org/x/sys/windows"
 	"time"
+
+	"golang.org/x/sys/windows"
 )
 
 // Error codes
@@ -160,7 +161,7 @@ const (
 )
 
 type (
-	PDH_HQUERY   HANDLE // query handle
+	PDH_HQUERY HANDLE   // query handle
 	PDH_HCOUNTER HANDLE // counter handle
 )
 
@@ -327,8 +328,7 @@ func PdhCollectQueryDataWithTime(hQuery PDH_HQUERY) (uint32, time.Time) {
 
 		// First convert 100-ns intervals to microseconds, then adjust for the
 		// epoch difference
-		var totalMicroSeconds int64
-		totalMicroSeconds = ((int64(utcFileTime.dwHighDateTime) << 32) | int64(utcFileTime.dwLowDateTime)) / 10
+		var totalMicroSeconds = ((int64(utcFileTime.dwHighDateTime) << 32) | int64(utcFileTime.dwLowDateTime)) / 10
 		totalMicroSeconds -= EPOCH_DIFFERENCE_MICROS
 
 		retTime := time.Unix(0, totalMicroSeconds*1000)
