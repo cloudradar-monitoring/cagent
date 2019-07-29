@@ -43,6 +43,13 @@ net_interface_exclude_disconnected = true # default true
 net_interface_exclude_loopback = true # default true
 net_metrics = ['in_B_per_s', 'out_B_per_s', 'errors_per_s','dropped_per_s'] # default['in_B_per_s', 'out_B_per_s']
 
+# If the value is not specified, cagent will try to query the maximum speed of the network cards to calculate the bandwidth usage (default)
+# Depending on the network card type this is not always reliable.
+# Some virtual network cards, for example, report a maximum speed lower than the real speed.
+# You can set a fixed value by using <number of Bytes per second> + <K, M or G as a quantifier>.
+# Examples: "125M" (equals 1 GigaBit), "12.5M" (equals 100 MegaBits), "12.5G" (equals 100 GigaBit)
+net_interface_max_speed = ""
+
 # System
 system_fields = ['uname','os_kernel','os_family','os_arch','cpu_model','fqdn','memory_total_B'] # default ['uname','os_kernel','os_family','os_arch','cpu_model','fqdn','memory_total_B']
 
