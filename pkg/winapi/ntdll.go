@@ -123,7 +123,7 @@ func GetSystemProcessInformation() (map[uint32]*SystemProcessInformation, error)
 	var counter int
 	result := make(map[uint32]*SystemProcessInformation)
 	for {
-		result[uint32((*p).UniqueProcessId)] = p
+		result[uint32((*p).UniqueProcessID)] = p
 		counter++
 		if p.NextEntryOffset == 0 {
 			break

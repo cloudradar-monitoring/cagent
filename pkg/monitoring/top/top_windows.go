@@ -35,7 +35,7 @@ func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfoSnapshot, erro
 			info := &ProcessInfoSnapshot{
 				Name:      newProcessInfo.ImageName.String(),
 				PID:       pid,
-				ParentPID: uint32(newProcessInfo.InheritedFromUniqueProcessId),
+				ParentPID: uint32(newProcessInfo.InheritedFromUniqueProcessID),
 				Command:   "",
 				Load:      winapi.CalculateProcessCPUUsagePercent(oldProcessInfo, newProcessInfo, timeElapsedReal, t.logicalCPUCount),
 			}

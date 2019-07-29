@@ -52,7 +52,7 @@ func fetchInventory() (map[string]interface{}, error) {
 		res = common.MergeStringMaps(res, baseboardInfo)
 	}
 
-	ramInfo, err := getRamInfo()
+	ramInfo, err := getRAMInfo()
 	errorCollector.Add(err)
 	if len(ramInfo) > 0 {
 		res = common.MergeStringMaps(res, ramInfo)
@@ -257,7 +257,7 @@ func getBaseboardInfo() (map[string]interface{}, error) {
 	return res, nil
 }
 
-func getRamInfo() (map[string]interface{}, error) {
+func getRAMInfo() (map[string]interface{}, error) {
 	var ram []win32_PhysicalMemory
 	query := wmi.CreateQuery(&ram, "")
 	if err := wmi.Query(query, &ram); err != nil {

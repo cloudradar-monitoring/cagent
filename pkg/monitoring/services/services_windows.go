@@ -6,11 +6,12 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/winapi"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc/mgr"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/winapi"
 )
 
 type serviceInfo struct {

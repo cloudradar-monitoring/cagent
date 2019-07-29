@@ -54,7 +54,7 @@ func processes(_ *docker.Watcher, systemMemorySize uint64) ([]ProcStat, error) {
 		memoryUsagePercent := (float64(proc.WorkingSetSize) / float64(systemMemorySize)) * 100
 		ps := ProcStat{
 			PID:                    int(pid),
-			ParentPID:              int(proc.InheritedFromUniqueProcessId),
+			ParentPID:              int(proc.InheritedFromUniqueProcessID),
 			State:                  "running",
 			Name:                   proc.ImageName.String(),
 			Cmdline:                cmdLine,
