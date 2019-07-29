@@ -335,7 +335,7 @@ func (cfg *Config) GetParsedNetInterfaceMaxSpeed() (uint64, error) {
 		return 0, err
 	}
 	if value <= 0.0 {
-		return 0, fmt.Errorf("should be >= 0.0")
+		return 0, fmt.Errorf("should be > 0.0")
 	}
 
 	switch unit {
