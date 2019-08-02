@@ -16,7 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// SystemdService contains the service's data parsed from systemctl
+// SystemdService contains the service data parsed from systemctl
 type SystemdService struct {
 	UnitFile    string
 	UnitState   string
@@ -26,8 +26,14 @@ type SystemdService struct {
 	Description string
 }
 
-// SysVService contains the service's data parsed from service(Sysvinit) or initctl(Upstart)
+// SysVService contains the service data parsed from service(Sysvinit) or initctl(Upstart)
 type SysVService struct {
+	UnitFile string
+	State    string
+}
+
+// OpenRCService contains the service data parsed from rc-status (OpenRC init system)
+type OpenRCService struct {
 	UnitFile string
 	State    string
 }
@@ -97,8 +103,8 @@ func systemdUnitFilesState() (map[string]string, error) {
 	return servicesStateMap, nil
 }
 
-// ListSystemdServices list Systemd services via systemctl
-func ListSystemdServices(autostartOnly bool) ([]SystemdService, error) {
+// tryListSystemdServices list Systemd services via systemctl
+func tryListSystemdServices(autostartOnly bool) ([]SystemdService, error) {
 	// get the map of unit files states to merge it with unit states
 	unitFilesStateByName, err := systemdUnitFilesState()
 	if err != nil {
@@ -184,10 +190,44 @@ func ListSystemdServices(autostartOnly bool) ([]SystemdService, error) {
 	return services, scanner.Err()
 }
 
+// tryListOpenRCServices list OpenRC services via `rc-status` command
+func tryListOpenRCServices() ([]OpenRCService, error) {
+	cmd := exec.Command("rc-status", "-qq", "--nocolor", "-a", "--servicelist")
+
+	setPathEnvVar(cmd)
+	var outb bytes.Buffer
+	cmd.Stdout = &outb
+	cmd.Stderr = &outb
+	err := cmd.Run()
+	if err != nil {
+		errOutput, _ := ioutil.ReadAll(&outb)
+		return nil, fmt.Errorf("service: %s, %s", err.Error(), string(errOutput))
+	}
+
+	var services []OpenRCService
+	scanner := bufio.NewScanner(&outb)
+
+	for scanner.Scan() {
+		// example output: " networking                  [  stopped  ] "
+		parts := strings.Fields(scanner.Text())
+
+		if len(parts) < 4 || parts[3] != "]" {
+			// skip invalid line
+			continue
+		}
+
+		services = append(services,
+			OpenRCService{UnitFile: parts[0], State: parts[2]},
+		)
+	}
+
+	return services, scanner.Err()
+}
+
 var sysVinitServiceRE = regexp.MustCompile(`^\s+\[\s+([\+\-\?]])\s+\]\s+(.*)$`)
 
-// ListSysVinitServices list SysVinit services via `service --status-all`
-func ListSysVinitServices() ([]SysVService, error) {
+// tryListSysVinitServices list SysVinit services via `service --status-all`
+func tryListSysVinitServices() ([]SysVService, error) {
 	cmd := exec.Command("service",
 		"--status-all",
 	)
@@ -285,6 +325,13 @@ func isSystemd() bool {
 	return false
 }
 
+func isOpenRC() bool {
+	if _, err := os.Stat("/bin/rc-status"); err == nil {
+		return true
+	}
+	return false
+}
+
 func isUpstart() bool {
 	if _, err := os.Stat("/sbin/upstart-udev-bridge"); err == nil {
 		return true
@@ -307,7 +354,7 @@ func setPathEnvVar(cmd *exec.Cmd) {
 func listSystemdServices(autostartOnly bool) ([]map[string]string, error) {
 	var servicesList []map[string]string
 
-	services, err := ListSystemdServices(autostartOnly)
+	services, err := tryListSystemdServices(autostartOnly)
 	if err != nil {
 		return []map[string]string{}, err
 	}
@@ -327,8 +374,28 @@ func listSystemdServices(autostartOnly bool) ([]map[string]string, error) {
 	return servicesList, nil
 }
 
+func listOpenRCServices() ([]map[string]string, error) {
+	var servicesList []map[string]string
+
+	services, err := tryListOpenRCServices()
+	if err != nil {
+		return []map[string]string{}, err
+	}
+
+	for _, service := range services {
+		servicesList = append(servicesList,
+			map[string]string{
+				"name":    service.UnitFile,
+				"state":   service.State,
+				"manager": "openrc",
+			})
+	}
+
+	return servicesList, nil
+}
+
 func listSysVAndUpstartServicesCombined() []map[string]string {
-	sysVServices, err := ListSysVinitServices()
+	sysVServices, err := tryListSysVinitServices()
 	if err != nil {
 		// return map[string]map[string]string{}, err
 		// in case of error lets try to query other
@@ -390,7 +457,16 @@ func ListServices(autostartOnly bool) (map[string]interface{}, error) {
 	if isSystemd() {
 		servicesList, err = listSystemdServices(autostartOnly)
 		if err != nil {
-			log.Errorf("[Services] Systemd appears running but failed to list a services: %s", err.Error())
+			log.WithError(err).Error("[Services] Systemd appears running but failed to list a services")
+		} else {
+			return map[string]interface{}{"list": servicesList}, nil
+		}
+	}
+
+	if isOpenRC() {
+		servicesList, err = listOpenRCServices()
+		if err != nil {
+			log.WithError(err).Error("[Services] error while trying to list open-rc services")
 		} else {
 			return map[string]interface{}{"list": servicesList}, nil
 		}
