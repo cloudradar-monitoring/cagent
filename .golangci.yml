@@ -67,6 +67,8 @@ linters-settings:
     # Default is to use a neutral variety of English.
     # Setting locale to US will correct the British spelling of 'colour' to 'color'.
     locale: US
+    ignore-words:
+      - utilisation # can't be fixed due to back compatibility issues.
   lll:
     # max line length, lines longer will be reported. Default is 120.
     # '\t' is counted as 1 character by default, and can be changed with the tab-width option
@@ -152,6 +154,7 @@ linters:
 #   # Default is false.
 #   new: false
 
+new: true
 #   # Show only new issues created after git revision `REV`
 #   new-from-rev: REV
 
