@@ -32,8 +32,8 @@ var (
 
 var svcConfig = &service.Config{
 	Name:        "cagent",
-	DisplayName: "Cagent",
-	Description: "Monitoring agent for system metrics",
+	DisplayName: "CloudRadar Monitoring Agent",
+	Description: "A versatile monitoring agent developed by cloudradar.io. It monitors your local operating system.",
 }
 
 func askForConfirmation(s string) bool {

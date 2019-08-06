@@ -73,7 +73,16 @@
                         <RemoveFolder Id="CleanApplicationFolders" Directory="ApplicationProgramsFolder" On="uninstall"/>
                         {{range $i, $e := .Files.Items}}
                             {{if eq $i 0}}
-                                <ServiceInstall Id="ServiceInstaller" Name="Cagent" Type="ownProcess" Vital="yes" DisplayName="Cagent" Description="Cagent" Start="auto" Account="LocalSystem" ErrorControl="normal" Interactive="no">
+                                <ServiceInstall Id="ServiceInstaller"
+                                    Name="Cagent"
+                                    Type="ownProcess"
+                                    Vital="yes"
+                                    DisplayName="CloudRadar Monitoring Agent"
+                                    Description="A versatile monitoring agent developed by cloudradar.io. It monitors your local operating system."
+                                    Start="auto"
+                                    Account="LocalSystem"
+                                    ErrorControl="normal"
+                                    Interactive="no">
                                 </ServiceInstall>
                                 <ServiceControl Id="StartService" Name="Cagent" Stop="both" Start="install" Remove="uninstall" Wait="yes">
                                     <ServiceArgument />
