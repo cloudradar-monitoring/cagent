@@ -34,7 +34,7 @@ cpu_utilisation_types = ['user','system','nice','idle','iowait','interrupt','sof
 # FS
 fs_type_include = ['ext3','ext4','xfs','jfs','ntfs','btrfs','hfs','apfs','fat32'] # default ['ext3','ext4','xfs','jfs','ntfs','btrfs','hfs','apfs','fat32']
 fs_path_exclude = ['/mnt/*','h:'] # default []
-fs_metrics = ['free_B','free_percent','used_B','used_percent','total_B','inodes_used_percent'] # default ['free_B','free_percent','total_B']
+fs_metrics = ['free_B','free_percent','used_B','used_percent','total_B','inodes_total','inodes_free','inodes_used','inodes_used_percent'] # default ['free_B','free_percent','total_B']
 
 # Network
 net_interface_exclude = ['utun', 'awdl']
