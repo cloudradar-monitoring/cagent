@@ -139,7 +139,7 @@ func (fw *FileSystemWatcher) Results() (common.MeasurementsMap, error) {
 
 		ioCounters, err := getPartitionIOCounters(partition.Device)
 		if err != nil {
-			logrus.WithError(err).Errorf("[FS] Failed to get IO counters for '%s'(%s)", partition.Mountpoint, partition.Device)
+			logrus.WithError(err).Errorf("[FS] Failed to get IO counters for '%s' (device %s)", partition.Mountpoint, partition.Device)
 			errs = append(errs, err.Error())
 			continue
 		}

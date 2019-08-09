@@ -2,7 +2,6 @@ package fs
 
 import (
 	"context"
-	"path/filepath"
 	"time"
 
 	"github.com/shirou/gopsutil/disk"
@@ -22,23 +21,10 @@ type ioUsageInfo struct {
 	writeOperationsPerSecond float64
 }
 
-
 func getFsPartitionUsageInfo(mountPoint string) (*disk.UsageStat, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), fsInfoRequestTimeout)
 	defer cancel()
 	return disk.UsageWithContext(ctx, mountPoint)
-}
-
-func getPartitionIOCounters(deviceName string) (*disk.IOCountersStat, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), fsInfoRequestTimeout)
-	defer cancel()
-	name := filepath.Base(deviceName)
-	result, err := disk.IOCountersWithContext(ctx, name)
-	if err != nil {
-		return nil, err
-	}
-	ret := result[name]
-	return &ret, nil
 }
 
 func calcIOCountersUsage(prev, curr *disk.IOCountersStat, timeDelta time.Duration) *ioUsageInfo {
@@ -61,4 +47,3 @@ func calcTotalIOUsage(partitionsUsageInfo map[string]*ioUsageInfo) *ioUsageInfo 
 	}
 	return result
 }
-

@@ -127,3 +127,39 @@ func CalculateProcessCPUUsagePercent(p1, p2 *SystemProcessInformation, delta flo
 	overallPercent := (deltaProc / delta) * 100
 	return overallPercent
 }
+
+// GetDiskPerformance calls syscall func CreateFile to generate a handler then executes the DeviceIoControl func in order to retrieve the metrics.
+func GetDiskPerformance(uncPath string) (*DiskPerformance, error) {
+	utfPath, err := syscall.UTF16PtrFromString(uncPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "call UTF16PtrFromString")
+	}
+	hFile, err := syscall.CreateFile(utfPath,
+		syscall.GENERIC_READ|syscall.GENERIC_WRITE,
+		syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE,
+		nil,
+		syscall.OPEN_EXISTING,
+		syscall.FILE_FLAG_BACKUP_SEMANTICS,
+		0,
+	)
+
+	if err != nil {
+		return nil, errors.Wrap(err, "call CreateFile")
+	}
+	defer func() {
+		_ = syscall.CloseHandle(hFile)
+	}()
+
+	var diskPerformanceSize uint32
+	var diskPerformance DiskPerformance
+	err = syscall.DeviceIoControl(hFile,
+		systemIOCTLDiskPerformance,
+		nil,
+		0,
+		(*byte)(unsafe.Pointer(&diskPerformance)),
+		uint32(unsafe.Sizeof(diskPerformance)),
+		&diskPerformanceSize,
+		nil,
+	)
+	return &diskPerformance, errors.Wrap(err, "call DeviceIoControl")
+}

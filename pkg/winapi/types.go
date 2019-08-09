@@ -33,6 +33,10 @@ const (
 
 	// SERVICE_CONFIG_DELAYED_AUTO_START_INFO
 	systemServiceConfigDelayedAutoStartInfoClass = 3
+
+	// IOCTL_DISK_PERFORMANCE to query with DeviceIoControl
+	// https://docs.microsoft.com/en-us/windows/win32/api/winioctl/ni-winioctl-ioctl_disk_performance
+	systemIOCTLDiskPerformance = 0x70020
 )
 
 // SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION
@@ -140,4 +144,21 @@ type processBasicInformation struct {
 // SERVICE_DELAYED_AUTO_START_INFO
 type serviceDelayedAutoStartInfo struct {
 	DelayedAutoStart bool
+}
+
+// DISK_PERFORMANCE
+// https://docs.microsoft.com/ru-ru/windows/win32/api/winioctl/ns-winioctl-disk_performance
+type DiskPerformance struct {
+	BytesRead           int64
+	BytesWritten        int64
+	ReadTime            int64
+	WriteTime           int64
+	IdleTime            int64
+	ReadCount           uint32
+	WriteCount          uint32
+	QueueDepth          uint32
+	SplitCount          uint32
+	QueryTime           int64
+	StorageDeviceNumber uint32
+	StorageManagerName  [8]uint16
 }
