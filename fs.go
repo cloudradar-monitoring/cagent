@@ -13,14 +13,26 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
-const fsGetUsageTimeout = time.Second * 10
-const fsGetPartitionsTimeout = time.Second * 10
+const fsInfoRequestTimeout = time.Second * 10
+
+type ioCountersMeasurement struct {
+	timestamp time.Time
+	counters  *disk.IOCountersStat
+}
+
+type ioUsageInfo struct {
+	readBytesPerSecond       float64
+	writeBytesPerSecond      float64
+	readOperationsPerSecond  float64
+	writeOperationsPerSecond float64
+}
 
 type FSWatcher struct {
 	AllowedTypes      map[string]struct{}
 	ExcludePath       map[string]struct{}
 	ExcludedPathCache map[string]bool
 	cagent            *Cagent
+	prevIOCounters    map[string]*ioCountersMeasurement
 }
 
 func (ca *Cagent) FSWatcher() *FSWatcher {
@@ -33,6 +45,7 @@ func (ca *Cagent) FSWatcher() *FSWatcher {
 		ExcludePath:       make(map[string]struct{}),
 		ExcludedPathCache: map[string]bool{},
 		cagent:            ca,
+		prevIOCounters:    make(map[string]*ioCountersMeasurement),
 	}
 
 	for _, t := range ca.Config.FSTypeInclude {
@@ -50,20 +63,20 @@ func (fw *FSWatcher) Results() (common.MeasurementsMap, error) {
 	results := common.MeasurementsMap{}
 
 	var errs []string
-	ctx, cancel := context.WithTimeout(context.Background(), fsGetPartitionsTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), fsInfoRequestTimeout)
 	defer cancel()
 
 	partitions, err := disk.PartitionsWithContext(ctx, true)
 
 	if err != nil {
-		log.Errorf("[FS] Failed to read partitions: %s", err.Error())
+		log.WithError(err).Errorf("[FS] Failed to read partitions")
 		errs = append(errs, err.Error())
 	}
 
+	partitionIOUsage := map[string]*ioUsageInfo{}
 	for _, partition := range partitions {
 		if _, typeAllowed := fw.AllowedTypes[strings.ToLower(partition.Fstype)]; !typeAllowed {
 			log.Debugf("[FS] fstype excluded: %s", partition.Fstype)
-
 			continue
 		}
 
@@ -83,11 +96,12 @@ func (fw *FSWatcher) Results() (common.MeasurementsMap, error) {
 			continue
 		}
 
+		partitionMountPoint := strings.ToLower(partition.Mountpoint)
+
 		cacheExists := false
-		if pathExcluded, cacheExists = fw.ExcludedPathCache[partition.Mountpoint]; cacheExists {
+		if pathExcluded, cacheExists = fw.ExcludedPathCache[partitionMountPoint]; cacheExists {
 			if pathExcluded {
 				log.Debugf("[FS] mountpoint excluded: %s", partition.Fstype)
-
 				continue
 			}
 		} else {
@@ -98,7 +112,7 @@ func (fw *FSWatcher) Results() (common.MeasurementsMap, error) {
 					break
 				}
 			}
-			fw.ExcludedPathCache[strings.ToLower(partition.Mountpoint)] = pathExcluded
+			fw.ExcludedPathCache[partitionMountPoint] = pathExcluded
 
 			if pathExcluded {
 				log.Debugf("[FS] mountpoint excluded: %s", partition.Mountpoint)
@@ -106,18 +120,10 @@ func (fw *FSWatcher) Results() (common.MeasurementsMap, error) {
 			}
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), fsGetUsageTimeout)
-		// FIXME: inspect for possible resource leak
-		defer cancel()
-
-		usage, err := disk.UsageWithContext(ctx, partition.Mountpoint)
-
+		usage, err := getFsPartitionUsageInfo(partition.Mountpoint)
 		if err != nil {
-			log.Errorf("[FS] Failed to read '%s'(%s): %s", partition.Mountpoint, partition.Device, err.Error())
+			log.WithError(err).Errorf("[FS] Failed to get usage info for '%s'(%s)", partition.Mountpoint, partition.Device)
 			errs = append(errs, err.Error())
-			for _, metric := range fw.cagent.Config.FSMetrics {
-				results[metric+"."+partition.Mountpoint] = nil
-			}
 			continue
 		}
 
@@ -142,6 +148,52 @@ func (fw *FSWatcher) Results() (common.MeasurementsMap, error) {
 			}
 		}
 
+		ioCounters, err := getPartitionIOCounters(partition.Device)
+		if err != nil {
+			log.WithError(err).Errorf("[FS] Failed to get IO counters for '%s'(%s)", partition.Mountpoint, partition.Device)
+			errs = append(errs, err.Error())
+			continue
+		}
+		currTimestamp := time.Now()
+		var prevIOCountersMeasurementTimestamp time.Time
+		var prevIOCounters *disk.IOCountersStat
+		prevIOCountersMeasurement, prevMeasurementExists := fw.prevIOCounters[partitionMountPoint]
+		fw.prevIOCounters[partitionMountPoint] = &ioCountersMeasurement{currTimestamp, ioCounters}
+		if prevMeasurementExists {
+			prevIOCountersMeasurementTimestamp = prevIOCountersMeasurement.timestamp
+			prevIOCounters = prevIOCountersMeasurement.counters
+
+			ioUsage := calcIOCountersUsage(prevIOCounters, ioCounters, currTimestamp.Sub(prevIOCountersMeasurementTimestamp))
+			for _, metric := range fw.cagent.Config.FSMetrics {
+				switch strings.ToLower(metric) {
+				case "read_b_per_s":
+					results[metric+"."+partition.Mountpoint] = common.RoundToTwoDecimalPlaces(ioUsage.readBytesPerSecond)
+				case "write_b_per_s":
+					results[metric+"."+partition.Mountpoint] = common.RoundToTwoDecimalPlaces(ioUsage.writeBytesPerSecond)
+				case "read_ops_per_s":
+					results[metric+"."+partition.Mountpoint] = common.RoundToTwoDecimalPlaces(ioUsage.readOperationsPerSecond)
+				case "write_ops_per_s":
+					results[metric+"."+partition.Mountpoint] = common.RoundToTwoDecimalPlaces(ioUsage.writeOperationsPerSecond)
+				}
+			}
+			partitionIOUsage[partitionMountPoint] = ioUsage
+		} else {
+			log.Debugf("[FS] skipping IO usage metrics for %s as it will be available starting from second check", partition.Mountpoint)
+		}
+	}
+
+	totalIOUsage := calcTotalIOUsage(partitionIOUsage)
+	for _, metric := range fw.cagent.Config.FSMetrics {
+		switch strings.ToLower(metric) {
+		case "read_b_per_s":
+			results["total_read_B_per_s"] = common.RoundToTwoDecimalPlaces(totalIOUsage.readBytesPerSecond)
+		case "write_b_per_s":
+			results["total_write_B_per_s"] = common.RoundToTwoDecimalPlaces(totalIOUsage.writeBytesPerSecond)
+		case "read_ops_per_s":
+			results["total_read_ops_per_s"] = common.RoundToTwoDecimalPlaces(totalIOUsage.readOperationsPerSecond)
+		case "write_ops_per_s":
+			results["total_write_ops_per_s"] = common.RoundToTwoDecimalPlaces(totalIOUsage.writeOperationsPerSecond)
+		}
 	}
 
 	if len(errs) != 0 {
@@ -149,4 +201,43 @@ func (fw *FSWatcher) Results() (common.MeasurementsMap, error) {
 	}
 
 	return results, nil
+}
+
+func getFsPartitionUsageInfo(mountPoint string) (*disk.UsageStat, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), fsInfoRequestTimeout)
+	defer cancel()
+	return disk.UsageWithContext(ctx, mountPoint)
+}
+
+func getPartitionIOCounters(deviceName string) (*disk.IOCountersStat, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), fsInfoRequestTimeout)
+	defer cancel()
+	name := filepath.Base(deviceName)
+	result, err := disk.IOCountersWithContext(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	ret := result[name]
+	return &ret, nil
+}
+
+func calcIOCountersUsage(prev, curr *disk.IOCountersStat, timeDelta time.Duration) *ioUsageInfo {
+	deltaSeconds := timeDelta.Seconds()
+	return &ioUsageInfo{
+		readBytesPerSecond:       float64(curr.ReadBytes-prev.ReadBytes) / deltaSeconds,
+		writeBytesPerSecond:      float64(curr.WriteBytes-prev.WriteBytes) / deltaSeconds,
+		readOperationsPerSecond:  float64(curr.ReadCount-prev.ReadCount) / deltaSeconds,
+		writeOperationsPerSecond: float64(curr.WriteCount-prev.WriteCount) / deltaSeconds,
+	}
+}
+
+func calcTotalIOUsage(partitionsUsageInfo map[string]*ioUsageInfo) *ioUsageInfo {
+	result := &ioUsageInfo{}
+	for _, info := range partitionsUsageInfo {
+		result.readBytesPerSecond += info.readBytesPerSecond
+		result.writeBytesPerSecond += info.writeBytesPerSecond
+		result.readOperationsPerSecond += info.readOperationsPerSecond
+		result.writeOperationsPerSecond += info.writeOperationsPerSecond
+	}
+	return result
 }
