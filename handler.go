@@ -197,7 +197,7 @@ func (ca *Cagent) CollectMeasurements(full bool) (common.MeasurementsMap, error)
 	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("cpu.", cpum)
 
-	fsResults, err := ca.FSWatcher().Results()
+	fsResults, err := ca.GetFileSystemWatcher().Results()
 	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("fs.", fsResults)
 
