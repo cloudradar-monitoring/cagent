@@ -37,7 +37,7 @@ aptly:
 	# Create remote work dir
 	ssh -p 24480 -oStrictHostKeyChecking=no cr@repo.cloudradar.io mkdir -p /home/cr/work/aptly/${CIRCLE_BUILD_NUM}
 	# Upload deb files
-	rsync -e 'ssh -oStrictHostKeyChecking=no -p 24480' --recursive ${PROJECT_DIR}/dist/*.deb  cr@repo.cloudradar.io:/home/cr/work/aptly/${CIRCLE_BUILD_NUM}/
+	rsync -e 'ssh -oStrictHostKeyChecking=no -p 24480' --recursive ${PROJECT_DIR}/dist/*.deb --exclude "*_armv6.deb"  cr@repo.cloudradar.io:/home/cr/work/aptly/${CIRCLE_BUILD_NUM}/
 	# Trigger repository update
 	ssh -p 24480 -oStrictHostKeyChecking=no cr@repo.cloudradar.io /home/cr/work/aptly/update_repo.sh /home/cr/work/aptly/${CIRCLE_BUILD_NUM} ${CIRCLE_TAG}
 
