@@ -84,19 +84,18 @@ nfpm:
   - rpm
 
   dependencies:
-  - dmidecode
-  - usbutils
   - sudo
 
-  # Recommend to install root SSL certificates
   recommends:
+  - dmidecode
+  - usbutils
   - ca-certificates
+  - dbus
 
   # Override default /usr/local/bin destination for binaries
   bindir: /usr/bin
 
-  # Empty folders that should be created and managed by the packager
-  # implementation.
+  # Empty folders that should be created and managed by the packager implementation.
   empty_folders:
   - /var/log/cagent
   - /etc/cagent
