@@ -418,8 +418,12 @@ func listSysVAndUpstartServicesCombined() []map[string]string {
 	if isUpstart() {
 		upstartServices, err := ListUpstartServices()
 		if err != nil {
-			// in case of error lets try to query other
-			log.Errorf("[Services] Upstart: failed to list a services via initctl: %s", err.Error())
+			if strings.Contains(err.Error(), "dbus") {
+				log.Info("[Services] Upstart: monitoring of service might be incomplete due to missing dbus. Try to install the dbus package.")
+				log.WithError(err).Debugf("[Services] Upstart: while calling initctl, encountered dbus error")
+			} else {
+				log.WithError(err).Error("[Services] Upstart: failed to list a services via initctl")
+			}
 		}
 
 		for _, service := range upstartServices {

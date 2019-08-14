@@ -17,8 +17,8 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
-func isCommandAvailable(name string) bool {
-	cmd := exec.Command("/bin/sh", "-c", "command", "-v", name)
+func isDmidecodeAvailable() bool {
+	cmd := exec.Command("/bin/sh", "-c", "command -v dmidecode")
 	if err := cmd.Run(); err != nil {
 		return false
 	}
@@ -64,7 +64,7 @@ func fetchInventory() (map[string]interface{}, error) {
 }
 
 func retrieveInfoUsingDmiDecode() (map[string]interface{}, error) {
-	if !isCommandAvailable("dmidecode") {
+	if !isDmidecodeAvailable() {
 		log.Infof("[HWINFO] dmidecode is not present. Skipping retrieval of baseboard, CPU and RAM info...")
 		return nil, nil
 	}
