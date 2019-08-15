@@ -78,7 +78,7 @@ type Config struct {
 	FSPathExclude        []string `toml:"fs_path_exclude" comment:"Exclude file systems by name, disabled by default"`
 	FSPathExcludeRecurse bool     `toml:"fs_path_exclude_recurse" comment:"Having fs_path_exclude_recurse = false the specified path must match a mountpoint or it will be ignored\nHaving fs_path_exclude_recurse = true the specified path can be any folder and all mountpoints underneath will be excluded"`
 
-	FSMetrics []string `toml:"fs_metrics" comment:"default ['free_B', 'free_percent', 'total_B', 'read_B_per_s', 'write_B_per_s', 'read_ops_per_s', 'write_ops_per_s']"`
+	FSMetrics []string `toml:"fs_metrics" comment:"default ['free_B', 'free_percent', 'total_B', 'read_B_per_s', 'write_B_per_s', 'read_ops_per_s', 'write_ops_per_s', 'inodes_used_percent']"`
 
 	NetInterfaceExclude             []string `toml:"net_interface_exclude" commented:"true"`
 	NetInterfaceExcludeRegex        []string `toml:"net_interface_exclude_regex" comment:"default [\"^vnet(.*)$\", \"^virbr(.*)$\", \"^vmnet(.*)$\", \"^vEthernet(.*)$\"]. On Windows, also \"Pseudo-Interface\" is added to list"`
@@ -182,6 +182,8 @@ func NewConfig() *Config {
 		cfg.CPULoadDataGather = []string{}
 		cfg.CPUUtilTypes = []string{"user", "system", "idle"}
 		cfg.VirtualMachinesStat = []string{"hyper-v"}
+	} else {
+		cfg.FSMetrics = append(cfg.FSMetrics, "inodes_used_percent")
 	}
 
 	return cfg
