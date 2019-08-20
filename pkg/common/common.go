@@ -4,18 +4,15 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"errors"
+	"crypto/sha256"
+	"encoding/json"
 	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
-)
 
-var (
-	Timeout    = 3 * time.Second
-	ErrTimeout = errors.New("invoker: command timed out")
+	"github.com/sirupsen/logrus"
 )
 
 // Invoker executes command in context and gathers stdout/stderr output into slice
@@ -137,4 +134,23 @@ func StrInSlice(search string, slice []string) bool {
 		}
 	}
 	return false
+}
+
+var alreadyLoggedLogs = map[[sha256.Size]byte]bool{}
+
+// LogOncef logs message only once using standard logger
+// hashes the serialized list of all parameters to check if message was already logged
+func LogOncef(logLevel logrus.Level, format string, args ...interface{}) {
+	obj := []interface{}{logLevel, format, args}
+	serializedBytes, err := json.Marshal(obj)
+	if err == nil {
+		hash := sha256.Sum256(serializedBytes)
+		if _, exists := alreadyLoggedLogs[hash]; exists {
+			// already logged
+			return
+		}
+		alreadyLoggedLogs[hash] = true
+	}
+
+	logrus.StandardLogger().Logf(logLevel, format, args...)
 }

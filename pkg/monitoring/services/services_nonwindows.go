@@ -14,6 +14,8 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 // SystemdService contains the service data parsed from systemctl
@@ -419,7 +421,7 @@ func listSysVAndUpstartServicesCombined() []map[string]string {
 		upstartServices, err := ListUpstartServices()
 		if err != nil {
 			if strings.Contains(err.Error(), "dbus") {
-				log.Info("[Services] Upstart: monitoring of service might be incomplete due to missing dbus. Try to install the dbus package.")
+				common.LogOncef(log.InfoLevel, "[Services] Upstart: monitoring of service might be incomplete due to missing dbus. Try to install the dbus package.")
 				log.WithError(err).Debugf("[Services] Upstart: while calling initctl, encountered dbus error")
 			} else {
 				log.WithError(err).Error("[Services] Upstart: failed to list a services via initctl")
