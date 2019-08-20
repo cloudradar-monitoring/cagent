@@ -65,7 +65,7 @@ func fetchInventory() (map[string]interface{}, error) {
 
 func retrieveInfoUsingDmiDecode() (map[string]interface{}, error) {
 	if !isDmidecodeAvailable() {
-		log.Infof("[HWINFO] dmidecode is not present. Skipping retrieval of baseboard, CPU and RAM info...")
+		common.LogOncef(log.InfoLevel, "[HWINFO] dmidecode is not present. Skipping retrieval of baseboard, CPU and RAM info...")
 		return nil, nil
 	}
 

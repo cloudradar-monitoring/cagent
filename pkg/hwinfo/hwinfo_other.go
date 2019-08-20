@@ -143,7 +143,7 @@ func listUSBDevices() ([]*usbDeviceInfo, error) {
 	buf := bytes.Buffer{}
 	cmd.Stdout = bufio.NewWriter(&buf)
 	if err := cmd.Run(); err != nil {
-		log.Info("[HWINFO] lsusb command is not available. Skipping USB listing...")
+		common.LogOncef(log.InfoLevel, "[HWINFO] lsusb command is not available: %s. Skipping USB listing...", err.Error())
 		return nil, nil
 	}
 
@@ -194,7 +194,7 @@ func listDisplays() ([]*monitorInfo, error) {
 	results := make([]*monitorInfo, 0)
 	screens, err := xrandr.GetScreens()
 	if err != nil {
-		log.WithError(err).Info("[HWINFO] xrandr not installed or returned not expected result. Skipping display listing...")
+		common.LogOncef(log.InfoLevel, "[HWINFO] xrandr not installed or returned not expected result: %s. Skipping display listing...", err.Error())
 		return nil, nil
 	}
 	for _, s := range screens {
