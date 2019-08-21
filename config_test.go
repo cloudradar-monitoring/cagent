@@ -24,6 +24,7 @@ func TestNewMinimumConfig(t *testing.T) {
 	assert.Equal(t, envURL, mvc.HubURL, "HubURL should be set from env")
 	assert.Equal(t, envUser, mvc.HubUser, "HubUser should be set from env")
 	assert.Equal(t, envPass, mvc.HubPassword, "HubPassword should be set from env")
+	assert.Equal(t, LogLevelError, mvc.LogLevel, "default log level should be error")
 
 	// Unset in the end for cleanup
 	defer os.Clearenv()
