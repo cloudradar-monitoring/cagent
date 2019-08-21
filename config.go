@@ -174,7 +174,7 @@ func NewConfig() *Config {
 		},
 	}
 
-	cfg.MinValuableConfig.IOMode = IOModeHTTP
+	cfg.MinValuableConfig = *(defaultMinValuableConfig())
 
 	if runtime.GOOS == "windows" {
 		cfg.WindowsUpdatesWatcherInterval = 3600
@@ -190,10 +190,7 @@ func NewConfig() *Config {
 }
 
 func NewMinimumConfig() *MinValuableConfig {
-	cfg := &MinValuableConfig{
-		LogLevel: "error",
-		IOMode:   IOModeHTTP,
-	}
+	cfg := defaultMinValuableConfig()
 
 	cfg.applyEnv(false)
 
@@ -209,6 +206,13 @@ func NewMinimumConfig() *MinValuableConfig {
 	}
 
 	return cfg
+}
+
+func defaultMinValuableConfig() *MinValuableConfig {
+	return &MinValuableConfig{
+		LogLevel: LogLevelError,
+		IOMode:   IOModeHTTP,
+	}
 }
 
 func secToDuration(secs float64) time.Duration {
