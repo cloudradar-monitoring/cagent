@@ -20,7 +20,6 @@ type cpuInfo struct {
 	manufacturingInfo string
 	description       string
 	coreCount         string
-	coreEnabled       string
 	threadCount       string
 }
 
@@ -104,8 +103,6 @@ func listCPUs() (map[string]interface{}, error) {
 			c.description = strings.Join(values[1:], " ")
 		case strings.HasPrefix(line, "machdep.cpu.thread_count"):
 			c.threadCount = values[1]
-		case strings.HasPrefix(line, "machdep.cpu.core_count"):
-			c.coreEnabled = values[1]
 		case strings.HasPrefix(line, "machdep.cpu.cores_per_package"):
 			c.coreCount = values[1]
 		case strings.HasPrefix(line, "machdep.cpu.family"):
@@ -135,7 +132,6 @@ func listCPUs() (map[string]interface{}, error) {
 		encodedCpus[fmt.Sprintf("cpu.%d.manufacturing_info", i)] = parsedCPUs[i].manufacturingInfo
 		encodedCpus[fmt.Sprintf("cpu.%d.description", i)] = parsedCPUs[i].description
 		encodedCpus[fmt.Sprintf("cpu.%d.core_count", i)] = parsedCPUs[i].coreCount
-		encodedCpus[fmt.Sprintf("cpu.%d.core_enabled", i)] = parsedCPUs[i].coreEnabled
 		encodedCpus[fmt.Sprintf("cpu.%d.thread_count", i)] = parsedCPUs[i].threadCount
 	}
 

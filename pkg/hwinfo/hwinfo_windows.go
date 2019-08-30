@@ -233,7 +233,6 @@ func getCPUInfo() (map[string]interface{}, error) {
 		res[fmt.Sprintf("cpu.%d.manufacturing_info", i)] = cpus[i].Description
 		res[fmt.Sprintf("cpu.%d.description", i)] = cpus[i].Name
 		res[fmt.Sprintf("cpu.%d.core_count", i)] = cpus[i].NumberOfCores
-		res[fmt.Sprintf("cpu.%d.core_enabled", i)] = cpus[i].NumberOfEnabledCore
 		res[fmt.Sprintf("cpu.%d.thread_count", i)] = cpus[i].NumberOfLogicalProcessors
 	}
 

@@ -24,7 +24,6 @@ type win32_Processor struct {
 	Name                      *string
 	Manufacturer              *string
 	NumberOfCores             *uint32
-	NumberOfEnabledCore       *uint32
 	NumberOfLogicalProcessors *uint32
 }
 
