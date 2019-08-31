@@ -419,7 +419,6 @@ func encodeCPUs(cpus []cpuStat) map[string]interface{} {
 			encodedCpus[fmt.Sprintf("cpu.%s.manufacturing_info", cpu.PhysicalID)] = fmt.Sprintf("Model %s Family %s Stepping %d", cpu.Model, cpu.Family, cpu.Stepping)
 			encodedCpus[fmt.Sprintf("cpu.%s.description", cpu.PhysicalID)] = cpu.ModelName
 			encodedCpus[fmt.Sprintf("cpu.%s.core_count", cpu.PhysicalID)] = fmt.Sprintf("%d", cpu.Cores)
-			encodedCpus[fmt.Sprintf("cpu.%s.core_enabled", cpu.PhysicalID)] = fmt.Sprintf("%d", cpu.Cores)
 			encodedCpus[fmt.Sprintf("cpu.%s.thread_count", cpu.PhysicalID)] = fmt.Sprintf("%d", cpu.Siblings)
 		}
 	}
