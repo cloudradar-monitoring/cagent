@@ -8,7 +8,7 @@
     <?error Unsupported value of sys.BUILDARCH=$(sys.BUILDARCH)?>
 <?endif?>
 
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
 
     <Product Id="*" UpgradeCode="{{.UpgradeCode}}"
             Name="{{.Product}}"
@@ -83,6 +83,13 @@
                                     Account="LocalSystem"
                                     ErrorControl="normal"
                                     Interactive="no">
+                                    <util:ServiceConfig
+                                        RestartServiceDelayInSeconds="60"
+                                        ResetPeriodInDays="0"
+                                        FirstFailureActionType="restart"
+                                        SecondFailureActionType="none"
+                                        ThirdFailureActionType="none"
+                                    />
                                 </ServiceInstall>
                                 <ServiceControl Id="StartService" Name="Cagent" Stop="both" Start="install" Remove="uninstall" Wait="yes">
                                     <ServiceArgument />
