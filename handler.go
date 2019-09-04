@@ -6,7 +6,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -116,7 +115,13 @@ func (ca *Cagent) checkClientError(resp *http.Response, err error, fieldHubUser,
 		}
 		return err
 	}
-	_, _ = io.Copy(ioutil.Discard, resp.Body)
+
+	var responseBody string
+	responseBodyBytes, readBodyErr := ioutil.ReadAll(resp.Body)
+	if readBodyErr == nil {
+		responseBody = string(responseBodyBytes)
+	}
+
 	_ = resp.Body.Close()
 	if resp.StatusCode == http.StatusUnauthorized {
 		if len(ca.Config.HubUser) == 0 {
@@ -124,11 +129,9 @@ func (ca *Cagent) checkClientError(resp *http.Response, err error, fieldHubUser,
 		} else if len(ca.Config.HubPassword) == 0 {
 			return newEmptyFieldError(fieldHubPassword)
 		}
-		err := errors.Errorf("unable to authorize with provided Hub credentials (HTTP %d)", resp.StatusCode)
-		return err
+		return errors.Errorf("unable to authorize with provided Hub credentials (HTTP %d). %s", resp.StatusCode, responseBody)
 	} else if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
-		err := errors.Errorf("unable to authorize with provided Hub credentials (HTTP %d)", resp.StatusCode)
-		return err
+		return errors.Errorf("got unexpected response from server (HTTP %d). %s", resp.StatusCode, responseBody)
 	}
 	return nil
 }
@@ -400,11 +403,7 @@ func (ca *Cagent) sendHeartbeat() error {
 	req = req.WithContext(ctx)
 	resp, err := ca.hubClient.Do(req)
 	if err = ca.checkClientError(resp, err, "hub_user", "hub_password"); err != nil {
-		if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
-			log.WithError(err).Debugf("unexpected HTTP status code was returned to heartbeat request: %d", resp.StatusCode)
-		} else {
-			return errors.WithStack(err)
-		}
+		return errors.WithStack(err)
 	}
 	log.Debugf("Heartbeat sent. Status: %d", resp.StatusCode)
 	return err
