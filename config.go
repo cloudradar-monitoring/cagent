@@ -27,6 +27,9 @@ const (
 
 	minIntervalValue          = 30.0
 	minHeartbeatIntervalValue = 5.0
+
+	minHubRequestTimeout = 1
+	maxHubRequestTimeout = 600
 )
 
 var operationModes = []string{OperationModeFull, OperationModeMinimal, OperationModeHeartbeat}
@@ -65,10 +68,11 @@ type Config struct {
 
 	MinValuableConfig
 
-	HubGzip          bool   `toml:"hub_gzip" comment:"enable gzip when sending results to the HUB"`
-	HubProxy         string `toml:"hub_proxy" commented:"true"`
-	HubProxyUser     string `toml:"hub_proxy_user" commented:"true"`
-	HubProxyPassword string `toml:"hub_proxy_password" commented:"true"`
+	HubGzip           bool   `toml:"hub_gzip" comment:"enable gzip when sending results to the HUB"`
+	HubRequestTimeout int    `toml:"hub_request_timeout" comment:"time limit in seconds for requests made to Hub.\nThe timeout includes connection time, any redirects, and reading the response body.\nMin: 1, Max: 600. default: 15"`
+	HubProxy          string `toml:"hub_proxy" commented:"true"`
+	HubProxyUser      string `toml:"hub_proxy_user" commented:"true"`
+	HubProxyPassword  string `toml:"hub_proxy_password" commented:"true"`
 
 	CPULoadDataGather []string `toml:"cpu_load_data_gathering_mode" comment:"default ['avg1']"`
 	CPUUtilDataGather []string `toml:"cpu_utilisation_gathering_mode" comment:"default ['avg1']"`
@@ -144,6 +148,7 @@ func NewConfig() *Config {
 		Interval:                         90,
 		HeartbeatInterval:                15,
 		HubGzip:                          true,
+		HubRequestTimeout:                15,
 		CPULoadDataGather:                []string{"avg1"},
 		CPUUtilTypes:                     []string{"user", "system", "idle", "iowait"},
 		CPUUtilDataGather:                []string{"avg1"},
@@ -382,6 +387,10 @@ func (cfg *Config) validate() error {
 	_, err := cfg.GetParsedNetInterfaceMaxSpeed()
 	if err != nil {
 		return fmt.Errorf("invalid net_interface_max_speed value supplied: %s", err.Error())
+	}
+
+	if cfg.HubRequestTimeout < minHubRequestTimeout || cfg.HubRequestTimeout > maxHubRequestTimeout {
+		return fmt.Errorf("hub_request_timeout must be between %d and %d", minHubRequestTimeout, maxHubRequestTimeout)
 	}
 
 	return nil

@@ -57,7 +57,7 @@ func (ca *Cagent) initHubClientOnce() {
 			}
 		}
 		ca.hubClient = &http.Client{
-			Timeout:   30 * time.Second,
+			Timeout:   time.Duration(ca.Config.HubRequestTimeout) * time.Second,
 			Transport: transport,
 		}
 	})
