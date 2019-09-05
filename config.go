@@ -69,7 +69,7 @@ type Config struct {
 	MinValuableConfig
 
 	HubGzip           bool   `toml:"hub_gzip" comment:"enable gzip when sending results to the HUB"`
-	HubRequestTimeout int    `toml:"hub_request_timeout" comment:"time limit in seconds for requests made to Hub.\nThe timeout includes connection time, any redirects, and reading the response body.\nMin: 1, Max: 600. default: 15"`
+	HubRequestTimeout int    `toml:"hub_request_timeout" comment:"time limit in seconds for requests made to Hub.\nThe timeout includes connection time, any redirects, and reading the response body.\nMin: 1, Max: 600. default: 30"`
 	HubProxy          string `toml:"hub_proxy" commented:"true"`
 	HubProxyUser      string `toml:"hub_proxy_user" commented:"true"`
 	HubProxyPassword  string `toml:"hub_proxy_password" commented:"true"`
@@ -148,7 +148,7 @@ func NewConfig() *Config {
 		Interval:                         90,
 		HeartbeatInterval:                15,
 		HubGzip:                          true,
-		HubRequestTimeout:                15,
+		HubRequestTimeout:                30,
 		CPULoadDataGather:                []string{"avg1"},
 		CPUUtilTypes:                     []string{"user", "system", "idle", "iowait"},
 		CPUUtilDataGather:                []string{"avg1"},
