@@ -13,6 +13,7 @@ hub_password = ""
 hub_proxy = "" # HTTP proxy to use with HUB
 hub_proxy_user = "" # requires hub_proxy to be set
 hub_proxy_password = "" # requires hub_proxy_user to be set
+hub_request_timeout = 10
 
 # operation_mode, possible values:
 # "full": perform all checks unless disabled individually through other config option. Default.
