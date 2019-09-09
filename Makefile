@@ -105,7 +105,7 @@ windows-sign:
 	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} curl -s -S http://localhost:8080/?file=cagent_32.msi
 	sleep 10
 	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} curl -s -S http://localhost:8080/?file=cagent_64.msi
-  # Copy MSI files back to build machine
+    # Copy MSI files back to build machine
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH}:/cygdrive/C/Users/hero/ci/cagent_32.msi ${PROJECT_DIR}/dist/cagent_proprietary_386.msi
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH}:/cygdrive/C/Users/hero/ci/cagent_64.msi ${PROJECT_DIR}/dist/cagent_proprietary_64.msi
 	# Upload proprietary MSI files to cloudradar package server
