@@ -77,9 +77,9 @@ windows-sign:
 	# Trigger MSI build
 	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} ${WIN_BUILD_MACHINE_CI_DIR}/build-win.bat ${CIRCLE_BUILD_NUM} ${CIRCLE_TAG}
 	# Trigger signing
-	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} curl -s -S http://localhost:8080/?file=cagent_32.msi
+	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} curl -s -S -f http://localhost:8080/?file=cagent_32.msi
 	sleep 10
-	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} curl -s -S http://localhost:8080/?file=cagent_64.msi
+	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} curl -s -S -f http://localhost:8080/?file=cagent_64.msi
 	# Copy MSI files back to build machine
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH}:/cygdrive/C/Users/hero/ci/cagent_32.msi ${PROJECT_DIR}/dist/cagent_386.msi
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH}:/cygdrive/C/Users/hero/ci/cagent_64.msi ${PROJECT_DIR}/dist/cagent_64.msi
@@ -102,10 +102,10 @@ windows-sign:
 	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} cp -r ${WIN_BUILD_MACHINE_PROPRIETARY_DEPS_DIR}/. ${WIN_BUILD_MACHINE_CI_DIR_PROPRIETARY}
 	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} ${WIN_BUILD_MACHINE_CI_DIR_PROPRIETARY}/build-proprietary-win.bat ${CIRCLE_BUILD_NUM}_proprietary ${CIRCLE_TAG}
 	# Trigger signing
-	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} curl -s -S http://localhost:8080/?file=cagent_32.msi
+	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} curl -s -S -f http://localhost:8080/?file=cagent_32.msi
 	sleep 10
-	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} curl -s -S http://localhost:8080/?file=cagent_64.msi
-    # Copy MSI files back to build machine
+	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} curl -s -S -f http://localhost:8080/?file=cagent_64.msi
+  # Copy MSI files back to build machine
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH}:/cygdrive/C/Users/hero/ci/cagent_32.msi ${PROJECT_DIR}/dist/cagent_proprietary_386.msi
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH}:/cygdrive/C/Users/hero/ci/cagent_64.msi ${PROJECT_DIR}/dist/cagent_proprietary_64.msi
 	# Upload proprietary MSI files to cloudradar package server
