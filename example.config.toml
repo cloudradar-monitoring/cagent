@@ -69,3 +69,15 @@ temperature_monitoring = true # default true
   report_processes = 5 # number of processes to return
   trailing_process_analysis_minutes = 5 # how much time analysis will continue to perform after the CPU utilisation returns to the normal value
 
+# Enable monitoring of hardware health for MegaRaids
+# reported by the storcli command-line tool
+# Refer to https://docs.cloudradar.io/cagent/modules#storcli
+# On Linux make sure a sudo rule exists. The storcli command is always executed via sudo. Example sudo rule:
+# cagent ALL= NOPASSWD: /opt/MegaRAID/storcli/storcli64 /c[0-9] show all J
+[storcli]
+  # Enable on Windows (use double slashes):
+  #   binary = "C:\\Program Files\storcli\storcli64.exe"
+  # Enable on Linux:
+  binary = "/opt/storcli/sbin/storcli64"
+  # controllers list to monitor:
+  controllers = [0, 1]

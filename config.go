@@ -102,22 +102,29 @@ type Config struct {
 
 	DiscoverAutostartingServicesOnly bool `toml:"discover_autostarting_services_only" comment:"default true"`
 
-	CPUUtilisationAnalysis CPUUtilisationAnalysis `toml:"cpu_utilisation_analysis"`
+	CPUUtilisationAnalysis CPUUtilisationAnalysisConfig `toml:"cpu_utilisation_analysis"`
 
 	TemperatureMonitoring bool `toml:"temperature_monitoring" comment:"default true"`
 
 	SMARTMonitoring bool            `toml:"smart_monitoring" comment:"Enable S.M.A.R.T monitoring of hard disks\ndefault false"`
 	SMARTCtl        string          `toml:"smartctl" comment:"Path to a smartctl binary (smartctl.exe on windows, path must be escaped) version >= 7\nSee https://docs.cloudradar.io/configuring-hosts/installing-agents/troubleshoot-s.m.a.r.t-monitoring\nsmartctl = \"C:\\\\Program Files\\\\smartmontools\\\\bin\\\\smartctl.exe\"\nsmartctl = \"/usr/local/bin/smartctl\""`
 	Logs            LogsFilesConfig `toml:"logs,omitempty"`
+
+	StorCLI StorCLIConfig `toml:"storcli,omitempty" comment:"Enable monitoring of hardware health for MegaRaids\nreported by the storcli command-line tool\nRefer to https://docs.cloudradar.io/cagent/modules#storcli\nOn Linux make sure a sudo rule exists. The storcli command is always executed via sudo. Example:\ncagent ALL= NOPASSWD: /opt/MegaRAID/storcli/storcli64 /c[0-9] show all J"`
 }
 
-type CPUUtilisationAnalysis struct {
+type CPUUtilisationAnalysisConfig struct {
 	Threshold                      float64 `toml:"threshold" comment:"target value to start the analysis" json:"threshold"`
 	Function                       string  `toml:"function" comment:"threshold compare function, possible values: 'lt', 'lte', 'gt', 'gte'" json:"function"`
 	Metric                         string  `toml:"metric" commend:"possible values: 'user','system','idle','iowait'" json:"metric"`
 	GatheringMode                  string  `toml:"gathering_mode" comment:"should be one of values of cpu_utilisation_gathering_mode" json:"gathering_mode"`
 	ReportProcesses                int     `toml:"report_processes" comment:"number of processes to return" json:"report_processes"`
 	TrailingProcessAnalysisMinutes int     `toml:"trailing_process_analysis_minutes" comment:"how much time analysis will continue to perform after the CPU utilisation returns to the normal value" json:"trailing_process_analysis_minutes"`
+}
+
+type StorCLIConfig struct {
+	BinaryPath     string `toml:"binary" comment:"Enable on Windows:\n  binary = 'C:\\\\Program Files\\\\storcli\\\\storcli64.exe'\nEnable on Linux:\n  binary = '/opt/storcli/sbin/storcli64'"`
+	ControllerList []uint `toml:"controllers" comment:"controllers to monitor, comma separated. default: [0] (monitor only controller c0)"`
 }
 
 func init() {
@@ -164,7 +171,7 @@ func NewConfig() *Config {
 		SystemFields:                     []string{"uname", "os_kernel", "os_family", "os_arch", "cpu_model", "fqdn", "memory_total_B"},
 		HardwareInventory:                true,
 		DiscoverAutostartingServicesOnly: true,
-		CPUUtilisationAnalysis: CPUUtilisationAnalysis{
+		CPUUtilisationAnalysis: CPUUtilisationAnalysisConfig{
 			Threshold:                      10,
 			Function:                       "lt",
 			Metric:                         "idle",
@@ -176,6 +183,10 @@ func NewConfig() *Config {
 		TemperatureMonitoring: true,
 		Logs: LogsFilesConfig{
 			HubFile: "",
+		},
+		StorCLI: StorCLIConfig{
+			BinaryPath:     "",
+			ControllerList: []uint{0},
 		},
 	}
 
