@@ -30,5 +30,9 @@ func (p *linuxLinkSpeedProvider) GetMaxAvailableLinkSpeed(ifName string) (float6
 		return 0, errors.Wrap(err, "invalid data in speed info file")
 	}
 
+	if megaBitsPerSecond < 0 {
+		return 0, fmt.Errorf("got unexpected speed value: %s", strData)
+	}
+
 	return float64(megaBitsPerSecond) / 8 * 1000 * 1000, nil
 }
