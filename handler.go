@@ -288,6 +288,10 @@ func (ca *Cagent) CollectMeasurements(full bool) (common.MeasurementsMap, error)
 			measurements = measurements.AddWithPrefix("temperatures.", common.MeasurementsMap{"list": temperatures})
 		}
 
+		modules, err := ca.collectModulesMeasurements()
+		errCollector.Add(err)
+		measurements = measurements.AddWithPrefix("", common.MeasurementsMap{"modules": modules})
+
 		smartMeas := ca.getSMARTMeasurements()
 		if len(smartMeas) > 0 {
 			measurements = measurements.AddInnerWithPrefix("smartmon", smartMeas)
