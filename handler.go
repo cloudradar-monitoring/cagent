@@ -276,8 +276,8 @@ func (ca *Cagent) CollectMeasurements(full bool) (common.MeasurementsMap, error)
 		}
 		measurements = measurements.AddWithPrefix("services.", servicesList)
 
-		containersList, err := ca.dockerWatcher.ListContainers()
-		if err != docker.ErrorNotImplementedForOS && err != docker.ErrorDockerNotFound {
+		containersList, err := docker.ListContainers()
+		if err != docker.ErrorNotImplementedForOS && err != docker.ErrorDockerNotAvailable {
 			errCollector.Add(err)
 		}
 		measurements = measurements.AddWithPrefix("docker.", containersList)

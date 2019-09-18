@@ -56,7 +56,7 @@ func (ca *Cagent) ProcessesResult(memStat *mem.VirtualMemoryStat) (m common.Meas
 	} else {
 		systemMemorySize = memStat.Total
 	}
-	procs, err = processes(ca.dockerWatcher, systemMemorySize)
+	procs, err = processes(systemMemorySize)
 	if err != nil {
 		log.Error("[PROC] error: ", err.Error())
 		return nil, nil, err

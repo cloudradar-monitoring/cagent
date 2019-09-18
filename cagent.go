@@ -11,7 +11,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/fs"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/networking"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/sensors"
@@ -33,7 +32,6 @@ type Cagent struct {
 	fsWatcher            *fs.FileSystemWatcher
 	netWatcher           *networking.NetWatcher
 	windowsUpdateWatcher *WindowsUpdateWatcher // nolint: structcheck,megacheck
-	dockerWatcher        *docker.Watcher
 
 	vmstatLazyInit sync.Once
 	vmWatchers     map[string]types.Provider
@@ -51,7 +49,6 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 		ConfigLocation: cfgPath,
 		version:        version,
 		vmWatchers:     make(map[string]types.Provider),
-		dockerWatcher:  &docker.Watcher{},
 	}
 
 	if rootCertsPath != "" {
