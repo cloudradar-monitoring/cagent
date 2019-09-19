@@ -34,9 +34,9 @@ type procStatus struct {
 var dockerContainerIDRE = regexp.MustCompile(`(?m)/docker/([a-f0-9]*)$`)
 var monitoredProcessCache = make(map[int]*process.Process)
 
-func processes(dockerWatcher *docker.Watcher, systemMemorySize uint64) ([]ProcStat, error) {
+func processes(systemMemorySize uint64) ([]ProcStat, error) {
 	if runtime.GOOS == "linux" {
-		return processesFromProc(dockerWatcher, systemMemorySize)
+		return processesFromProc(systemMemorySize)
 	}
 	return processesFromPS(systemMemorySize)
 }
@@ -73,7 +73,7 @@ func getProcLongState(shortState byte) string {
 }
 
 // get process states from /proc/(pid)/stat
-func processesFromProc(dockerWatcher *docker.Watcher, systemMemorySize uint64) ([]ProcStat, error) {
+func processesFromProc(systemMemorySize uint64) ([]ProcStat, error) {
 	filepaths, err := filepath.Glob(getHostProc() + "/[0-9]*/status")
 	if err != nil {
 		return nil, err
@@ -117,21 +117,21 @@ func processesFromProc(dockerWatcher *docker.Watcher, systemMemorySize uint64) (
 			stat.Cmdline = strings.Replace(string(bytes.TrimRight(cmdline, "\x00")), "\x00", " ", -1)
 		}
 
-		if dockerWatcher != nil {
-			cgroupFilepath := getHostProc() + "/" + pidString + "/cgroup"
-			cgroup, err := readProcFile(cgroupFilepath)
-			if err != nil && err != errorProcessTerminated {
-				log.Errorf("[PROC] failed to read cgroup(%s): %s", cgroupFilepath, err.Error())
-			} else if err == nil {
-				reParts := dockerContainerIDRE.FindStringSubmatch(string(cgroup))
-				if len(reParts) > 0 {
-					containerID := reParts[1]
-					containerName, err := dockerWatcher.ContainerNameByID(containerID)
-					if err != nil && err != docker.ErrorNotImplementedForOS {
+		cgroupFilepath := getHostProc() + "/" + pidString + "/cgroup"
+		cgroup, err := readProcFile(cgroupFilepath)
+		if err != nil && err != errorProcessTerminated {
+			log.Errorf("[PROC] failed to read cgroup(%s): %s", cgroupFilepath, err.Error())
+		} else if err == nil {
+			reParts := dockerContainerIDRE.FindStringSubmatch(string(cgroup))
+			if len(reParts) > 0 {
+				containerID := reParts[1]
+				containerName, err := docker.ContainerNameByID(containerID)
+				if err != nil {
+					if err != docker.ErrorNotImplementedForOS && err != docker.ErrorDockerNotAvailable {
 						log.Errorf("[PROC] failed to read docker container name by id(%s): %s", containerID, err.Error())
-					} else {
-						stat.Container = containerName
 					}
+				} else {
+					stat.Container = containerName
 				}
 			}
 		}

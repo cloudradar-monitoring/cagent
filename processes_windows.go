@@ -10,14 +10,13 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
-	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/winapi"
 )
 
 var monitoredProcessCache = make(map[uint32]*winapi.SystemProcessInformation)
 var lastProcessQueryTime time.Time
 
-func processes(_ *docker.Watcher, systemMemorySize uint64) ([]ProcStat, error) {
+func processes(systemMemorySize uint64) ([]ProcStat, error) {
 	procs, err := winapi.GetSystemProcessInformation()
 	if err != nil {
 		return nil, errors.Wrap(err, "[PROC] can't get system processes")
