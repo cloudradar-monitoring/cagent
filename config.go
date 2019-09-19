@@ -78,7 +78,7 @@ type Config struct {
 	CPUUtilDataGather []string `toml:"cpu_utilisation_gathering_mode" comment:"default ['avg1']"`
 	CPUUtilTypes      []string `toml:"cpu_utilisation_types" comment:"default ['user','system','idle','iowait']"`
 
-	FSTypeInclude        []string `toml:"fs_type_include" comment:"default ['ext3','ext4','xfs','jfs','ntfs','btrfs','hfs','apfs','fat32']"`
+	FSTypeInclude        []string `toml:"fs_type_include" comment:"default ['ext3','ext4','xfs','jfs','ntfs','btrfs','hfs','apfs','fat32','smbfs','nfs']"`
 	FSPathExclude        []string `toml:"fs_path_exclude" comment:"Exclude file systems by name, disabled by default"`
 	FSPathExcludeRecurse bool     `toml:"fs_path_exclude_recurse" comment:"Having fs_path_exclude_recurse = false the specified path must match a mountpoint or it will be ignored\nHaving fs_path_exclude_recurse = true the specified path can be any folder and all mountpoints underneath will be excluded"`
 
@@ -159,7 +159,7 @@ func NewConfig() *Config {
 		CPULoadDataGather:                []string{"avg1"},
 		CPUUtilTypes:                     []string{"user", "system", "idle", "iowait"},
 		CPUUtilDataGather:                []string{"avg1"},
-		FSTypeInclude:                    []string{"ext3", "ext4", "xfs", "jfs", "ntfs", "btrfs", "hfs", "apfs", "fat32"},
+		FSTypeInclude:                    []string{"ext3", "ext4", "xfs", "jfs", "ntfs", "btrfs", "hfs", "apfs", "fat32", "smbfs", "nfs"},
 		FSPathExclude:                    []string{},
 		FSPathExcludeRecurse:             false,
 		FSMetrics:                        []string{"free_B", "free_percent", "total_B", "read_B_per_s", "write_B_per_s", "read_ops_per_s", "write_ops_per_s"},

@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"context"
 	"path/filepath"
 	"strings"
 	"time"
@@ -49,13 +48,9 @@ func NewWatcher(config FileSystemWatcherConfig) *FileSystemWatcher {
 
 func (fw *FileSystemWatcher) Results() (common.MeasurementsMap, error) {
 	results := common.MeasurementsMap{}
-
 	var errs common.ErrorCollector
-	ctx, cancel := context.WithTimeout(context.Background(), fsInfoRequestTimeout)
-	defer cancel()
 
-	partitions, err := disk.PartitionsWithContext(ctx, true)
-
+	partitions, err := getPartitions()
 	if err != nil {
 		logrus.WithError(err).Errorf("[FS] Failed to read partitions")
 		errs.Add(err)
@@ -119,7 +114,15 @@ func (fw *FileSystemWatcher) Results() (common.MeasurementsMap, error) {
 
 		ioCounters, err := getPartitionIOCounters(partition.Device)
 		if err != nil {
-			logrus.WithError(err).Errorf("[FS] Failed to get IO counters for '%s' (device %s)", partition.Mountpoint, partition.Device)
+			log := logrus.WithError(err)
+			isNetworkVolumeDrive := partition.Fstype == "smbfs" || partition.Fstype == "nfs"
+			if isNetworkVolumeDrive {
+				// this info is not available for network shares
+				log.Debugf("[FS] Skipping IO counters for network share '%s' (device %s)", partition.Mountpoint, partition.Device)
+				continue
+			}
+
+			log.Errorf("[FS] Failed to get IO counters for '%s' (device %s)", partition.Mountpoint, partition.Device)
 			errs.Add(err)
 			continue
 		}

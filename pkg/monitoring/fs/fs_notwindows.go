@@ -9,6 +9,13 @@ import (
 	"github.com/shirou/gopsutil/disk"
 )
 
+func getPartitions() ([]disk.PartitionStat, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), fsInfoRequestTimeout)
+	defer cancel()
+
+	return disk.PartitionsWithContext(ctx, true)
+}
+
 func getPartitionIOCounters(deviceName string) (*disk.IOCountersStat, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), fsInfoRequestTimeout)
 	defer cancel()
