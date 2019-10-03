@@ -89,7 +89,7 @@ type Config struct {
 	NetInterfaceExcludeDisconnected bool     `toml:"net_interface_exclude_disconnected" comment:"default true"`
 	NetInterfaceExcludeLoopback     bool     `toml:"net_interface_exclude_loopback" comment:"default true"`
 
-	NetMetrics           []string `toml:"net_metrics" comment:"default['in_B_per_s', 'out_B_per_s']"`
+	NetMetrics           []string `toml:"net_metrics" comment:"default ['in_B_per_s','out_B_per_s','total_out_B_per_s','total_in_B_per_s']"`
 	NetInterfaceMaxSpeed string   `toml:"net_interface_max_speed" comment:"If the value is not specified, cagent will try to query the maximum speed of the network cards to calculate the bandwidth usage (default)\nDepending on the network card type this is not always reliable.\nSome virtual network cards, for example, report a maximum speed lower than the real speed.\nYou can set a fixed value by using <number of Bytes per second> + <K, M or G as a quantifier>.\nExamples: \"125M\" (equals 1 GigaBit), \"12.5M\" (equals 100 MegaBits), \"12.5G\" (equals 100 GigaBit)"`
 
 	SystemFields []string `toml:"system_fields" comment:"default ['uname','os_kernel','os_family','os_arch','cpu_model','fqdn','memory_total_B']"`
@@ -163,7 +163,7 @@ func NewConfig() *Config {
 		FSPathExclude:                    []string{},
 		FSPathExcludeRecurse:             false,
 		FSMetrics:                        []string{"free_B", "free_percent", "total_B", "read_B_per_s", "write_B_per_s", "read_ops_per_s", "write_ops_per_s"},
-		NetMetrics:                       []string{"in_B_per_s", "out_B_per_s"},
+		NetMetrics:                       []string{"in_B_per_s", "out_B_per_s", "total_out_B_per_s", "total_in_B_per_s"},
 		NetInterfaceExcludeDisconnected:  true,
 		NetInterfaceExclude:              []string{},
 		NetInterfaceExcludeRegex:         []string{"^vnet(.*)$", "^virbr(.*)$", "^vmnet(.*)$", "^vEthernet(.*)$"},
