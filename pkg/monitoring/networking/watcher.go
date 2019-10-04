@@ -123,6 +123,9 @@ func (nw *NetWatcher) fillEmptyMeasurements(results common.MeasurementsMap, inte
 		}
 
 		for _, metric := range nw.config.NetMetrics {
+			if strings.HasPrefix(metric, "total") {
+				continue
+			}
 			results[metric+"."+netIf.Name] = nil
 		}
 	}
@@ -155,6 +158,11 @@ func (nw *NetWatcher) fillCountersMeasurements(results common.MeasurementsMap, i
 		lastIOCounterByName[lastIOCounter.Name] = lastIOCounter
 	}
 
+	secondsSinceLastMeasurement := gotIOCountersAt.Sub(*nw.lastIOCountersAt).Seconds()
+
+	var totalBytesReceivedPerSecond uint64
+	var totalBytesSentPerSecond uint64
+
 	linkSpeedProvider := newLinkSpeedProvider()
 	for _, ioCounter := range counters {
 		// iterate over all counters
@@ -171,14 +179,15 @@ func (nw *NetWatcher) fillCountersMeasurements(results common.MeasurementsMap, i
 			continue
 		}
 
-		secondsSinceLastMeasurement := gotIOCountersAt.Sub(*nw.lastIOCountersAt).Seconds()
 		for _, metric := range nw.config.NetMetrics {
 			switch metric {
 			case "in_B_per_s":
 				bytesReceivedSinceLastMeasurement := ioCounter.BytesRecv - previousIOCounter.BytesRecv
+				totalBytesReceivedPerSecond += bytesReceivedSinceLastMeasurement
 				results[metric+"."+ioCounter.Name] = common.FloatToIntRoundUP(float64(bytesReceivedSinceLastMeasurement) / secondsSinceLastMeasurement)
 			case "out_B_per_s":
 				bytesSentSinceLastMeasurement := ioCounter.BytesSent - previousIOCounter.BytesSent
+				totalBytesSentPerSecond += bytesSentSinceLastMeasurement
 				results[metric+"."+ioCounter.Name] = common.FloatToIntRoundUP(float64(bytesSentSinceLastMeasurement) / secondsSinceLastMeasurement)
 			case "errors_per_s":
 				errorsSinceLastMeasurement := ioCounter.Errin + ioCounter.Errout - previousIOCounter.Errin - previousIOCounter.Errout
@@ -208,6 +217,14 @@ func (nw *NetWatcher) fillCountersMeasurements(results common.MeasurementsMap, i
 		results["net_util_percent."+ioCounter.Name] = common.RoundToTwoDecimalPlaces((currLinkSpeed / maxAvailableLinkSpeed) * 100)
 	}
 
+	for _, metric := range nw.config.NetMetrics {
+		switch metric {
+		case "total_in_B_per_s":
+			results[metric] = common.FloatToIntRoundUP(float64(totalBytesReceivedPerSecond) / secondsSinceLastMeasurement)
+		case "total_out_B_per_s":
+			results[metric] = common.FloatToIntRoundUP(float64(totalBytesSentPerSecond) / secondsSinceLastMeasurement)
+		}
+	}
 	return nil
 }
 
