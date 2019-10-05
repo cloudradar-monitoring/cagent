@@ -5,6 +5,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/storcli"
 )
 
@@ -39,14 +40,16 @@ func (ca *Cagent) collectModulesMeasurements() ([]map[string]interface{}, error)
 		}
 
 		alerts := m.GetAlerts()
-		if len(alerts) > 0 {
-			moduleResult["alerts"] = alerts
+		if alerts == nil {
+			alerts = make([]monitoring.Alert, 0)
 		}
+		moduleResult["alerts"] = alerts
 
 		warnings := m.GetWarnings()
-		if len(warnings) > 0 {
-			moduleResult["warnings"] = warnings
+		if warnings == nil {
+			warnings = make([]monitoring.Warning, 0)
 		}
+		moduleResult["warnings"] = warnings
 
 		result = append(result, moduleResult)
 	}
