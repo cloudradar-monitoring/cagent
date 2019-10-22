@@ -123,8 +123,7 @@ type CPUUtilisationAnalysisConfig struct {
 }
 
 type StorCLIConfig struct {
-	BinaryPath     string `toml:"binary" comment:"Enable on Windows:\n  binary = 'C:\\\\Program Files\\\\storcli\\\\storcli64.exe'\nEnable on Linux:\n  binary = '/opt/storcli/sbin/storcli64'"`
-	ControllerList []uint `toml:"controllers" comment:"controllers to monitor, comma separated. default: [0] (monitor only controller c0)"`
+	BinaryPath string `toml:"binary" comment:"Enable on Windows:\n  binary = 'C:\\\\Program Files\\\\storcli\\\\storcli64.exe'\nEnable on Linux:\n  binary = '/opt/storcli/sbin/storcli64'"`
 }
 
 func init() {
@@ -185,8 +184,7 @@ func NewConfig() *Config {
 			HubFile: "",
 		},
 		StorCLI: StorCLIConfig{
-			BinaryPath:     "",
-			ControllerList: []uint{0},
+			BinaryPath: "",
 		},
 	}
 

@@ -13,17 +13,35 @@ import (
 
 type controllersResult struct {
 	Controllers []struct {
-		ResponseData controllerResponseData `json:"Response Data"`
+		CommandStatus commandStatus          `json:"Command Status"`
+		ResponseData  controllerResponseData `json:"Response Data"`
 	} `json:"Controllers"`
+}
+
+type commandStatus struct {
+	Status      string `json:"Status"`
+	Description string `json:"Description"`
 }
 
 type controllerResponseData struct {
 	// we can't parse some nested fields due to inconsistency (same field can have different types)
 	// so we use json.RawMessage
 
-	Status         map[string]*json.RawMessage   `json:"Status"`
-	VirtualDrives  []map[string]*json.RawMessage `json:"VD LIST"`
-	PhysicalDrives []map[string]*json.RawMessage `json:"PD LIST"`
+	Basics              controllerBasicsData
+	Status              map[string]*json.RawMessage   `json:"Status"`
+	VirtualDrives       []map[string]*json.RawMessage `json:"VD LIST"`
+	PhysicalDrivesCount int                           `json:"Physical Drives"`
+	PhysicalDrives      []map[string]*json.RawMessage `json:"PD LIST"`
+}
+
+type controllerBasicsData struct {
+	ControllerID int    `json:"Controller"`
+	Model        string `json:"Model"`
+	SerialNumber string `json:"Serial Number"`
+}
+
+func (c *controllerBasicsData) GetDisplayName() string {
+	return fmt.Sprintf("%s %s", c.Model, c.SerialNumber)
 }
 
 const statusOptimal = "Optimal"
@@ -51,29 +69,25 @@ func getHumanReadablePhysDriveState(state string) string {
 	return res
 }
 
-func tryParseCmdOutput(outBytes *[]byte) (
+func tryParseCmdOutput(outBytes *[]byte) (*controllersResult, error) {
+	var output controllersResult
+	err := json.Unmarshal(*outBytes, &output)
+	if err != nil {
+		err = errors.Wrap(err, "error while parsing storcli command output")
+	}
+	return &output, err
+}
+
+func getReportData(responseData *controllerResponseData) (
 	measurements map[string]interface{},
 	alerts []monitoring.Alert,
 	warnings []monitoring.Warning,
 	err error,
 ) {
-	var output controllersResult
-	err = json.Unmarshal(*outBytes, &output)
-	if err != nil {
-		err = errors.Wrap(err, "while Unmarshal storcli cmd output")
-		return
-	}
-
-	if len(output.Controllers) < 1 {
-		err = errors.New("unexpected json: no controllers listed")
-		return
-	}
-
-	responseData := output.Controllers[0].ResponseData
-
 	status := responseData.Status
 	measurements = map[string]interface{}{}
 	measurements["Status"] = status
+	measurements["Number of attached physical drives"] = responseData.PhysicalDrivesCount
 
 	// If the status is not Optimal an alert with the status is created.
 	var controllerStatus string
@@ -85,6 +99,8 @@ func tryParseCmdOutput(outBytes *[]byte) (
 		alerts = append(alerts, monitoring.Alert(fmt.Sprintf("Controller status not optimal (%s)", controllerStatus)))
 	}
 
+	var vdStates = make(map[string]string)
+
 	// If one of the virtual disks is not in operational status, an alert with all details is created.
 	for _, vd := range responseData.VirtualDrives {
 		var vdState string
@@ -92,29 +108,34 @@ func tryParseCmdOutput(outBytes *[]byte) (
 		if err != nil {
 			return
 		}
-		if vdState != stateOperational {
-			var dgVD string
-			dgVD, err = extractFieldFromRawMap(&vd, "DG/VD")
-			if err != nil {
-				return
-			}
 
-			var vdType string
-			vdType, err = extractFieldFromRawMap(&vd, "TYPE")
-			if err != nil {
-				return
-			}
-
-			vdStatusAlertMsg := fmt.Sprintf(
-				"DG/VD %s %s State not operational (%s)",
-				dgVD,
-				vdType,
-				vdState,
-			)
-			alerts = append(alerts, monitoring.Alert(vdStatusAlertMsg))
+		var dgVD string
+		dgVD, err = extractFieldFromRawMap(&vd, "DG/VD")
+		if err != nil {
+			return
 		}
 
+		var vdType string
+		vdType, err = extractFieldFromRawMap(&vd, "TYPE")
+		if err != nil {
+			return
+		}
+
+		var vdName string
+		vdName, err = extractFieldFromRawMap(&vd, "Name")
+		if err != nil {
+			return
+		}
+
+		vdLabel := fmt.Sprintf("DG/VD %s %s %s", dgVD, vdType, vdName)
+		vdStates[fmt.Sprintf("%s State", vdLabel)] = vdState
+
+		if vdState != stateOperational {
+			vdStatusAlertMsg := fmt.Sprintf("%s State not operational (%s)", vdLabel, vdState)
+			alerts = append(alerts, monitoring.Alert(vdStatusAlertMsg))
+		}
 	}
+	measurements["Virtual Drives"] = vdStates
 
 	// If one of the physical disks is in bad state,
 	// a warning with the details of the device is created.
