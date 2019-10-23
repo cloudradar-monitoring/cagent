@@ -12,10 +12,11 @@ import (
 )
 
 type FileSystemWatcherConfig struct {
-	TypeInclude        []string
-	PathExclude        []string
-	PathExcludeRecurse bool
-	Metrics            []string
+	TypeInclude                 []string
+	PathExclude                 []string
+	PathExcludeRecurse          bool
+	Metrics                     []string
+	IdentifyMountpointsByDevice bool
 }
 
 type FileSystemWatcher struct {
@@ -50,7 +51,7 @@ func (fw *FileSystemWatcher) Results() (common.MeasurementsMap, error) {
 	results := common.MeasurementsMap{}
 	var errs common.ErrorCollector
 
-	partitions, err := getPartitions()
+	partitions, err := getPartitions(fw.config.IdentifyMountpointsByDevice)
 	if err != nil {
 		logrus.WithError(err).Errorf("[FS] Failed to read partitions")
 		errs.Add(err)

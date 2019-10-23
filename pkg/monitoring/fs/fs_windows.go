@@ -28,7 +28,7 @@ const (
 
 // getPartitions is an improved version of gopsutil/disk.GetPartitions()
 // which is capable of determining the fs type of network drives.
-func getPartitions() ([]disk.PartitionStat, error) {
+func getPartitions(onlyUniqueDevices bool) ([]disk.PartitionStat, error) {
 	var result []disk.PartitionStat
 	lpBuffer := make([]byte, 254)
 	bufferPtr := unsafe.Pointer(&lpBuffer[0])

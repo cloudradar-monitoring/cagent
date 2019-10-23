@@ -41,14 +41,6 @@ func processes(systemMemorySize uint64) ([]ProcStat, error) {
 	return processesFromPS(systemMemorySize)
 }
 
-func getHostProc() string {
-	if hostProc := os.Getenv("HOST_PROC"); hostProc != "" {
-		return hostProc
-	}
-
-	return "/proc"
-}
-
 func getProcLongState(shortState byte) string {
 	switch shortState {
 	case 'R':
@@ -74,7 +66,7 @@ func getProcLongState(shortState byte) string {
 
 // get process states from /proc/(pid)/stat
 func processesFromProc(systemMemorySize uint64) ([]ProcStat, error) {
-	filepaths, err := filepath.Glob(getHostProc() + "/[0-9]*/status")
+	filepaths, err := filepath.Glob(common.HostProc() + "/[0-9]*/status")
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +93,7 @@ func processesFromProc(systemMemorySize uint64) ([]ProcStat, error) {
 			log.Errorf("[PROC] proc/status: failed to convert PID(%s) to int: %s", pidString, err.Error())
 		}
 
-		commFilepath := getHostProc() + "/" + pidString + "/comm"
+		commFilepath := common.HostProc() + "/" + pidString + "/comm"
 		comm, err := readProcFile(commFilepath)
 		if err != nil && err != errorProcessTerminated {
 			log.Errorf("[PROC] failed to read comm(%s): %s", commFilepath, err.Error())
@@ -109,7 +101,7 @@ func processesFromProc(systemMemorySize uint64) ([]ProcStat, error) {
 			stat.Name = string(bytes.TrimRight(comm, "\n"))
 		}
 
-		cmdLineFilepath := getHostProc() + "/" + pidString + "/cmdline"
+		cmdLineFilepath := common.HostProc() + "/" + pidString + "/cmdline"
 		cmdline, err := readProcFile(cmdLineFilepath)
 		if err != nil && err != errorProcessTerminated {
 			log.Errorf("[PROC] failed to read cmdline(%s): %s", cmdLineFilepath, err.Error())
@@ -117,7 +109,7 @@ func processesFromProc(systemMemorySize uint64) ([]ProcStat, error) {
 			stat.Cmdline = strings.Replace(string(bytes.TrimRight(cmdline, "\x00")), "\x00", " ", -1)
 		}
 
-		cgroupFilepath := getHostProc() + "/" + pidString + "/cgroup"
+		cgroupFilepath := common.HostProc() + "/" + pidString + "/cgroup"
 		cgroup, err := readProcFile(cgroupFilepath)
 		if err != nil && err != errorProcessTerminated {
 			log.Errorf("[PROC] failed to read cgroup(%s): %s", cgroupFilepath, err.Error())
