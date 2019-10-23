@@ -79,5 +79,3 @@ temperature_monitoring = true # default true
   #   binary = "C:\\Program Files\storcli\storcli64.exe"
   # Enable on Linux:
   binary = "/opt/storcli/sbin/storcli64"
-  # controllers list to monitor:
-  controllers = [0, 1]

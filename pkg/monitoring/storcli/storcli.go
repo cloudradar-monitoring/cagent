@@ -17,39 +17,33 @@ import (
 const cacheExpirationDuration = 30 * time.Minute
 
 type StorCLI struct {
-	binaryPath string
-	controller uint
-	lastRunAt  *time.Time
-
-	message      string
-	alerts       []monitoring.Alert
-	warnings     []monitoring.Warning
-	measurements map[string]interface{}
+	binaryPath     string
+	lastRunAt      time.Time
+	lastRunReports []*monitoring.ModuleReport
 }
 
-func CreateModules(binaryPath string, controllerList []uint) []monitoring.Module {
-	result := make([]monitoring.Module, 0)
-	for _, controller := range controllerList {
-		result = append(result, &StorCLI{binaryPath: binaryPath, controller: controller})
-	}
-	return result
+func CreateModule(binaryPath string) monitoring.Module {
+	return &StorCLI{binaryPath: binaryPath}
 }
 
 func (s *StorCLI) IsEnabled() bool {
 	return s.binaryPath != ""
 }
 
-func (s *StorCLI) Run() error {
+func (s *StorCLI) Run() ([]*monitoring.ModuleReport, error) {
 	if s.binaryPath == "" {
-		return nil
+		return nil, nil
 	}
 
 	now := time.Now()
-	if s.lastRunAt != nil {
-		if s.lastRunAt.Sub(now) < cacheExpirationDuration {
-			return nil
-		}
+	if !s.lastRunAt.IsZero() && s.lastRunAt.Sub(now) < cacheExpirationDuration {
+		return s.lastRunReports, nil
 	}
+
+	reports := make([]*monitoring.ModuleReport, 0)
+	cmdLineStr := s.getCommandLineCombined()
+	cmdExecReport := monitoring.NewReport("storecli execution for hardware raid health", now, cmdLineStr)
+	reports = append(reports, &cmdExecReport)
 
 	cmdLine := s.getCommandLine()
 	showAllCmd := exec.Command(cmdLine[0], cmdLine[1:]...)
@@ -59,39 +53,67 @@ func (s *StorCLI) Run() error {
 	if err != nil {
 		stderrBytes, _ := ioutil.ReadAll(bufio.NewReader(&stderrBuffer))
 		stderr := string(stderrBytes)
-		s.message = fmt.Sprintf("Error while invoking storcli command: %s. %s", err.Error(), stderr)
-		logrus.Error(s.message)
-		return nil
+		errMsg := fmt.Sprintf("Error while invoking storcli command: %s. %s", err.Error(), stderr)
+		logrus.Error(errMsg)
+
+		cmdExecReport.Message = errMsg
+		cmdExecReport.Alerts = append(cmdExecReport.Alerts, monitoring.Alert(errMsg))
+		return reports, nil
 	}
 
-	s.lastRunAt = &now
+	parsedOutput, err := tryParseCmdOutput(&outBytes)
+	if err != nil {
+		logrus.WithError(err).Error()
+		cmdExecReport.Message = err.Error()
+		cmdExecReport.Alerts = append(cmdExecReport.Alerts, monitoring.Alert(err.Error()))
+		return reports, nil
+	}
 
-	s.measurements, s.alerts, s.warnings, err = tryParseCmdOutput(&outBytes)
-	return err
+	if len(parsedOutput.Controllers) < 1 {
+		return reports, fmt.Errorf("unexpected storcli JSON: no controller objects present")
+	}
+
+	// there is always at least one controller object even if there is no RAID installed
+	firstController := parsedOutput.Controllers[0]
+
+	cmdExecReport.Measurements = map[string]interface{}{
+		"Command Status": firstController.CommandStatus,
+	}
+
+	if firstController.CommandStatus.Status != "Failure" {
+		cmdExecReport.Measurements["Detected Controllers"] = len(parsedOutput.Controllers)
+
+		for _, c := range parsedOutput.Controllers {
+			cBasicInfo := &c.ResponseData.Basics
+			cid := cBasicInfo.ControllerID
+			cmdExecReport.Measurements[fmt.Sprintf("Controller %d", cid)] = cBasicInfo.GetDisplayName()
+
+			measurements, alerts, warnings, err := getReportData(&c.ResponseData)
+			if err != nil {
+				logrus.WithError(err).Error()
+				continue
+			}
+
+			r := monitoring.NewReport(getModuleReportName(cid), now, cmdLineStr)
+			r.Measurements = measurements
+			r.Alerts = append(r.Alerts, alerts...)
+			r.Warnings = append(r.Warnings, warnings...)
+			reports = append(reports, &r)
+		}
+	}
+
+	s.lastRunReports = reports
+	s.lastRunAt = now
+
+	return reports, nil
 }
 
-func (s *StorCLI) GetName() string {
-	return fmt.Sprintf("storecli hardware raid health controller c%d", s.controller)
+func (s *StorCLI) GetDescription() string {
+	return "storcli monitoring"
 }
 
-func (s *StorCLI) GetExecutedCommand() string {
-	return s.getCommandLineCombined()
-}
-
-func (s *StorCLI) GetAlerts() []monitoring.Alert {
-	return s.alerts
-}
-
-func (s *StorCLI) GetWarnings() []monitoring.Warning {
-	return s.warnings
-}
-
-func (s *StorCLI) GetMessage() string {
-	return s.message
-}
-
-func (s *StorCLI) GetMeasurements() map[string]interface{} {
-	return s.measurements
+func getModuleReportName(controllerID int) string {
+	return fmt.Sprintf("storecli hardware raid health controller c%d", controllerID)
 }
 
 func (s *StorCLI) getCommandLineCombined() string {

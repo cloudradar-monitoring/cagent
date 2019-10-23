@@ -9,49 +9,28 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/storcli"
 )
 
-func (ca *Cagent) collectModulesMeasurements() ([]map[string]interface{}, error) {
-	var result []map[string]interface{}
+var modules []monitoring.Module
+
+func (ca *Cagent) collectModulesMeasurements() ([]*monitoring.ModuleReport, error) {
+	var result []*monitoring.ModuleReport
 	var errs common.ErrorCollector
 
-	modules := storcli.CreateModules(ca.Config.StorCLI.BinaryPath, ca.Config.StorCLI.ControllerList)
+	if len(modules) == 0 {
+		m := storcli.CreateModule(ca.Config.StorCLI.BinaryPath)
+		if m.IsEnabled() {
+			modules = append(modules, m)
+		}
+	}
 
 	for _, m := range modules {
-		if !m.IsEnabled() {
-			continue
-		}
-
-		err := m.Run()
+		reports, err := m.Run()
 		if err != nil {
-			err = errors.Wrapf(err, "while executing module '%s'", m.GetName())
+			err = errors.Wrapf(err, "while executing module '%s'", m.GetDescription())
 			logrus.WithError(err).Debug()
 			errs.Add(err)
 			continue
 		}
-
-		moduleResult := map[string]interface{}{
-			"name":             m.GetName(),
-			"command executed": m.GetExecutedCommand(),
-			"measurements":     m.GetMeasurements(),
-		}
-
-		msg := m.GetMessage()
-		if len(msg) > 0 {
-			moduleResult["message"] = msg
-		}
-
-		alerts := m.GetAlerts()
-		if alerts == nil {
-			alerts = make([]monitoring.Alert, 0)
-		}
-		moduleResult["alerts"] = alerts
-
-		warnings := m.GetWarnings()
-		if warnings == nil {
-			warnings = make([]monitoring.Warning, 0)
-		}
-		moduleResult["warnings"] = warnings
-
-		result = append(result, moduleResult)
+		result = append(result, reports...)
 	}
 
 	return result, errors.Wrap(errs.Combine(), "while collecting modules measurements")
