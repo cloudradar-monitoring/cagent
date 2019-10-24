@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 var errTemperatureNotAvailable = errors.New("the temperature is not available")
@@ -27,14 +28,14 @@ func Shutdown() {
 // https://www.kernel.org/doc/Documentation/hwmon/sysfs-interface
 func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
 	var temperatures []*TemperatureSensorInfo
-	files, err := filepath.Glob(getHostSys("/class/hwmon/hwmon*/temp*_*"))
+	files, err := filepath.Glob(common.HostSys("/class/hwmon/hwmon*/temp*_*"))
 	if err != nil {
 		logger.WithError(err).Error("failed to list sensors")
 		return temperatures, err
 	}
 	if len(files) == 0 {
 		// CentOS has an intermediate /device directory:
-		files, err = filepath.Glob(getHostSys("/class/hwmon/hwmon*/device/temp*_*"))
+		files, err = filepath.Glob(common.HostSys("/class/hwmon/hwmon*/device/temp*_*"))
 		if err != nil {
 			logger.WithError(err).Error("failed to list sensors")
 			return temperatures, err
@@ -103,13 +104,4 @@ func readTemperatureFromFile(sensorName string, filePath string) (float64, error
 	}
 
 	return value / 1000.0, nil
-}
-
-func getHostSys(combineWith string) string {
-	var result = "/sys"
-	if hostProc := os.Getenv("HOST_SYS"); hostProc != "" {
-		result = hostProc
-	}
-
-	return filepath.Join(result, combineWith)
 }

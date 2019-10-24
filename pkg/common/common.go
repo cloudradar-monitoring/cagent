@@ -89,6 +89,14 @@ func GetEnv(key string, dfault string, combineWith ...string) string {
 	}
 }
 
+func HostProc(combineWith ...string) string {
+	return GetEnv("HOST_PROC", "/proc", combineWith...)
+}
+
+func HostSys(combineWith ...string) string {
+	return GetEnv("HOST_SYS", "/sys", combineWith...)
+}
+
 // ReadLines reads contents from a file and splits them by new lines.
 // A convenience wrapper to ReadLinesOffsetN(filename, 0, -1).
 // from github.com/shriou/gopsutil/internal/common.go

@@ -1,4 +1,4 @@
-// +build !windows
+// +build !windows,!linux
 
 package fs
 
@@ -9,7 +9,7 @@ import (
 	"github.com/shirou/gopsutil/disk"
 )
 
-func getPartitions() ([]disk.PartitionStat, error) {
+func getPartitions(onlyUniqueDevices bool) ([]disk.PartitionStat, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), fsInfoRequestTimeout)
 	defer cancel()
 

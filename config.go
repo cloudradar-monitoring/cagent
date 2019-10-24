@@ -78,11 +78,11 @@ type Config struct {
 	CPUUtilDataGather []string `toml:"cpu_utilisation_gathering_mode" comment:"default ['avg1']"`
 	CPUUtilTypes      []string `toml:"cpu_utilisation_types" comment:"default ['user','system','idle','iowait']"`
 
-	FSTypeInclude        []string `toml:"fs_type_include" comment:"default ['ext3','ext4','xfs','jfs','ntfs','btrfs','hfs','apfs','fat32','smbfs','nfs']"`
-	FSPathExclude        []string `toml:"fs_path_exclude" comment:"Exclude file systems by name, disabled by default"`
-	FSPathExcludeRecurse bool     `toml:"fs_path_exclude_recurse" comment:"Having fs_path_exclude_recurse = false the specified path must match a mountpoint or it will be ignored\nHaving fs_path_exclude_recurse = true the specified path can be any folder and all mountpoints underneath will be excluded"`
-
-	FSMetrics []string `toml:"fs_metrics" comment:"default ['free_B', 'free_percent', 'total_B', 'read_B_per_s', 'write_B_per_s', 'read_ops_per_s', 'write_ops_per_s', 'inodes_used_percent']"`
+	FSTypeInclude                 []string `toml:"fs_type_include" comment:"default ['ext3','ext4','xfs','jfs','ntfs','btrfs','hfs','apfs','fat32','smbfs','nfs']"`
+	FSPathExclude                 []string `toml:"fs_path_exclude" comment:"Exclude file systems by name, disabled by default"`
+	FSPathExcludeRecurse          bool     `toml:"fs_path_exclude_recurse" comment:"Having fs_path_exclude_recurse = false the specified path must match a mountpoint or it will be ignored\nHaving fs_path_exclude_recurse = true the specified path can be any folder and all mountpoints underneath will be excluded"`
+	FSMetrics                     []string `toml:"fs_metrics" comment:"default ['free_B', 'free_percent', 'total_B', 'read_B_per_s', 'write_B_per_s', 'read_ops_per_s', 'write_ops_per_s', 'inodes_used_percent']"`
+	FSIdentifyMountpointsByDevice bool     `toml:"fs_identify_mountpoints_by_device" comment:"To avoid monitoring of so-called mount binds mount points are identified by the path and device name.\nMountpoints pointing to the same device are ignored. What appears first in /proc/self/mountinfo is considered as the original.\nApplies only to Linux"`
 
 	NetInterfaceExclude             []string `toml:"net_interface_exclude" commented:"true"`
 	NetInterfaceExcludeRegex        []string `toml:"net_interface_exclude_regex" comment:"default [\"^vnet(.*)$\", \"^virbr(.*)$\", \"^vmnet(.*)$\", \"^vEthernet(.*)$\"]. On Windows, also \"Pseudo-Interface\" is added to list"`
@@ -162,6 +162,7 @@ func NewConfig() *Config {
 		FSPathExclude:                    []string{},
 		FSPathExcludeRecurse:             false,
 		FSMetrics:                        []string{"free_B", "free_percent", "total_B", "read_B_per_s", "write_B_per_s", "read_ops_per_s", "write_ops_per_s"},
+		FSIdentifyMountpointsByDevice:    true,
 		NetMetrics:                       []string{"in_B_per_s", "out_B_per_s", "total_out_B_per_s", "total_in_B_per_s"},
 		NetInterfaceExcludeDisconnected:  true,
 		NetInterfaceExclude:              []string{},
