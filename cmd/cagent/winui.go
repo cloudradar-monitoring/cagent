@@ -186,7 +186,7 @@ func windowsShowSettingsUI(ca *cagent.Cagent, installationMode bool) {
 	inputFont := Font{PointSize: 12, Family: "Segoe UI"}
 	buttonFont := Font{PointSize: 12, Family: "Segoe UI"}
 
-	MainWindow{
+	err = MainWindow{
 		AssignTo: &ui.MainWindow,
 		Title:    "Cagent",
 		MinSize:  Size{360, 300},
@@ -255,6 +255,10 @@ func windowsShowSettingsUI(ca *cagent.Cagent, installationMode bool) {
 			OnClicked: func() {},
 		}},
 	}.Create()
+
+	if err != nil {
+		panic(err)
+	}
 
 	go func() {
 		ui.CheckPermissions()
