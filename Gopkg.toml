@@ -67,8 +67,12 @@
   version = "1.2.2"
 
 [[constraint]]
-  branch = "master"
+  name = "github.com/lxn/win"
+  revision = "6f00d814e89c2442495334cdd91bb6ff3003eeb7"
+
+[[constraint]]
   name = "github.com/lxn/walk"
+  revision = "6cf0bf1359a5d99a8160321be78b61e7b635e324"
 
 [[constraint]]
   name = "github.com/vcraescu/go-xrandr"

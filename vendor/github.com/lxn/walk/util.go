@@ -13,9 +13,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
-)
 
-import (
 	"github.com/lxn/win"
 )
 
@@ -258,6 +256,21 @@ func applyFontToDescendants(window Window, font *Font) {
 	})
 }
 
+func applyDPIToDescendants(window Window, dpi int) {
+	wb := window.AsWindowBase()
+	wb.ApplyDPI(dpi)
+
+	walkDescendants(window, func(w Window) bool {
+		if w.Handle() == wb.hWnd {
+			return true
+		}
+
+		w.(ApplyDPIer).ApplyDPI(dpi)
+
+		return true
+	})
+}
+
 func walkDescendants(window Window, f func(w Window) bool) {
 	window = window.AsWindowBase().window
 
@@ -265,15 +278,17 @@ func walkDescendants(window Window, f func(w Window) bool) {
 		return
 	}
 
-	var children []Widget
+	var children []*WidgetBase
 
 	switch w := window.(type) {
 	case *NumberEdit:
-		children = append(children, w.edit)
+		if w.edit != nil {
+			children = append(children, w.edit.AsWidgetBase())
+		}
 
 	case *TabWidget:
 		for _, p := range w.Pages().items {
-			children = append(children, p)
+			children = append(children, p.AsWidgetBase())
 		}
 
 	case Container:
@@ -284,8 +299,8 @@ func walkDescendants(window Window, f func(w Window) bool) {
 		}
 	}
 
-	for _, w := range children {
-		walkDescendants(w, f)
+	for _, wb := range children {
+		walkDescendants(wb.window.(Widget), f)
 	}
 }
 
@@ -444,4 +459,88 @@ func less(a, b interface{}, order SortOrder) bool {
 	}
 
 	return false
+}
+
+func dpiForHDC(hdc win.HDC) int {
+	if hwnd := win.WindowFromDC(hdc); hwnd != 0 {
+		return int(win.GetDpiForWindow(hwnd))
+	}
+
+	return int(win.GetDeviceCaps(hdc, win.LOGPIXELSX))
+}
+
+func IntFrom96DPI(value, dpi int) int {
+	return scaleInt(value, float64(dpi)/96.0)
+}
+
+func IntTo96DPI(value, dpi int) int {
+	return scaleInt(value, 96.0/float64(dpi))
+}
+
+func scaleInt(value int, scale float64) int {
+	return int(float64(value) * scale)
+}
+
+func MarginsFrom96DPI(value Margins, dpi int) Margins {
+	return scaleMargins(value, float64(dpi)/96.0)
+}
+
+func MarginsTo96DPI(value Margins, dpi int) Margins {
+	return scaleMargins(value, 96.0/float64(dpi))
+}
+
+func scaleMargins(value Margins, scale float64) Margins {
+	return Margins{
+		HNear: int(float64(value.HNear) * scale),
+		VNear: int(float64(value.VNear) * scale),
+		HFar:  int(float64(value.HFar) * scale),
+		VFar:  int(float64(value.VFar) * scale),
+	}
+}
+
+func PointFrom96DPI(value Point, dpi int) Point {
+	return scalePoint(value, float64(dpi)/96.0)
+}
+
+func PointTo96DPI(value Point, dpi int) Point {
+	return scalePoint(value, 96.0/float64(dpi))
+}
+
+func scalePoint(value Point, scale float64) Point {
+	return Point{
+		X: int(float64(value.X) * scale),
+		Y: int(float64(value.Y) * scale),
+	}
+}
+
+func RectangleFrom96DPI(value Rectangle, dpi int) Rectangle {
+	return scaleRectangle(value, float64(dpi)/96.0)
+}
+
+func RectangleTo96DPI(value Rectangle, dpi int) Rectangle {
+	return scaleRectangle(value, 96.0/float64(dpi))
+}
+
+func scaleRectangle(value Rectangle, scale float64) Rectangle {
+	return Rectangle{
+		X:      int(float64(value.X) * scale),
+		Y:      int(float64(value.Y) * scale),
+		Width:  int(float64(value.Width) * scale),
+		Height: int(float64(value.Height) * scale),
+	}
+}
+
+func SizeFrom96DPI(value Size, dpi int) Size {
+	return scaleSize(value, float64(dpi)/96.0)
+}
+
+func SizeTo96DPI(value Size, dpi int) Size {
+	return scaleSize(value, 96.0/float64(dpi))
+}
+
+func scaleSize(value Size, scale float64) Size {
+	return Size{
+		Width:  int(float64(value.Width) * scale),
+		Height: int(float64(value.Height) * scale),
+	}
 }

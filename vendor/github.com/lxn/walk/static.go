@@ -52,7 +52,7 @@ func (s *static) init(widget Widget, parent Container) error {
 		0,
 		nil,
 	); s.hwndStatic == 0 {
-		return newErr("creating static failed")
+		return newError("creating static failed")
 	}
 
 	s.origStaticWndProcPtr = win.SetWindowLongPtr(s.hwndStatic, win.GWLP_WNDPROC, staticWndProcPtr)
@@ -63,6 +63,8 @@ func (s *static) init(widget Widget, parent Container) error {
 	s.applyFont(s.Font())
 
 	s.SetBackground(nullBrushSingleton)
+
+	s.SetAlignment(AlignHNearVCenter)
 
 	return nil
 }
@@ -78,10 +80,10 @@ func (s *static) Dispose() {
 
 func (s *static) LayoutFlags() LayoutFlags {
 	if s.textAlignment1D() == AlignNear {
-		return GrowableVert
+		return 0
 	}
 
-	return GrowableHorz | GrowableVert
+	return GrowableHorz
 }
 
 func (s *static) MinSizeHint() Size {
@@ -176,7 +178,17 @@ func (s *static) setText(text string) (changed bool, err error) {
 		return false, err
 	}
 
-	return true, s.updateParentLayout()
+	size := s.BoundsPixels().Size()
+
+	if err := s.updateParentLayout(); err != nil {
+		return false, err
+	}
+
+	if s.BoundsPixels().Size() == size && size != (Size{}) {
+		s.updateStaticBounds()
+	}
+
+	return true, nil
 }
 
 func (s *static) TextColor() Color {
@@ -189,6 +201,55 @@ func (s *static) SetTextColor(c Color) {
 	s.Invalidate()
 }
 
+func (s *static) updateStaticBounds() {
+	var format DrawTextFormat
+
+	switch s.textAlignment {
+	case AlignHNearVNear, AlignHNearVCenter, AlignHNearVFar:
+		format |= TextLeft
+
+	case AlignHCenterVNear, AlignHCenterVCenter, AlignHCenterVFar:
+		format |= TextCenter
+
+	case AlignHFarVNear, AlignHFarVCenter, AlignHFarVFar:
+		format |= TextRight
+	}
+
+	switch s.textAlignment {
+	case AlignHNearVNear, AlignHCenterVNear, AlignHFarVNear:
+		format |= TextTop
+
+	case AlignHNearVCenter, AlignHCenterVCenter, AlignHFarVCenter:
+		format |= TextVCenter
+
+	case AlignHNearVFar, AlignHCenterVFar, AlignHFarVFar:
+		format |= TextBottom
+	}
+
+	cb := s.ClientBoundsPixels()
+
+	if format&TextVCenter != 0 || format&TextBottom != 0 {
+		var size Size
+		if _, ok := s.window.(HeightForWidther); ok {
+			size = s.calculateTextSizeForWidth(cb.Width)
+		} else {
+			size = s.calculateTextSize()
+		}
+
+		if format&TextVCenter != 0 {
+			cb.Y += (cb.Height - size.Height) / 2
+		} else {
+			cb.Y += cb.Height - size.Height
+		}
+
+		cb.Height = size.Height
+	}
+
+	win.MoveWindow(s.hwndStatic, int32(cb.X), int32(cb.Y), int32(cb.Width), int32(cb.Height), true)
+
+	s.Invalidate()
+}
+
 func (s *static) WndProc(hwnd win.HWND, msg uint32, wp, lp uintptr) uintptr {
 	switch msg {
 	case win.WM_CTLCOLORSTATIC:
@@ -196,53 +257,8 @@ func (s *static) WndProc(hwnd win.HWND, msg uint32, wp, lp uintptr) uintptr {
 			return hBrush
 		}
 
-	case win.WM_SIZE, win.WM_SIZING:
-		var format DrawTextFormat
-
-		switch s.textAlignment {
-		case AlignHNearVNear, AlignHNearVCenter, AlignHNearVFar:
-			format |= TextLeft
-
-		case AlignHCenterVNear, AlignHCenterVCenter, AlignHCenterVFar:
-			format |= TextCenter
-
-		case AlignHFarVNear, AlignHFarVCenter, AlignHFarVFar:
-			format |= TextRight
-		}
-
-		switch s.textAlignment {
-		case AlignHNearVNear, AlignHCenterVNear, AlignHFarVNear:
-			format |= TextTop
-
-		case AlignHNearVCenter, AlignHCenterVCenter, AlignHFarVCenter:
-			format |= TextVCenter
-
-		case AlignHNearVFar, AlignHCenterVFar, AlignHFarVFar:
-			format |= TextBottom
-		}
-
-		cb := s.ClientBounds()
-
-		if format&TextVCenter != 0 || format&TextBottom != 0 {
-			var size Size
-			if _, ok := s.window.(HeightForWidther); ok {
-				size = s.calculateTextSizeForWidth(cb.Width)
-			} else {
-				size = s.calculateTextSize()
-			}
-
-			if format&TextVCenter != 0 {
-				cb.Y += (cb.Height - size.Height) / 2
-			} else {
-				cb.Y += cb.Height - size.Height
-			}
-
-			cb.Height = size.Height
-		}
-
-		win.MoveWindow(s.hwndStatic, int32(cb.X), int32(cb.Y), int32(cb.Width), int32(cb.Height), true)
-
-		s.Invalidate()
+	case win.WM_SIZE:
+		s.updateStaticBounds()
 	}
 
 	return s.WidgetBase.WndProc(hwnd, msg, wp, lp)

@@ -20,21 +20,24 @@ const (
 )
 
 type BoxLayout struct {
-	container          Container
-	margins            Margins
-	spacing            int
+	LayoutBase
 	orientation        Orientation
 	hwnd2StretchFactor map[win.HWND]int
-	size2MinSize       map[Size]Size
-	resetNeeded        bool
 }
 
 func newBoxLayout(orientation Orientation) *BoxLayout {
-	return &BoxLayout{
+	l := &BoxLayout{
+		LayoutBase: LayoutBase{
+			sizeAndDPI2MinSize: make(map[sizeAndDPI]Size),
+			margins96dpi:       Margins{9, 9, 9, 9},
+			spacing96dpi:       6,
+		},
 		orientation:        orientation,
 		hwnd2StretchFactor: make(map[win.HWND]int),
-		size2MinSize:       make(map[Size]Size),
 	}
+	l.layout = l
+
+	return l
 }
 
 func NewHBoxLayout() *BoxLayout {
@@ -43,42 +46,6 @@ func NewHBoxLayout() *BoxLayout {
 
 func NewVBoxLayout() *BoxLayout {
 	return newBoxLayout(Vertical)
-}
-
-func (l *BoxLayout) Container() Container {
-	return l.container
-}
-
-func (l *BoxLayout) SetContainer(value Container) {
-	if value != l.container {
-		if l.container != nil {
-			l.container.SetLayout(nil)
-		}
-
-		l.container = value
-
-		if value != nil && value.Layout() != Layout(l) {
-			value.SetLayout(l)
-
-			l.Update(true)
-		}
-	}
-}
-
-func (l *BoxLayout) Margins() Margins {
-	return l.margins
-}
-
-func (l *BoxLayout) SetMargins(value Margins) error {
-	if value.HNear < 0 || value.VNear < 0 || value.HFar < 0 || value.VFar < 0 {
-		return newError("margins must be positive")
-	}
-
-	l.margins = value
-
-	l.Update(false)
-
-	return nil
 }
 
 func (l *BoxLayout) Orientation() Orientation {
@@ -95,24 +62,6 @@ func (l *BoxLayout) SetOrientation(value Orientation) error {
 		}
 
 		l.orientation = value
-
-		l.Update(false)
-	}
-
-	return nil
-}
-
-func (l *BoxLayout) Spacing() int {
-	return l.spacing
-}
-
-func (l *BoxLayout) SetSpacing(value int) error {
-	if value != l.spacing {
-		if value < 0 {
-			return newError("spacing cannot be negative")
-		}
-
-		l.spacing = value
 
 		l.Update(false)
 	}
@@ -162,12 +111,12 @@ func (l *BoxLayout) cleanupStretchFactors() {
 }
 
 type widgetInfo struct {
-	index   int
-	minSize int
-	maxSize int
-	stretch int
-	greedy  bool
-	widget  Widget
+	index      int
+	minSize    int
+	maxSize    int
+	stretch    int
+	greedy     bool
+	widgetBase *WidgetBase
 }
 
 type widgetInfoList []widgetInfo
@@ -177,8 +126,8 @@ func (l widgetInfoList) Len() int {
 }
 
 func (l widgetInfoList) Less(i, j int) bool {
-	_, iIsSpacer := l[i].widget.(*Spacer)
-	_, jIsSpacer := l[j].widget.(*Spacer)
+	_, iIsSpacer := l[i].widgetBase.window.(*Spacer)
+	_, jIsSpacer := l[j].widgetBase.window.(*Spacer)
 
 	if l[i].greedy == l[j].greedy {
 		if iIsSpacer == jIsSpacer {
@@ -214,7 +163,7 @@ func (l *BoxLayout) MinSize() Size {
 		return Size{}
 	}
 
-	return l.MinSizeForSize(l.container.ClientBounds().Size())
+	return l.MinSizeForSize(l.container.ClientBoundsPixels().Size())
 }
 
 func (l *BoxLayout) MinSizeForSize(size Size) Size {
@@ -222,13 +171,15 @@ func (l *BoxLayout) MinSizeForSize(size Size) Size {
 		return Size{}
 	}
 
-	if min, ok := l.size2MinSize[size]; ok {
+	dpi := l.container.DPI()
+
+	if min, ok := l.sizeAndDPI2MinSize[sizeAndDPI{size, dpi}]; ok {
 		return min
 	}
 
 	bounds := Rectangle{Width: size.Width, Height: size.Height}
 
-	items, err := boxLayoutItems(widgetsToLayout(l.Container().Children()), l.orientation, bounds, l.margins, l.spacing, l.hwnd2StretchFactor)
+	items, err := boxLayoutItems(widgetsToLayout(l.Container().Children()), l.orientation, l.alignment, bounds, l.margins, l.spacing, l.hwnd2StretchFactor)
 	if err != nil {
 		return Size{}
 	}
@@ -267,7 +218,7 @@ func (l *BoxLayout) MinSizeForSize(size Size) Size {
 	}
 
 	if s.Width > 0 && s.Height > 0 {
-		l.size2MinSize[size] = s
+		l.sizeAndDPI2MinSize[sizeAndDPI{size, dpi}] = s
 	}
 
 	return s
@@ -278,7 +229,7 @@ func (l *BoxLayout) Update(reset bool) error {
 		return nil
 	}
 
-	l.size2MinSize = make(map[Size]Size)
+	l.sizeAndDPI2MinSize = make(map[sizeAndDPI]Size)
 
 	if reset {
 		l.resetNeeded = true
@@ -300,12 +251,16 @@ func (l *BoxLayout) Update(reset bool) error {
 
 	ifContainerIsScrollViewDoCoolSpecialLayoutStuff(l)
 
-	items, err := boxLayoutItems(widgetsToLayout(l.Container().Children()), l.orientation, l.container.ClientBounds(), l.margins, l.spacing, l.hwnd2StretchFactor)
+	items, err := boxLayoutItems(widgetsToLayout(l.Container().Children()), l.orientation, l.alignment, l.container.ClientBoundsPixels(), l.margins, l.spacing, l.hwnd2StretchFactor)
 	if err != nil {
 		return err
 	}
 
-	return applyLayoutResults(l.container, items)
+	if err := applyLayoutResults(l.container, items); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func boxLayoutFlags(orientation Orientation, children *WidgetList) LayoutFlags {
@@ -322,6 +277,12 @@ func boxLayoutFlags(orientation Orientation, children *WidgetList) LayoutFlags {
 
 			if _, ok := widget.(*splitterHandle); ok || !shouldLayoutWidget(widget) {
 				continue
+			}
+
+			if s, ok := widget.(*Spacer); ok {
+				if s.greedyLocallyOnly {
+					continue
+				}
 			}
 
 			f := widget.LayoutFlags()
@@ -352,7 +313,11 @@ func boxLayoutFlags(orientation Orientation, children *WidgetList) LayoutFlags {
 	return flags
 }
 
-func boxLayoutItems(widgets []Widget, orientation Orientation, bounds Rectangle, margins Margins, spacing int, hwnd2StretchFactor map[win.HWND]int) ([]layoutResultItem, error) {
+func boxLayoutItems(widgets []Widget, orientation Orientation, alignment Alignment2D, bounds Rectangle, margins Margins, spacing int, hwnd2StretchFactor map[win.HWND]int) ([]layoutResultItem, error) {
+	if len(widgets) == 0 {
+		return nil, nil
+	}
+
 	var greedyNonSpacerCount int
 	var greedySpacerCount int
 	var stretchFactorsTotal [3]int
@@ -374,7 +339,7 @@ func boxLayoutItems(widgets []Widget, orientation Orientation, bounds Rectangle,
 
 		flags := widget.LayoutFlags()
 
-		max := widget.MaxSize()
+		max := widget.MaxSizePixels()
 		pref := widget.SizeHint()
 
 		if orientation == Horizontal {
@@ -419,7 +384,7 @@ func boxLayoutItems(widgets []Widget, orientation Orientation, bounds Rectangle,
 		sortedWidgetInfo[i].minSize = minSizes[i]
 		sortedWidgetInfo[i].maxSize = maxSizes[i]
 		sortedWidgetInfo[i].stretch = sf
-		sortedWidgetInfo[i].widget = widget
+		sortedWidgetInfo[i].widgetBase = widget.AsWidgetBase()
 
 		minSizesRemaining += minSizes[i]
 
@@ -490,10 +455,10 @@ func boxLayoutItems(widgets []Widget, orientation Orientation, bounds Rectangle,
 	results := make([]layoutResultItem, 0, len(widgets))
 
 	excessTotal := space1 - minSizesRemaining - spacingRemaining
-	excessShare := excessTotal / (len(widgets) + 1)
+	excessShare := excessTotal / len(widgets)
+	halfExcessShare := excessTotal / (len(widgets) * 2)
 	p1 := start1
 	for i, widget := range widgets {
-		p1 += excessShare
 		s1 := sizes[i]
 
 		var s2 int
@@ -503,13 +468,85 @@ func boxLayoutItems(widgets []Widget, orientation Orientation, bounds Rectangle,
 			s2 = prefSizes2[i]
 		}
 
-		p2 := start2 + (space2-s2)/2
+		align := widget.Alignment()
+		if align == AlignHVDefault {
+			align = alignment
+		}
 
-		var x, y, w, h int
+		var x, y, w, h, p2 int
 		if orientation == Horizontal {
+			switch align {
+			case AlignHNearVNear, AlignHNearVCenter, AlignHNearVFar:
+				// nop
+
+			case AlignHFarVNear, AlignHFarVCenter, AlignHFarVFar:
+				p1 += excessShare
+
+			default:
+				p1 += halfExcessShare
+			}
+
+			switch align {
+			case AlignHNearVNear, AlignHCenterVNear, AlignHFarVNear:
+				p2 = start2
+
+			case AlignHNearVFar, AlignHCenterVFar, AlignHFarVFar:
+				p2 = start2 + space2 - s2
+
+			default:
+				p2 = start2 + (space2-s2)/2
+			}
+
 			x, y, w, h = p1, p2, s1, s2
 		} else {
+			switch align {
+			case AlignHNearVNear, AlignHCenterVNear, AlignHFarVNear:
+				// nop
+
+			case AlignHNearVFar, AlignHCenterVFar, AlignHFarVFar:
+				p1 += excessShare
+
+			default:
+				p1 += halfExcessShare
+			}
+
+			switch align {
+			case AlignHNearVNear, AlignHNearVCenter, AlignHNearVFar:
+				p2 = start2
+
+			case AlignHFarVNear, AlignHFarVCenter, AlignHFarVFar:
+				p2 = start2 + space2 - s2
+
+			default:
+				p2 = start2 + (space2-s2)/2
+			}
+
 			x, y, w, h = p2, p1, s2, s1
+		}
+
+		if orientation == Horizontal {
+			switch align {
+			case AlignHNearVNear, AlignHNearVCenter, AlignHNearVFar:
+				p1 += excessShare
+
+			case AlignHFarVNear, AlignHFarVCenter, AlignHFarVFar:
+				// nop
+
+			default:
+				p1 += halfExcessShare
+			}
+
+		} else {
+			switch align {
+			case AlignHNearVNear, AlignHCenterVNear, AlignHFarVNear:
+				p1 += excessShare
+
+			case AlignHNearVFar, AlignHCenterVFar, AlignHFarVFar:
+				// nop
+
+			default:
+				p1 += halfExcessShare
+			}
 		}
 
 		p1 += s1 + spacing

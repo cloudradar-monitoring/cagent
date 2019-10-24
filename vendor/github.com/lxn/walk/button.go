@@ -9,6 +9,7 @@ package walk
 import (
 	"fmt"
 	"strconv"
+	"unsafe"
 
 	"github.com/lxn/win"
 )
@@ -85,30 +86,30 @@ func (b *Button) init() {
 		b.textChangedPublisher.Event()))
 }
 
+func (b *Button) MinSizeHint() Size {
+	var s win.SIZE
+
+	b.SendMessage(win.BCM_GETIDEALSIZE, 0, uintptr(unsafe.Pointer(&s)))
+
+	return maxSize(Size{int(s.CX), int(s.CY)}, b.dialogBaseUnitsToPixels(Size{50, 14}))
+}
+
 func (b *Button) Image() Image {
 	return b.image
 }
 
 func (b *Button) SetImage(image Image) error {
-	var typ uintptr
 	var handle uintptr
-	switch img := image.(type) {
-	case nil:
-		// zeroes are good
+	if image != nil {
+		bmp, err := iconCache.Bitmap(image, b.DPI())
+		if err != nil {
+			return err
+		}
 
-	case *Bitmap:
-		typ = win.IMAGE_BITMAP
-		handle = uintptr(img.hBmp)
-
-	case *Icon:
-		typ = win.IMAGE_ICON
-		handle = uintptr(img.hIcon)
-
-	default:
-		return newError("image must be either *walk.Bitmap or *walk.Icon")
+		handle = uintptr(bmp.hBmp)
 	}
 
-	b.SendMessage(win.BM_SETIMAGE, typ, handle)
+	b.SendMessage(win.BM_SETIMAGE, win.IMAGE_BITMAP, handle)
 
 	b.image = image
 

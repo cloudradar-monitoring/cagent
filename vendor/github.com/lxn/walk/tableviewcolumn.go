@@ -25,6 +25,7 @@ type TableViewColumn struct {
 	titleOverride string
 	width         int
 	lessFunc      func(i, j int) bool
+	formatFunc    func(value interface{}) string
 	visible       bool
 	frozen        bool
 }
@@ -297,7 +298,7 @@ func (tvc *TableViewColumn) Width() int {
 		return tvc.width
 	}
 
-	return int(tvc.sendMessage(win.LVM_GETCOLUMNWIDTH, uintptr(tvc.indexInListView()), 0))
+	return tvc.tv.IntTo96DPI(int(tvc.sendMessage(win.LVM_GETCOLUMNWIDTH, uintptr(tvc.indexInListView()), 0)))
 }
 
 // SetWidth sets the width of the column in pixels.
@@ -330,6 +331,16 @@ func (tvc *TableViewColumn) LessFunc() func(i, j int) bool {
 // This function is used to provide custom sorting for models based on ReflectTableModel only.
 func (tvc *TableViewColumn) SetLessFunc(lessFunc func(i, j int) bool) {
 	tvc.lessFunc = lessFunc
+}
+
+// FormatFunc returns the custom format func of this TableViewColumn.
+func (tvc *TableViewColumn) FormatFunc() func(value interface{}) string {
+	return tvc.formatFunc
+}
+
+// FormatFunc sets the custom format func of this TableViewColumn.
+func (tvc *TableViewColumn) SetFormatFunc(formatFunc func(value interface{}) string) {
+	tvc.formatFunc = formatFunc
 }
 
 func (tvc *TableViewColumn) indexInListView() int32 {
@@ -369,6 +380,7 @@ func (tvc *TableViewColumn) create() error {
 	} else {
 		lvc.Cx = 100
 	}
+	lvc.Cx = int32(tvc.tv.IntFrom96DPI(int(lvc.Cx)))
 
 	switch tvc.alignment {
 	case AlignCenter:
@@ -420,10 +432,15 @@ func (tvc *TableViewColumn) update() error {
 func (tvc *TableViewColumn) getLVCOLUMN() *win.LVCOLUMN {
 	var lvc win.LVCOLUMN
 
+	width := tvc.width
+	if tvc.tv != nil {
+		width = tvc.tv.IntFrom96DPI(width)
+	}
+
 	lvc.Mask = win.LVCF_FMT | win.LVCF_WIDTH | win.LVCF_TEXT | win.LVCF_SUBITEM
 	lvc.ISubItem = int32(tvc.indexInListView())
 	lvc.PszText = syscall.StringToUTF16Ptr(tvc.TitleEffective())
-	lvc.Cx = int32(tvc.width)
+	lvc.Cx = int32(width)
 
 	switch tvc.alignment {
 	case AlignCenter:

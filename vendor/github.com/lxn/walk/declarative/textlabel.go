@@ -13,6 +13,7 @@ import (
 type Alignment2D uint
 
 const (
+	AlignHVDefault      = Alignment2D(walk.AlignHVDefault)
 	AlignHNearVNear     = Alignment2D(walk.AlignHNearVNear)
 	AlignHCenterVNear   = Alignment2D(walk.AlignHCenterVNear)
 	AlignHFarVNear      = Alignment2D(walk.AlignHFarVNear)
@@ -29,6 +30,7 @@ type TextLabel struct {
 
 	Background         Brush
 	ContextMenuItems   []MenuItem
+	DoubleBuffering    bool
 	Enabled            Property
 	Font               Font
 	MaxSize            Size
@@ -49,6 +51,7 @@ type TextLabel struct {
 
 	// Widget
 
+	Alignment          Alignment2D
 	AlwaysConsumeSpace bool
 	Column             int
 	ColumnSpan         int

@@ -202,6 +202,10 @@ func (b *Builder) InitWidget(d Widget, w walk.Window, customInit func() error) e
 		w.SizeChanged().Attach(handler)
 	}
 
+	if db := b.bool("DoubleBuffering"); db {
+		w.SetDoubleBuffering(true)
+	}
+
 	if rtl := b.bool("RightToLeftReading"); rtl {
 		w.SetRightToLeftReading(true)
 	}
@@ -211,7 +215,16 @@ func (b *Builder) InitWidget(d Widget, w walk.Window, customInit func() error) e
 	column := b.int("Column")
 	columnSpan := b.int("ColumnSpan")
 
+	rowBackup := row
+	columnBackup := column
+
 	if widget, ok := w.(walk.Widget); ok {
+		if alignment := b.alignment(); alignment != AlignHVDefault {
+			if err := widget.SetAlignment(walk.Alignment2D(alignment)); err != nil {
+				return err
+			}
+		}
+
 		if err := widget.SetAlwaysConsumeSpace(b.bool("AlwaysConsumeSpace")); err != nil {
 			return err
 		}
@@ -332,10 +345,13 @@ func (b *Builder) InitWidget(d Widget, w walk.Window, customInit func() error) e
 
 		if layout != nil {
 			if g, ok := layout.(Grid); ok {
+				rowBackup = b.row
+				columnBackup = b.col
+
 				rows := b.rows
 				columns := b.columns
 				defer func() {
-					b.rows, b.columns, b.row, b.col = rows, columns, row, column+columnSpan
+					b.rows, b.columns, b.row, b.col = rows, columns, rowBackup+rowSpan, columnBackup+columnSpan
 				}()
 
 				b.rows = g.Rows
@@ -415,6 +431,16 @@ func (b *Builder) InitWidget(d Widget, w walk.Window, customInit func() error) e
 	succeeded = true
 
 	return nil
+}
+
+func (b *Builder) alignment() Alignment2D {
+	fieldValue := b.widgetValue.FieldByName("Alignment")
+
+	if fieldValue.IsValid() {
+		return fieldValue.Interface().(Alignment2D)
+	}
+
+	return AlignHVDefault
 }
 
 func (b *Builder) bool(fieldName string) bool {
@@ -681,6 +707,10 @@ func (se subExpressions) Get(name string) (interface{}, error) {
 	}
 
 	return nil, fmt.Errorf(`invalid sub expression: "%s"`, name)
+}
+
+func (e *expression) String() string {
+	return e.text
 }
 
 func (e *expression) Value() interface{} {
