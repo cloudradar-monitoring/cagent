@@ -110,7 +110,7 @@ type Config struct {
 	SMARTCtl        string          `toml:"smartctl" comment:"Path to a smartctl binary (smartctl.exe on windows, path must be escaped) version >= 7\nSee https://docs.cloudradar.io/configuring-hosts/installing-agents/troubleshoot-s.m.a.r.t-monitoring\nsmartctl = \"C:\\\\Program Files\\\\smartmontools\\\\bin\\\\smartctl.exe\"\nsmartctl = \"/usr/local/bin/smartctl\""`
 	Logs            LogsFilesConfig `toml:"logs,omitempty"`
 
-	StorCLI StorCLIConfig `toml:"storcli,omitempty" comment:"Enable monitoring of hardware health for MegaRaids\nreported by the storcli command-line tool\nRefer to https://docs.cloudradar.io/cagent/modules#storcli\nOn Linux make sure a sudo rule exists. The storcli command is always executed via sudo. Example:\ncagent ALL= NOPASSWD: /opt/MegaRAID/storcli/storcli64 /c[0-9] show all J"`
+	StorCLI StorCLIConfig `toml:"storcli,omitempty" comment:"Enable monitoring of hardware health for MegaRaids\nreported by the storcli command-line tool\nRefer to https://docs.cloudradar.io/cagent/modules#storcli\nOn Linux make sure a sudo rule exists. The storcli command is always executed via sudo. Example:\ncagent ALL= NOPASSWD: /opt/MegaRAID/storcli/storcli64 /call show all J"`
 }
 
 type CPUUtilisationAnalysisConfig struct {
@@ -123,7 +123,7 @@ type CPUUtilisationAnalysisConfig struct {
 }
 
 type StorCLIConfig struct {
-	BinaryPath string `toml:"binary" comment:"Enable on Windows:\n  binary = 'C:\\\\Program Files\\\\storcli\\\\storcli64.exe'\nEnable on Linux:\n  binary = '/opt/storcli/sbin/storcli64'"`
+	BinaryPath string `toml:"binary" comment:"Enable on Windows:\n  binary = 'C:\\Program Files\\storcli\\storcli64.exe'\nEnable on Linux:\n  binary = '/opt/storcli/sbin/storcli64'"`
 }
 
 func init() {

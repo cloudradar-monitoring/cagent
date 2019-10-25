@@ -74,9 +74,9 @@ temperature_monitoring = true # default true
 # reported by the storcli command-line tool
 # Refer to https://docs.cloudradar.io/cagent/modules#storcli
 # On Linux make sure a sudo rule exists. The storcli command is always executed via sudo. Example sudo rule:
-# cagent ALL= NOPASSWD: /opt/MegaRAID/storcli/storcli64 /c[0-9] show all J
+# cagent ALL= NOPASSWD: /opt/MegaRAID/storcli/storcli64 /call show all J
 [storcli]
-  # Enable on Windows (use double slashes):
-  #   binary = "C:\\Program Files\storcli\storcli64.exe"
+  # Enable on Windows:
+  #   binary = 'C:\Program Files\storcli\storcli64.exe'
   # Enable on Linux:
-  binary = "/opt/storcli/sbin/storcli64"
+  binary = '/opt/storcli/sbin/storcli64'
