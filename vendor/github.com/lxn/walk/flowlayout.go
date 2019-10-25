@@ -11,12 +11,8 @@ import (
 )
 
 type FlowLayout struct {
-	container          Container
+	LayoutBase
 	hwnd2StretchFactor map[win.HWND]int
-	margins            Margins
-	size2MinSize       map[Size]Size
-	spacing            int
-	resetNeeded        bool
 }
 
 type flowLayoutSection struct {
@@ -31,59 +27,17 @@ type flowLayoutSectionItem struct {
 }
 
 func NewFlowLayout() *FlowLayout {
-	return &FlowLayout{size2MinSize: make(map[Size]Size)}
-}
-
-func (l *FlowLayout) Container() Container {
-	return l.container
-}
-
-func (l *FlowLayout) SetContainer(value Container) {
-	if value != l.container {
-		if l.container != nil {
-			l.container.SetLayout(nil)
-		}
-
-		l.container = value
-
-		if value != nil && value.Layout() != Layout(l) {
-			value.SetLayout(l)
-
-			l.Update(true)
-		}
+	l := &FlowLayout{
+		LayoutBase: LayoutBase{
+			sizeAndDPI2MinSize: make(map[sizeAndDPI]Size),
+			margins96dpi:       Margins{9, 9, 9, 9},
+			spacing96dpi:       6,
+		},
+		hwnd2StretchFactor: make(map[win.HWND]int),
 	}
-}
+	l.layout = l
 
-func (l *FlowLayout) Margins() Margins {
-	return l.margins
-}
-
-func (l *FlowLayout) SetMargins(value Margins) error {
-	if value.HNear < 0 || value.VNear < 0 || value.HFar < 0 || value.VFar < 0 {
-		return newError("margins must be positive")
-	}
-
-	l.margins = value
-
-	return nil
-}
-
-func (l *FlowLayout) Spacing() int {
-	return l.spacing
-}
-
-func (l *FlowLayout) SetSpacing(value int) error {
-	if value != l.spacing {
-		if value < 0 {
-			return newError("spacing cannot be negative")
-		}
-
-		l.spacing = value
-
-		l.Update(false)
-	}
-
-	return nil
+	return l
 }
 
 func (l *FlowLayout) StretchFactor(widget Widget) int {
@@ -136,7 +90,7 @@ func (l *FlowLayout) MinSize() Size {
 		return Size{}
 	}
 
-	return l.MinSizeForSize(l.container.ClientBounds().Size())
+	return l.MinSizeForSize(l.container.ClientBoundsPixels().Size())
 }
 
 func (l *FlowLayout) MinSizeForSize(size Size) Size {
@@ -144,7 +98,9 @@ func (l *FlowLayout) MinSizeForSize(size Size) Size {
 		return Size{}
 	}
 
-	if min, ok := l.size2MinSize[size]; ok {
+	dpi := l.container.DPI()
+
+	if min, ok := l.sizeAndDPI2MinSize[sizeAndDPI{size, dpi}]; ok {
 		return min
 	}
 
@@ -176,7 +132,7 @@ func (l *FlowLayout) MinSizeForSize(size Size) Size {
 			margins.VFar = 0
 		}
 
-		layoutItems, err := boxLayoutItems(widgets, Horizontal, bounds, margins, l.spacing, l.hwnd2StretchFactor)
+		layoutItems, err := boxLayoutItems(widgets, Horizontal, l.alignment, bounds, margins, l.spacing, l.hwnd2StretchFactor)
 		if err != nil {
 			return Size{}
 		}
@@ -206,7 +162,7 @@ func (l *FlowLayout) MinSizeForSize(size Size) Size {
 	s.Height += l.margins.VNear + l.margins.VFar + (len(sections)-1)*l.spacing
 
 	if s.Width > 0 && s.Height > 0 {
-		l.size2MinSize[size] = s
+		l.sizeAndDPI2MinSize[sizeAndDPI{size, dpi}] = s
 	}
 
 	return s
@@ -217,7 +173,7 @@ func (l *FlowLayout) Update(reset bool) error {
 		return nil
 	}
 
-	l.size2MinSize = make(map[Size]Size)
+	l.sizeAndDPI2MinSize = make(map[sizeAndDPI]Size)
 
 	if reset {
 		l.resetNeeded = true
@@ -239,7 +195,7 @@ func (l *FlowLayout) Update(reset bool) error {
 
 	ifContainerIsScrollViewDoCoolSpecialLayoutStuff(l)
 
-	bounds := l.container.ClientBounds()
+	bounds := l.container.ClientBoundsPixels()
 	sections := l.sectionsForPrimarySize(bounds.Width)
 
 	for i, section := range sections {
@@ -258,7 +214,7 @@ func (l *FlowLayout) Update(reset bool) error {
 			margins.VFar = 0
 		}
 
-		layoutItems, err := boxLayoutItems(widgets, Horizontal, bounds, margins, l.spacing, l.hwnd2StretchFactor)
+		layoutItems, err := boxLayoutItems(widgets, Horizontal, l.alignment, bounds, margins, l.spacing, l.hwnd2StretchFactor)
 		if err != nil {
 			return err
 		}
@@ -277,7 +233,7 @@ func (l *FlowLayout) Update(reset bool) error {
 
 		bounds.Height = maxSecondary + margins.VNear + margins.VFar
 
-		if layoutItems, err = boxLayoutItems(widgets, Horizontal, bounds, margins, l.spacing, l.hwnd2StretchFactor); err != nil {
+		if layoutItems, err = boxLayoutItems(widgets, Horizontal, l.alignment, bounds, margins, l.spacing, l.hwnd2StretchFactor); err != nil {
 			return err
 		}
 

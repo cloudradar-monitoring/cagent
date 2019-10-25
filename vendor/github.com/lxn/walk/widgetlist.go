@@ -20,13 +20,13 @@ type widgetListObserver interface {
 }
 
 type WidgetList struct {
-	items         []Widget
-	observer      widgetListObserver
-	removingIndex int
+	items           []*WidgetBase
+	observer        widgetListObserver
+	widgetInRemoval *WidgetBase
 }
 
 func newWidgetList(observer widgetListObserver) *WidgetList {
-	return &WidgetList{observer: observer, removingIndex: -1}
+	return &WidgetList{observer: observer}
 }
 
 func (l *WidgetList) Add(item Widget) error {
@@ -34,7 +34,7 @@ func (l *WidgetList) Add(item Widget) error {
 }
 
 func (l *WidgetList) At(index int) Widget {
-	return l.items[index]
+	return l.items[index].window.(Widget)
 }
 
 func (l *WidgetList) Clear() error {
@@ -59,8 +59,10 @@ func (l *WidgetList) Clear() error {
 }
 
 func (l *WidgetList) Index(item Widget) int {
+	wb := item.AsWidgetBase()
+
 	for i, widget := range l.items {
-		if widget == item {
+		if widget == wb {
 			return i
 		}
 	}
@@ -89,7 +91,7 @@ func (l *WidgetList) containsHandle(handle win.HWND) bool {
 func (l *WidgetList) insertIntoSlice(index int, item Widget) {
 	l.items = append(l.items, nil)
 	copy(l.items[index+1:], l.items[index:])
-	l.items[index] = item
+	l.items[index] = item.AsWidgetBase()
 }
 
 func (l *WidgetList) Insert(index int, item Widget) error {
@@ -130,19 +132,22 @@ func (l *WidgetList) Remove(item Widget) error {
 }
 
 func (l *WidgetList) RemoveAt(index int) error {
-	if index == l.removingIndex {
+	item := l.items[index]
+
+	if item == l.widgetInRemoval {
 		return nil
 	}
 
 	observer := l.observer
-	item := l.items[index]
+	widget := item.window.(Widget)
+
 	if observer != nil {
-		l.removingIndex = index
+		l.widgetInRemoval = item
 		defer func() {
-			l.removingIndex = -1
+			l.widgetInRemoval = nil
 		}()
 
-		if err := observer.onRemovingWidget(index, item); err != nil {
+		if err := observer.onRemovingWidget(index, widget); err != nil {
 			return err
 		}
 	}
@@ -150,8 +155,8 @@ func (l *WidgetList) RemoveAt(index int) error {
 	l.items = append(l.items[:index], l.items[index+1:]...)
 
 	if observer != nil {
-		if err := observer.onRemovedWidget(index, item); err != nil {
-			l.insertIntoSlice(index, item)
+		if err := observer.onRemovedWidget(index, widget); err != nil {
+			l.insertIntoSlice(index, widget)
 			return err
 		}
 	}

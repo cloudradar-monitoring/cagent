@@ -15,6 +15,7 @@ type NumberEdit struct {
 
 	Background         Brush
 	ContextMenuItems   []MenuItem
+	DoubleBuffering    bool
 	Enabled            Property
 	Font               Font
 	MaxSize            Size
@@ -35,6 +36,7 @@ type NumberEdit struct {
 
 	// Widget
 
+	Alignment          Alignment2D
 	AlwaysConsumeSpace bool
 	Column             int
 	ColumnSpan         int
@@ -76,7 +78,7 @@ func (ne NumberEdit) Create(builder *Builder) error {
 		}
 
 		inc := ne.Increment
-		if inc <= 0 {
+		if inc == 0 {
 			inc = 1
 		}
 

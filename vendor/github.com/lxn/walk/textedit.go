@@ -92,7 +92,7 @@ func (te *TextEdit) SetText(value string) (err error) {
 	return
 }
 
-func (te *TextEdit) Alignment() Alignment1D {
+func (te *TextEdit) TextAlignment() Alignment1D {
 	switch win.GetWindowLong(te.hWnd, win.GWL_STYLE) & (win.ES_LEFT | win.ES_CENTER | win.ES_RIGHT) {
 	case win.ES_CENTER:
 		return AlignCenter
@@ -104,7 +104,7 @@ func (te *TextEdit) Alignment() Alignment1D {
 	return AlignNear
 }
 
-func (te *TextEdit) SetAlignment(alignment Alignment1D) error {
+func (te *TextEdit) SetTextAlignment(alignment Alignment1D) error {
 	if alignment == AlignDefault {
 		alignment = AlignNear
 	}
@@ -131,6 +131,10 @@ func (te *TextEdit) MaxLength() int {
 
 func (te *TextEdit) SetMaxLength(value int) {
 	te.SendMessage(win.EM_SETLIMITTEXT, uintptr(value), 0)
+}
+
+func (te *TextEdit) ScrollToCaret() {
+	te.SendMessage(win.EM_SCROLLCARET, 0, 0)
 }
 
 func (te *TextEdit) TextSelection() (start, end int) {

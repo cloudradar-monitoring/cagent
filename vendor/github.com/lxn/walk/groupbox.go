@@ -25,6 +25,7 @@ type GroupBox struct {
 	hWndGroupBox          win.HWND
 	checkBox              *CheckBox
 	composite             *Composite
+	headerHeight          int
 	titleChangedPublisher EventPublisher
 }
 
@@ -56,6 +57,7 @@ func NewGroupBox(parent Container) (*GroupBox, error) {
 	}
 
 	setWindowFont(gb.hWndGroupBox, gb.Font())
+	gb.updateHeaderHeight()
 
 	var err error
 
@@ -133,7 +135,7 @@ func (gb *GroupBox) MinSizeHint() Size {
 		cmsh.Height += s.Height
 	}
 
-	return Size{cmsh.Width + 2, cmsh.Height + 14}
+	return Size{cmsh.Width + 2, cmsh.Height + gb.headerHeight}
 }
 
 func (gb *GroupBox) SizeHint() Size {
@@ -154,10 +156,10 @@ func (gb *GroupBox) HeightForWidth(width int) int {
 		cmsh.Height += s.Height
 	}
 
-	return cmsh.Height + 14
+	return cmsh.Height + gb.headerHeight
 }
 
-func (gb *GroupBox) ClientBounds() Rectangle {
+func (gb *GroupBox) ClientBoundsPixels() Rectangle {
 	cb := windowClientBounds(gb.hWndGroupBox)
 
 	if gb.Layout() == nil {
@@ -171,8 +173,11 @@ func (gb *GroupBox) ClientBounds() Rectangle {
 		cb.Height -= s.Height
 	}
 
-	// FIXME: Use appropriate margins
-	return Rectangle{cb.X + 1, cb.Y + 14, cb.Width - 2, cb.Height - 14}
+	return Rectangle{cb.X + 1, cb.Y + gb.headerHeight, cb.Width - 2, cb.Height - gb.headerHeight}
+}
+
+func (gb *GroupBox) updateHeaderHeight() {
+	gb.headerHeight = gb.calculateTextSizeImpl("gM").Height
 }
 
 func (gb *GroupBox) Persistent() bool {
@@ -231,6 +236,8 @@ func (gb *GroupBox) applyFont(font *Font) {
 	if gb.composite != nil {
 		gb.composite.applyFont(font)
 	}
+
+	gb.updateHeaderHeight()
 }
 
 func (gb *GroupBox) SetSuspended(suspend bool) {
@@ -346,7 +353,7 @@ func (gb *GroupBox) WndProc(hwnd win.HWND, msg uint32, wParam, lParam uintptr) u
 			win.UpdateWindow(gb.checkBox.hWnd)
 
 		case win.WM_SIZE, win.WM_SIZING:
-			wbcb := gb.WidgetBase.ClientBounds()
+			wbcb := gb.WidgetBase.ClientBoundsPixels()
 			if !win.MoveWindow(
 				gb.hWndGroupBox,
 				int32(wbcb.X),
@@ -361,11 +368,18 @@ func (gb *GroupBox) WndProc(hwnd win.HWND, msg uint32, wParam, lParam uintptr) u
 
 			if gb.Checkable() {
 				s := gb.checkBox.SizeHint()
-				gb.checkBox.SetBounds(Rectangle{9, 14, s.Width, s.Height})
+				var x int
+				if l := gb.Layout(); l != nil {
+					x = l.Margins().HNear
+				} else {
+					x = gb.headerHeight * 2 / 3
+				}
+				gb.checkBox.SetBoundsPixels(Rectangle{x, gb.headerHeight, s.Width, s.Height})
 			}
 
-			gbcb := gb.ClientBounds()
-			gb.composite.SetBounds(gbcb)
+			gbcb := gb.ClientBoundsPixels()
+			gbcb.Height -= 2
+			gb.composite.SetBoundsPixels(gbcb)
 		}
 	}
 
