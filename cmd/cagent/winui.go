@@ -189,8 +189,8 @@ func windowsShowSettingsUI(ca *cagent.Cagent, installationMode bool) {
 	err = MainWindow{
 		AssignTo: &ui.MainWindow,
 		Title:    "Cagent",
-		MinSize:  Size{360, 300},
-		MaxSize:  Size{660, 300},
+		MinSize:  Size{Width: 360, Height: 300},
+		MaxSize:  Size{Width: 660, Height: 300},
 
 		DataBinder: DataBinder{
 			AssignTo:       &ui.DataBinder,
@@ -236,7 +236,7 @@ func windowsShowSettingsUI(ca *cagent.Cagent, installationMode bool) {
 				Layout: HBox{},
 				Children: []Widget{
 					ToolButton{
-						MinSize:            Size{380, 35},
+						MinSize:            Size{Width: 380, Height: 35},
 						AlwaysConsumeSpace: true,
 						AssignTo:           &ui.SaveButton,
 						Text:               "Test and Save",
@@ -319,7 +319,6 @@ func waitServiceState(ctx context.Context, s *mgr.Service, expectedState svc.Sta
 			time.Sleep(300 * time.Millisecond)
 		}
 	}
-	return nil
 }
 
 func (ui *UI) CheckPermissions() {
@@ -350,7 +349,7 @@ func RunDialog(owner walk.Form, icon *walk.Icon, title, text string, callback fu
 		AssignTo:      &dlg,
 		Title:         title,
 		DefaultButton: &acceptPB,
-		MaxSize:       Size{320, 180},
+		MaxSize:       Size{Width: 320, Height: 180},
 		Font:          font,
 		Layout:        VBox{},
 		Children: []Widget{
@@ -362,7 +361,7 @@ func RunDialog(owner walk.Form, icon *walk.Icon, title, text string, callback fu
 					},
 					VSpacer{},
 					TextLabel{
-						MaxSize: Size{320, 180},
+						MaxSize: Size{Width: 320, Height: 180},
 						Text:    text,
 						Font:    font,
 					},
