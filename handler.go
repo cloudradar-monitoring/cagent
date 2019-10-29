@@ -258,12 +258,6 @@ func (ca *Cagent) CollectMeasurements(full bool) (common.MeasurementsMap, error)
 			}
 		})
 
-		if runtime.GOOS == "linux" {
-			raid, err := ca.RaidState()
-			errCollector.Add(err)
-			measurements = measurements.AddWithPrefix("raid.", raid)
-		}
-
 		if runtime.GOOS == "windows" {
 			wu, err := ca.WindowsUpdatesWatcher().WindowsUpdates()
 			errCollector.Add(err)

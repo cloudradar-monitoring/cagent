@@ -33,13 +33,13 @@ type msAcpi_ThermalZoneTemperature struct {
 func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
 	loaded, err := hwinfolib.TryLoadLibrary()
 	if err != nil {
-		logger.WithError(err).Debug("error while loading hwinfo lib")
+		log.WithError(err).Debug("error while loading hwinfo lib")
 	}
 
 	if loaded {
 		results, err := readTemperatureFromHwinfoLib()
 		if err != nil {
-			logger.WithError(err).Error("cannot read temperature from hwinfo lib")
+			log.WithError(err).Error("cannot read temperature from hwinfo lib")
 			return results, nil
 		}
 		return results, nil
@@ -52,7 +52,7 @@ func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
 func Shutdown() {
 	err := hwinfolib.DeInit()
 	if err != nil {
-		logger.WithError(err).Debugf("while trying to DeInit the hwinfo lib")
+		log.WithError(err).Debugf("while trying to DeInit the hwinfo lib")
 	}
 }
 
@@ -67,19 +67,19 @@ func readTemperatureFromHwinfoLib() ([]*TemperatureSensorInfo, error) {
 	for deviceIndex := 0; deviceIndex < devicesCount; deviceIndex++ {
 		err = hwinfolib.ReadDataFromSensor(deviceIndex)
 		if err != nil {
-			logger.WithError(err).Debugf("while trying to ReadDataFromSensor %d", deviceIndex)
+			log.WithError(err).Debugf("while trying to ReadDataFromSensor %d", deviceIndex)
 			continue
 		}
 		deviceName, err := hwinfolib.GetSensorName(deviceIndex)
 		if err != nil {
-			logger.WithError(err).Debugf("while trying to GetSensorName %d", deviceIndex)
+			log.WithError(err).Debugf("while trying to GetSensorName %d", deviceIndex)
 			continue
 		}
 
 		for sensorIndex := 0; sensorIndex < 512; sensorIndex++ {
 			sensorName, temperature, err := hwinfolib.GetTemperature(deviceIndex, sensorIndex)
 			if err != nil {
-				logger.WithError(err).Debugf("while trying to GetTemperature (%s) %d, %d", deviceName, deviceIndex, sensorIndex)
+				log.WithError(err).Debugf("while trying to GetTemperature (%s) %d, %d", deviceName, deviceIndex, sensorIndex)
 				continue
 			}
 			if sensorName == "" {
@@ -103,7 +103,7 @@ func readWMITemperatureSensors() ([]*TemperatureSensorInfo, error) {
 
 	err := wmiutil.QueryWithTimeout(readTimeout, query, &thermalSensors, wmiConnectServerArgs...)
 	if err != nil {
-		l := logger.WithError(err)
+		l := log.WithError(err)
 		errText := strings.ToLower(err.Error())
 		if strings.Contains(errText, "not supported") {
 			l.Debugf("not supported by BIOS or driver is required")

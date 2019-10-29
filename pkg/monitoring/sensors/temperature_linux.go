@@ -30,14 +30,14 @@ func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
 	var temperatures []*TemperatureSensorInfo
 	files, err := filepath.Glob(common.HostSys("/class/hwmon/hwmon*/temp*_*"))
 	if err != nil {
-		logger.WithError(err).Error("failed to list sensors")
+		log.WithError(err).Error("failed to list sensors")
 		return temperatures, err
 	}
 	if len(files) == 0 {
 		// CentOS has an intermediate /device directory:
 		files, err = filepath.Glob(common.HostSys("/class/hwmon/hwmon*/device/temp*_*"))
 		if err != nil {
-			logger.WithError(err).Error("failed to list sensors")
+			log.WithError(err).Error("failed to list sensors")
 			return temperatures, err
 		}
 	}
@@ -62,7 +62,7 @@ func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
 
 		nameBytes, err := ioutil.ReadFile(filepath.Join(filepath.Dir(file), "name"))
 		if err != nil {
-			logger.WithError(err).Debug("could not read 'name' file")
+			log.WithError(err).Debug("could not read 'name' file")
 			continue
 		}
 		name := strings.TrimSpace(string(nameBytes))
@@ -70,7 +70,7 @@ func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
 		temperature, err := readTemperatureFromFile(name, file)
 		if err != nil {
 			if err != errTemperatureNotAvailable {
-				logger.WithError(err).Debugf("could not read temperature from file: %s", file)
+				log.WithError(err).Debugf("could not read temperature from file: %s", file)
 			}
 			continue
 		}
@@ -99,7 +99,7 @@ func readTemperatureFromFile(sensorName string, filePath string) (float64, error
 
 	if sensorName == nouveauDriver && value < 0 {
 		errCode := uint(math.Abs(value))
-		logger.Debugf("temperature for nvidia driver is not available: the driver returned %d", errCode)
+		log.Debugf("temperature for nvidia driver is not available: the driver returned %d", errCode)
 		return 0, errTemperatureNotAvailable
 	}
 

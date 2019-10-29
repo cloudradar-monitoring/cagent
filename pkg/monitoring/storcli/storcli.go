@@ -57,7 +57,7 @@ func (s *StorCLI) Run() ([]*monitoring.ModuleReport, error) {
 		logrus.Error(errMsg)
 
 		cmdExecReport.Message = errMsg
-		cmdExecReport.Alerts = append(cmdExecReport.Alerts, monitoring.Alert(errMsg))
+		cmdExecReport.AddAlert(errMsg)
 		return reports, nil
 	}
 
@@ -65,7 +65,7 @@ func (s *StorCLI) Run() ([]*monitoring.ModuleReport, error) {
 	if err != nil {
 		logrus.WithError(err).Error()
 		cmdExecReport.Message = err.Error()
-		cmdExecReport.Alerts = append(cmdExecReport.Alerts, monitoring.Alert(err.Error()))
+		cmdExecReport.AddAlert(err.Error())
 		return reports, nil
 	}
 
