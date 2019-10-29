@@ -36,7 +36,7 @@ func (s *StorCLI) Run() ([]*monitoring.ModuleReport, error) {
 	}
 
 	now := time.Now()
-	if !s.lastRunAt.IsZero() && s.lastRunAt.Sub(now) < cacheExpirationDuration {
+	if !s.lastRunAt.IsZero() && (now.Sub(s.lastRunAt) < cacheExpirationDuration) {
 		return s.lastRunReports, nil
 	}
 
