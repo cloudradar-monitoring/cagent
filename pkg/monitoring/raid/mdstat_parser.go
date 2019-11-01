@@ -82,7 +82,8 @@ func parseMdstat(data string) raidArrays {
 		raid.Inactive, raid.Active = parseStatusLine(lines[n+1])
 
 		syncLineIdx := n + 2
-		if strings.Contains(lines[n+2], "bitmap") { // skip bitmap line
+		if strings.Contains(lines[n+2], "bitmap") {
+			// skip bitmap line
 			syncLineIdx++
 		}
 
