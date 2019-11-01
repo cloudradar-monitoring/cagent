@@ -6,21 +6,39 @@ import (
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/raid"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/storcli"
 )
 
 var modules []monitoring.Module
 
-func (ca *Cagent) collectModulesMeasurements() ([]*monitoring.ModuleReport, error) {
-	var result []*monitoring.ModuleReport
-	var errs common.ErrorCollector
+func (ca *Cagent) initModules() {
+	if len(modules) > 0 {
+		return
+	}
 
-	if len(modules) == 0 {
-		m := storcli.CreateModule(ca.Config.StorCLI.BinaryPath)
+	l := []func() monitoring.Module{
+		func() monitoring.Module {
+			return storcli.CreateModule(ca.Config.StorCLI.BinaryPath)
+		},
+		func() monitoring.Module {
+			return raid.CreateModule()
+		},
+	}
+
+	for _, f := range l {
+		m := f()
 		if m.IsEnabled() {
 			modules = append(modules, m)
 		}
 	}
+}
+
+func (ca *Cagent) collectModulesMeasurements() ([]*monitoring.ModuleReport, error) {
+	var result []*monitoring.ModuleReport
+	var errs common.ErrorCollector
+
+	ca.initModules()
 
 	for _, m := range modules {
 		reports, err := m.Run()

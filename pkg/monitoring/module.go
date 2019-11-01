@@ -20,11 +20,19 @@ type Module interface {
 type ModuleReport struct {
 	Name            string                 `json:"name"`
 	Timestamp       common.Timestamp       `json:"timestamp"`
-	ExecutedCommand string                 `json:"command executed"`
+	ExecutedCommand string                 `json:"command executed,omitempty"`
 	Alerts          []Alert                `json:"alerts"`
 	Warnings        []Warning              `json:"warnings"`
 	Message         string                 `json:"message,omitempty"`
 	Measurements    map[string]interface{} `json:"measurements,omitempty"`
+}
+
+func (r *ModuleReport) AddAlert(alert string) {
+	r.Alerts = append(r.Alerts, Alert(alert))
+}
+
+func (r *ModuleReport) AddWarning(warn string) {
+	r.Warnings = append(r.Warnings, Warning(warn))
 }
 
 func NewReport(name string, t time.Time, cmd string) ModuleReport {

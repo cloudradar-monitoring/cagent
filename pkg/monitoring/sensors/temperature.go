@@ -11,4 +11,4 @@ type TemperatureSensorInfo struct {
 	Unit              string  `json:"unit"`
 }
 
-var logger = logrus.WithField("package", "sensors")
+var log = logrus.WithField("package", "sensors")
