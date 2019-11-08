@@ -51,7 +51,9 @@ func parseMdstat(data string) raidArrays {
 			continue
 		}
 
-		parts := strings.Split(line, " ")
+		line = strings.ReplaceAll(line, "(auto-read-only)", "")
+
+		parts := strings.Fields(line)
 		if len(parts) < 5 || parts[1] != ":" {
 			continue
 		}
