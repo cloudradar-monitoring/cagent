@@ -32,9 +32,12 @@ func TestRAIDModule(t *testing.T) {
 		"mdstat_empty":          {false, noAlerts, noWarnings},
 		"mdstat_not_configured": {false, noAlerts, noWarnings},
 
-		"mdstat_degraded_fail":          {true, []monitoring.Alert{"Raid md1 degraded. Devices failing: sde1.", "Raid md1 degraded. Missing 1 devices.", alertNonOptimal}, noWarnings},
-		"mdstat_degraded_phys_missing1": {true, []monitoring.Alert{"Raid md0 degraded. Missing 1 devices.", alertNonOptimal}, noWarnings},
-		"mdstat_degraded_phys_missing2": {true, []monitoring.Alert{"Raid md2 degraded. Missing 1 devices.", alertNonOptimal}, noWarnings},
+		"mdstat_degraded_fail":             {true, []monitoring.Alert{"Raid md1 degraded. Devices failing: sde1.", alertNonOptimal}, noWarnings},
+		"mdstat_degraded_fail_and_missing": {true, []monitoring.Alert{"Raid md1 degraded. Devices failing: sde1.", "Raid md1 degraded. Missing 1 devices.", alertNonOptimal}, noWarnings},
+		"mdstat_degraded_phys_missing1":    {true, []monitoring.Alert{"Raid md0 degraded. Missing 1 devices.", alertNonOptimal}, noWarnings},
+		"mdstat_degraded_phys_missing2":    {true, []monitoring.Alert{"Raid md2 degraded. Missing 1 devices.", alertNonOptimal}, noWarnings},
+		"mdstat_degraded_phys_missing3":    {true, []monitoring.Alert{"Raid md2 degraded. Missing 1 devices.", alertNonOptimal}, noWarnings},
+		"mdstat_degraded_phys_missing4":    {true, []monitoring.Alert{"Raid md2 degraded. Missing 1 devices.", alertNonOptimal}, noWarnings},
 
 		"mdstat_good1":        {true, noAlerts, noWarnings},
 		"mdstat_good2":        {true, noAlerts, noWarnings},

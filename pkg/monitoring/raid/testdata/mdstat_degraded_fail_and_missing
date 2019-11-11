@@ -1,0 +1,5 @@
+Personalities : [raid1]
+md1 : active raid1 sde1[5](F) sdg1[0] sdb1[3] sdd1[2] sdc1[1]
+      488383936 blocks [6/4] [_UUUU_]
+
+unused devices: <none>

@@ -22,19 +22,14 @@ type raidInfo struct {
 
 var raidStatusRegex = regexp.MustCompile(`\[([U_]+)\]`)
 
-func (r raidInfo) GetFailedAndMissingPhysicalDevices() (failedDevices []string, missingDevicesCount int) {
+func (r raidInfo) GetFailedDevices() (failedDevices []string) {
 	for _, deviceIndex := range r.Failed {
 		if deviceIndex < len(r.Devices) {
 			failedDevices = append(failedDevices, r.Devices[deviceIndex])
 		}
 	}
 
-	for _, deviceIndex := range r.Inactive {
-		if deviceIndex >= len(r.Devices) {
-			missingDevicesCount++
-		}
-	}
-	return failedDevices, missingDevicesCount
+	return failedDevices
 }
 
 func parseMdstat(data string) raidArrays {
