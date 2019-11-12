@@ -37,20 +37,15 @@ func (r *RAID) GetDescription() string {
 }
 
 func (r *RAID) IsEnabled() bool {
-	if runtime.GOOS != "linux" {
-		return false
-	}
-	_, err := os.Stat(r.mdstatFilePath)
-	if os.IsNotExist(err) {
-		return false
-	}
-
-	a := r.readAndParseMdstat()
-	return len(a) > 0
+	return runtime.GOOS == "linux"
 }
 
 func (r *RAID) readAndParseMdstat() raidArrays {
 	buf, err := ioutil.ReadFile(r.mdstatFilePath)
+	if os.IsNotExist(err) {
+		return nil
+	}
+
 	if err != nil {
 		log.WithError(err).Errorf("could not read %s file", r.mdstatFilePath)
 		return nil
@@ -62,6 +57,9 @@ func (r *RAID) readAndParseMdstat() raidArrays {
 
 func (r *RAID) Run() ([]*monitoring.ModuleReport, error) {
 	raidArrays := r.readAndParseMdstat()
+	if len(raidArrays) == 0 {
+		return nil, nil
+	}
 
 	report := monitoring.NewReport(
 		fmt.Sprintf("software raid health according to %s", r.mdstatFilePath),

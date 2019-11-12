@@ -19,9 +19,9 @@ func helperInitModule(fileName string) *RAID {
 
 func TestRAIDModule(t *testing.T) {
 	type expectedValues struct {
-		moduleEnabled bool
-		alerts        []monitoring.Alert
-		warnings      []monitoring.Warning
+		reportReturned bool
+		alerts         []monitoring.Alert
+		warnings       []monitoring.Warning
 	}
 
 	var noAlerts = make([]monitoring.Alert, 0)
@@ -31,6 +31,8 @@ func TestRAIDModule(t *testing.T) {
 	var testMap = map[string]expectedValues{
 		"mdstat_empty":          {false, noAlerts, noWarnings},
 		"mdstat_not_configured": {false, noAlerts, noWarnings},
+		"mdstat_removed1":       {false, noAlerts, noWarnings},
+		"mdstat_removed2":       {false, noAlerts, noWarnings},
 
 		"mdstat_degraded_fail":             {true, []monitoring.Alert{"Raid md1 degraded. Devices failing: sde1.", alertNonOptimal}, noWarnings},
 		"mdstat_degraded_fail_and_missing": {true, []monitoring.Alert{"Raid md1 degraded. Devices failing: sde1.", "Raid md1 degraded. Missing 1 devices.", alertNonOptimal}, noWarnings},
@@ -49,11 +51,9 @@ func TestRAIDModule(t *testing.T) {
 	for fileName, expected := range testMap {
 		t.Run(fmt.Sprintf("test-%s", fileName), func(t *testing.T) {
 			m := helperInitModule(fileName)
-			assert.Equal(t, expected.moduleEnabled, m.IsEnabled())
-
-			if expected.moduleEnabled {
-				reports, err := m.Run()
-				assert.NoError(t, err)
+			reports, err := m.Run()
+			assert.NoError(t, err)
+			if expected.reportReturned {
 				assert.Len(t, reports, 1)
 
 				r := reports[0]
