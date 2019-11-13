@@ -6,6 +6,8 @@ if [ -z "$1" ]
     exit
 fi
 
+BUILD_PATH="github.com/cloudradar-monitoring/cagent/cmd/cagent/..."
+LD_FLAGS="-s -w -X main.version=$1"
 
 # IMPORTANT: CGO_ENABLED=0 is used to force binaries to be statically linked
 
@@ -15,7 +17,7 @@ rm 2_create_project/INFO.bak
 sed -i.bak "s/{PKG_ARCH}/noarch/g" 2_create_project/INFO
 rm 2_create_project/INFO.bak
 
-CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build github.com/cloudradar-monitoring/cagent/cmd/cagent/...
+CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="$LD_FLAGS" "$BUILD_PATH"
 mv -f cagent 1_create_package/cagent
 
 cd 1_create_package
@@ -36,7 +38,7 @@ rm 2_create_project/INFO.bak
 sed -i.bak "s/{PKG_ARCH}/noarch/g" 2_create_project/INFO
 rm 2_create_project/INFO.bak
 
-CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build github.com/cloudradar-monitoring/cagent/cmd/cagent/...
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$LD_FLAGS" "$BUILD_PATH"
 mv -f cagent 1_create_package/cagent
 
 cd 1_create_package
@@ -57,7 +59,7 @@ rm 2_create_project/INFO.bak
 sed -i.bak "s/{PKG_ARCH}/x86_64 cedarview bromolow broadwell/g" 2_create_project/INFO
 rm 2_create_project/INFO.bak
 
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build github.com/cloudradar-monitoring/cagent/cmd/cagent/...
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$LD_FLAGS" $BUILD_PATH
 mv -f cagent 1_create_package/cagent
 
 cd 1_create_package
