@@ -37,20 +37,15 @@ func (r *RAID) GetDescription() string {
 }
 
 func (r *RAID) IsEnabled() bool {
-	if runtime.GOOS != "linux" {
-		return false
-	}
-	_, err := os.Stat(r.mdstatFilePath)
-	if os.IsNotExist(err) {
-		return false
-	}
-
-	a := r.readAndParseMdstat()
-	return len(a) > 0
+	return runtime.GOOS == "linux"
 }
 
 func (r *RAID) readAndParseMdstat() raidArrays {
 	buf, err := ioutil.ReadFile(r.mdstatFilePath)
+	if os.IsNotExist(err) {
+		return nil
+	}
+
 	if err != nil {
 		log.WithError(err).Errorf("could not read %s file", r.mdstatFilePath)
 		return nil
@@ -62,6 +57,9 @@ func (r *RAID) readAndParseMdstat() raidArrays {
 
 func (r *RAID) Run() ([]*monitoring.ModuleReport, error) {
 	raidArrays := r.readAndParseMdstat()
+	if len(raidArrays) == 0 {
+		return nil, nil
+	}
 
 	report := monitoring.NewReport(
 		fmt.Sprintf("software raid health according to %s", r.mdstatFilePath),
@@ -82,7 +80,12 @@ func (r *RAID) Run() ([]*monitoring.ModuleReport, error) {
 		raidName := raidInfo.Name
 		virtualDrives[fmt.Sprintf("%s raid level", raidName)] = raidInfo.RaidLevel
 
-		failedDevs, numberOfMissingDevs := raidInfo.GetFailedAndMissingPhysicalDevices()
+		if raidInfo.IsRebuilding {
+			status = raidStatusRebuilding
+			report.AddWarning(fmt.Sprintf("Raid %s rebuilding.", raidName))
+		}
+
+		failedDevs := raidInfo.GetFailedDevices()
 		if len(failedDevs) > 0 {
 			report.AddAlert(fmt.Sprintf(
 				"Raid %s degraded. Devices failing: %s.",
@@ -92,14 +95,11 @@ func (r *RAID) Run() ([]*monitoring.ModuleReport, error) {
 			status = raidStatusDegraded
 		}
 
+		detectedDeviceStatusesCount := len(raidInfo.Active) + len(raidInfo.Inactive)
+		numberOfMissingDevs := detectedDeviceStatusesCount - len(raidInfo.Devices)
 		if numberOfMissingDevs > 0 {
 			report.AddAlert(fmt.Sprintf("Raid %s degraded. Missing %d devices.", raidName, numberOfMissingDevs))
 			status = raidStatusDegraded
-		}
-
-		if raidInfo.IsRebuilding {
-			status = raidStatusRebuilding
-			report.AddWarning(fmt.Sprintf("Raid %s rebuilding.", raidName))
 		}
 
 		if status == raidStatusDegraded {
