@@ -23,13 +23,6 @@ import (
 	"github.com/cloudradar-monitoring/cagent"
 )
 
-// variables set on build. Example:
-// go build -o cagent -ldflags="-X main.version=$(git --git-dir=src/github.com/cloudradar-monitoring/cagent/.git describe --always --long --dirty --tag)" github.com/cloudradar-monitoring/cagent/cmd/cagent
-var (
-	version     string
-	licenseInfo = "released under MIT license. https://github.com/cloudradar-monitoring/cagent/"
-)
-
 var svcConfig = &service.Config{
 	Name:        "cagent",
 	DisplayName: "CloudRadar Monitoring Agent",
@@ -116,7 +109,7 @@ func main() {
 		log.WithError(err).Fatalln("Failed to handle Cagent configuration")
 	}
 
-	ca := cagent.New(cfg, *cfgPathPtr, version)
+	ca := cagent.New(cfg, *cfgPathPtr)
 
 	handleFlagPrintConfig(*printConfigPtr, cfg)
 
@@ -186,7 +179,7 @@ func main() {
 
 func handleFlagVersion(versionFlag bool) {
 	if versionFlag {
-		fmt.Printf("cagent v%s %s\n", version, licenseInfo)
+		fmt.Printf("cagent v%s %s\n", cagent.Version, cagent.LicenseInfo)
 		os.Exit(0)
 	}
 }

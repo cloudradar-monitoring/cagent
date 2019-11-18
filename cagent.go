@@ -16,6 +16,13 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/smart"
 )
 
+// variables set on build. Example:
+// go build -o cagent -ldflags="-X github.com/cloudradar-monitoring/cagent.Version=$(git --git-dir=src/github.com/cloudradar-monitoring/cagent/.git describe --always --long --dirty --tag)" github.com/cloudradar-monitoring/cagent/cmd/cagent
+var (
+	Version     string
+	LicenseInfo = "released under MIT license. https://github.com/cloudradar-monitoring/cagent/"
+)
+
 type Cagent struct {
 	Config         *Config
 	ConfigLocation string
@@ -38,11 +45,10 @@ type Cagent struct {
 	version string
 }
 
-func New(cfg *Config, cfgPath string, version string) *Cagent {
+func New(cfg *Config, cfgPath string) *Cagent {
 	ca := &Cagent{
 		Config:         cfg,
 		ConfigLocation: cfgPath,
-		version:        version,
 		vmWatchers:     make(map[string]types.Provider),
 	}
 
@@ -59,15 +65,11 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 	return ca
 }
 
-func (ca *Cagent) SetVersion(version string) {
-	ca.version = version
-}
-
 func (ca *Cagent) userAgent() string {
-	if ca.version == "" {
-		ca.version = "{undefined}"
+	if Version == "" {
+		Version = "{undefined}"
 	}
-	return fmt.Sprintf("Cagent v%s %s %s", ca.version, runtime.GOOS, runtime.GOARCH)
+	return fmt.Sprintf("Cagent v%s %s %s", Version, runtime.GOOS, runtime.GOARCH)
 }
 
 func (ca *Cagent) Shutdown() {
