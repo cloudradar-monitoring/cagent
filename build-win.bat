@@ -6,12 +6,16 @@ CD %build_dir%
 
 
 COPY dist\cagent_386.exe cagent.exe
+COPY dist\cagent_64.exe csender.exe
 go-msi make --src pkg-scripts\msi-templates --msi dist/_cagent_32.msi --version %cagent_version% --arch 386
 DEL cagent.exe
+DEL csender.exe
 
 COPY dist\cagent_64.exe cagent.exe
+COPY dist\csender.exe csender.exe
 go-msi make --src pkg-scripts\msi-templates --msi dist/_cagent_64.msi --version %cagent_version% --arch amd64
 DEL cagent.exe
+DEL csender.exe
 
 COPY dist\_cagent_32.msi C:\Users\hero\ci\cagent_32.msi
 COPY dist\_cagent_64.msi C:\Users\hero\ci\cagent_64.msi
