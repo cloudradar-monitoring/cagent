@@ -50,17 +50,18 @@
 
         <Directory Id="TARGETDIR" Name="SourceDir">
             <Component Id="RegistryEntries" Guid="e4e0d475-ca19-4a32-bd22-d0ed7ce303f0">
-                <RegistryKey Root="HKCR"
-                            Key="cagent\shell\open\command"
-                    ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
+                <RegistryKey Root="HKCR" Key="cagent\shell\open\command"
+                                        ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
                     <RegistryValue Type="string" Value='"[INSTALLDIR]\cagent.exe" "%1%"'/>
                 </RegistryKey>
-                <RegistryKey Root="HKCR"
-                                        Key="cagent"
+                <RegistryKey Root="HKCR" Key="csender\shell\open\command"
+                                        ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
+                    <RegistryValue Type="string" Value='"[INSTALLDIR]\csender.exe" "%1%"'/>
+                </RegistryKey>
+                <RegistryKey Root="HKCR" Key="cagent"
                                         ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
                     <RegistryValue Type="string" Name="URL Protocol" Value="" KeyPath="yes"/>
                     <RegistryValue Type="string" Value="URL:cagent"/>
-
                 </RegistryKey>
             </Component>
             <Directory Id="ProgramMenuFolder">
@@ -165,7 +166,7 @@
 
             <Custom Action="CustomInstallExecInstall" Before="InstallFinalize">NOT Installed AND NOT REMOVE AND UILevel &gt; 2</Custom>
             <Custom Action="CustomInstallExecQuietInstall" Before="InstallFinalize">NOT Installed AND NOT REMOVE AND UILevel &lt; 3</Custom>
-            
+
             {{range $i, $e := .InstallHooks}}
             <Custom Action="CustomInstallExec{{$i}}" {{if eq $i 0}}Before="InstallFinalize{{else}}After="CustomInstallExec{{dec $i}}{{end}}">NOT Installed AND NOT REMOVE</Custom>
             {{end}}

@@ -14,22 +14,19 @@ GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
-BINARY_NAME=cagent
+BINARIES=cagent csender
 
 all: test build
+
 build:
-	$(GOBUILD) -o $(BINARY_NAME) -v ./cmd/cagent/...
+	$(foreach BINARY,$(BINARIES),$(GOBUILD) -o $(BINARY) -v ./cmd/$(BINARY)/...;)
 
 test:
 	$(GOTEST) -v ./...
 
 clean:
 	$(GOCLEAN)
-	rm -f $(BINARY_NAME)
-
-run:
-	$(GOBUILD) -o $(BINARY_NAME) -v ./cmd/cagent/...
-	./$(BINARY_NAME)
+	rm -f $(BINARIES)
 
 ci: goreleaser-rm-dist windows-sign
 
