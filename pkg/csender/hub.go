@@ -12,8 +12,9 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/pkg/errors"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 func (cs *Csender) httpClient() *http.Client {
