@@ -81,7 +81,7 @@ func main() {
 	flag.Parse()
 
 	if *versionPtr {
-		fmt.Printf("csender v%s released under MIT license. https://github.com/cloudradar-monitoring/csender/\n", version)
+		fmt.Printf("csender v%s released under MIT license. https://github.com/cloudradar-monitoring/cagent/\n", version)
 		return
 	}
 
