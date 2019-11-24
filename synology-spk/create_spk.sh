@@ -27,4 +27,4 @@ cd ..
 done
 
 ## special case to normalize armv7 build name to be in line with gorelease files
-mv ../../dist/cagent_$1_synology_arm_7.spk ../../dist/cagent_$1_synology_armv7.spk
+mv ../dist/cagent_$1_synology_arm_7.spk ../dist/cagent_$1_synology_armv7.spk
