@@ -1,11 +1,8 @@
 package cagent
 
 import (
-	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"os"
 	"runtime"
 	"sync"
 
@@ -38,8 +35,6 @@ type Cagent struct {
 	hwInventory    sync.Once
 	smart          *smart.SMART
 
-	rootCAs *x509.CertPool
-
 	version string
 }
 
@@ -49,22 +44,6 @@ func New(cfg *Config, cfgPath string, version string) *Cagent {
 		ConfigLocation: cfgPath,
 		version:        version,
 		vmWatchers:     make(map[string]types.Provider),
-	}
-
-	if rootCertsPath != "" {
-		if _, err := os.Stat(rootCertsPath); err == nil {
-			certPool := x509.NewCertPool()
-
-			b, err := ioutil.ReadFile(rootCertsPath)
-			if err != nil {
-				logrus.WithError(err).Warnln("Failed to read cacert.pem")
-			} else {
-				ok := certPool.AppendCertsFromPEM(b)
-				if ok {
-					ca.rootCAs = certPool
-				}
-			}
-		}
 	}
 
 	ca.configureLogger()

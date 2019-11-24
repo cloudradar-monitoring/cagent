@@ -32,11 +32,18 @@ func (ca *Cagent) initHubClientOnce() {
 		transport := &http.Transport{
 			ResponseHeaderTimeout: 15 * time.Second,
 		}
-		if ca.rootCAs != nil {
+
+		rootCAs, err := common.CustomRootCertPool()
+		if err != nil {
+			if err != common.ErrorCustomRootCertPoolNotImplementedForOS {
+				log.Errorf("failed to add root certs: %s", err.Error())
+			}
+		} else if rootCAs != nil {
 			transport.TLSClientConfig = &tls.Config{
-				RootCAs: ca.rootCAs,
+				RootCAs: rootCAs,
 			}
 		}
+
 		if len(ca.Config.HubProxy) > 0 {
 			if !strings.HasPrefix(ca.Config.HubProxy, "http://") {
 				ca.Config.HubProxy = "http://" + ca.Config.HubProxy

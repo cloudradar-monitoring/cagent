@@ -5,36 +5,27 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"runtime"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/pkg/errors"
 )
 
 func (cs *Csender) httpClient() *http.Client {
 	tr := *(http.DefaultTransport.(*http.Transport))
-
-	if runtime.GOOS != "windows" && runtime.GOOS != "darwin" {
-		// inject ca root certs, cause they can be missing on some systems
-		rootCertsPath := "/etc/cagent/cacert.pem"
-		if _, err := os.Stat(rootCertsPath); err == nil {
-			certPool := x509.NewCertPool()
-
-			b, err := ioutil.ReadFile(rootCertsPath)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Failed to read cacert.pem: "+err.Error())
-			} else {
-				ok := certPool.AppendCertsFromPEM(b)
-				if ok {
-					tr.TLSClientConfig = &tls.Config{RootCAs: certPool}
-				}
-			}
+	rootCAs, err := common.CustomRootCertPool()
+	if err != nil {
+		if err != common.ErrorCustomRootCertPoolNotImplementedForOS {
+			fmt.Fprintln(os.Stderr, "failed to add root certs: "+err.Error())
+		}
+	} else if rootCAs != nil {
+		tr.TLSClientConfig = &tls.Config{
+			RootCAs: rootCAs,
 		}
 	}
 
