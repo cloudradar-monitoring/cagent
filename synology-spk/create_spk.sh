@@ -6,69 +6,25 @@ if [ -z "$1" ]
     exit
 fi
 
-BUILD_PATH="github.com/cloudradar-monitoring/cagent/cmd/cagent/..."
-LD_FLAGS="-s -w -X main.version=$1"
-
-# IMPORTANT: CGO_ENABLED=0 is used to force binaries to be statically linked
-
-# ARMv7
+for ARCH in arm_7 arm64 amd64
+do
 sed -i.bak "s/{PKG_VERSION}/$1/g" 2_create_project/INFO
 rm 2_create_project/INFO.bak
 sed -i.bak "s/{PKG_ARCH}/noarch/g" 2_create_project/INFO
 rm 2_create_project/INFO.bak
 
-CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="$LD_FLAGS" "$BUILD_PATH"
-mv -f cagent 1_create_package/cagent
+cp -f ../dist/cagent_linux_${ARCH}/cagent 1_create_package/cagent
+cp -f ../dist/cagent_linux_${ARCH}/cagent 1_create_package/cagent
 
 cd 1_create_package
 tar cvfz package.tgz *
 mv package.tgz ../2_create_project/
 cd ../2_create_project/
 tar cvfz cagent.spk *
-mv cagent.spk ../cagent-armv7.spk
+mv cagent.spk ../../dist/cagent_$1_synology_${ARCH}.spk
 rm -f package.tgz
 cd ..
+done
 
-git checkout 2_create_project/INFO
-
-
-# ARMv8
-sed -i.bak "s/{PKG_VERSION}/$1/g" 2_create_project/INFO
-rm 2_create_project/INFO.bak
-sed -i.bak "s/{PKG_ARCH}/noarch/g" 2_create_project/INFO
-rm 2_create_project/INFO.bak
-
-CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$LD_FLAGS" "$BUILD_PATH"
-mv -f cagent 1_create_package/cagent
-
-cd 1_create_package
-tar cvfz package.tgz *
-mv package.tgz ../2_create_project/
-cd ../2_create_project/
-tar cvfz cagent.spk *
-mv cagent.spk ../cagent-armv8.spk
-rm -f package.tgz
-cd ..
-
-git checkout 2_create_project/INFO
-
-
-# AMD64
-sed -i.bak "s/{PKG_VERSION}/$1/g" 2_create_project/INFO
-rm 2_create_project/INFO.bak
-sed -i.bak "s/{PKG_ARCH}/x86_64 cedarview bromolow broadwell/g" 2_create_project/INFO
-rm 2_create_project/INFO.bak
-
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$LD_FLAGS" $BUILD_PATH
-mv -f cagent 1_create_package/cagent
-
-cd 1_create_package
-tar cvfz package.tgz *
-mv package.tgz ../2_create_project/
-cd ../2_create_project/
-tar cvfz cagent.spk *
-mv cagent.spk ../cagent-amd64.spk
-rm -f package.tgz
-cd ..
-
-git checkout 2_create_project/INFO
+## special case to normalize armv7 build name to be in line with gorelease files
+mv ../dist/cagent_$1_synology_arm_7.spk ../dist/cagent_$1_synology_armv7.spk
