@@ -29,3 +29,34 @@ func (t *Timestamp) MarshalJSON() ([]byte, error) {
 
 	return []byte(stamp), nil
 }
+
+// LimitedBuffer allows to store last N bytes written to it, discarding unneeded bytes
+type LimitedBuffer struct {
+	buf []byte
+	n   int
+}
+
+func NewLimitedBuffer(n int) *LimitedBuffer {
+	return &LimitedBuffer{buf: make([]byte, 0, n), n: n}
+}
+
+func (w *LimitedBuffer) String() string {
+	return string(w.buf)
+}
+
+func (w *LimitedBuffer) Write(p []byte) (n int, err error) {
+	gotLen := len(p)
+	if gotLen >= w.n {
+		w.buf = p[gotLen-w.n-1:]
+	} else if gotLen > 0 {
+		newLength := len(w.buf) + gotLen
+		if newLength <= w.n {
+			w.buf = append(w.buf, p...)
+		} else {
+			truncateIndex := newLength - w.n - 1
+			w.buf = append(w.buf[truncateIndex-1:], p...)
+		}
+	}
+
+	return gotLen, nil
+}

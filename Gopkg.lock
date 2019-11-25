@@ -138,6 +138,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:6491080aa184f88c2bb8e2f6056e5e0e9a578b2d8666efbd6e97bc37a0c41e72"
+  name = "github.com/nightlyone/lockfile"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "0ad87eef1443f64d3d8c50da647e2b1552851124"
+
+[[projects]]
+  branch = "master"
   digest = "1:0e1e5f960c58fdc677212fcc70e55042a0084d367623e51afbdb568963832f5d"
   name = "github.com/nu7hatch/gouuid"
   packages = ["."]
@@ -281,6 +289,7 @@
     "github.com/lxn/walk",
     "github.com/lxn/walk/declarative",
     "github.com/lxn/win",
+    "github.com/nightlyone/lockfile",
     "github.com/pkg/errors",
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/disk",

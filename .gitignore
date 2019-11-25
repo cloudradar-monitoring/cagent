@@ -1,7 +1,11 @@
 .idea
 cmd/cagent/cagent
+cmd/jobmon/jobmon
 synology-spk/1_create_package/cagent/cagent
 /cagent
 /cagent.exe
+/jobmon
+/jobmon.exe
 .DS_Store
 dist
+config.toml

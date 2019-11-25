@@ -41,8 +41,6 @@ type Cagent struct {
 	vmWatchers     map[string]types.Provider
 	hwInventory    sync.Once
 	smart          *smart.SMART
-
-	version string
 }
 
 func New(cfg *Config, cfgPath string) *Cagent {
