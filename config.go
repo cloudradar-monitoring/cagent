@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/troian/toml"
@@ -226,10 +225,6 @@ func defaultMinValuableConfig() *MinValuableConfig {
 		LogLevel: LogLevelError,
 		IOMode:   IOModeHTTP,
 	}
-}
-
-func secToDuration(secs float64) time.Duration {
-	return time.Duration(int64(float64(time.Second) * secs))
 }
 
 func (mvc *MinValuableConfig) applyEnv(force bool) {
