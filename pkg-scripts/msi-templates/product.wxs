@@ -58,6 +58,10 @@
                                         ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
                     <RegistryValue Type="string" Value='"[INSTALLDIR]\csender.exe" "%1%"'/>
                 </RegistryKey>
+                <RegistryKey Root="HKCR" Key="jobmon\shell\open\command"
+                                        ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
+                    <RegistryValue Type="string" Value='"[INSTALLDIR]\jobmon.exe" "%1%"'/>
+                </RegistryKey>
                 <RegistryKey Root="HKCR" Key="cagent"
                                         ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
                     <RegistryValue Type="string" Name="URL Protocol" Value="" KeyPath="yes"/>
