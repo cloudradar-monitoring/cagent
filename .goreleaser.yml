@@ -1,36 +1,38 @@
+env:
+  - CGO_ENABLED=0
+  - PROJECT=github.com/cloudradar-monitoring/cagent
+  - LICENSE_PROPRIETARY=released under a proprietary license. See license.txt
 builds:
 - id: cagent
   main: ./cmd/cagent
   binary: cagent
   goos:
-  - windows
-  - darwin
-  - linux
+    - windows
+    - darwin
+    - linux
   goarch:
-  - 386
-  - amd64
-  - arm
-  - arm64
+    - 386
+    - amd64
+    - arm
+    - arm64
   goarm:
-  - 5
-  - 6
-  - 7
+    - 5
+    - 6
+    - 7
   # List of combinations of GOOS + GOARCH + GOARM to ignore.
   ignore:
-  - goos: darwin
-    goarch: 386
-  - goos: windows
-    goarch: arm
-  - goos: darwin
-    goarch: arm
-  - goos: windows
-    goarch: arm64
-  - goos: darwin
-    goarch: arm64
+    - goos: darwin
+      goarch: 386
+    - goos: windows
+      goarch: arm
+    - goos: darwin
+      goarch: arm
+    - goos: windows
+      goarch: arm64
+    - goos: darwin
+      goarch: arm64
   ldflags:
-  - -s -w -X github.com/cloudradar-monitoring/cagent.Version={{.Version}}
-  env:
-  - CGO_ENABLED=0
+    - "-s -w -X {{.Env.PROJECT}}.Version={{.Version}}"
 - id: csender
   main: ./cmd/csender
   binary: csender
@@ -60,21 +62,47 @@ builds:
     - goos: darwin
       goarch: arm64
   ldflags:
-    - -s -w -X main.version={{.Version}}
-  env:
-    - CGO_ENABLED=0
+    - "-s -w -X {{.Env.PROJECT}}.Version={{.Version}}"
+- id: jobmon
+  main: ./cmd/jobmon
+  binary: jobmon
+  goos:
+    - windows
+    - darwin
+    - linux
+  goarch:
+    - 386
+    - amd64
+    - arm
+    - arm64
+  goarm:
+    - 5
+    - 6
+    - 7
+  # List of combinations of GOOS + GOARCH + GOARM to ignore.
+  ignore:
+    - goos: darwin
+      goarch: 386
+    - goos: windows
+      goarch: arm
+    - goos: darwin
+      goarch: arm
+    - goos: windows
+      goarch: arm64
+    - goos: darwin
+      goarch: arm64
+  ldflags:
+    - "-s -w -X {{.Env.PROJECT}}.Version={{.Version}}"
 - id: cagent_proprietary
   main: ./cmd/cagent
   binary: cagent
   goos:
-  - windows
+    - windows
   goarch:
-  - 386
-  - amd64
+    - 386
+    - amd64
   ldflags:
-    - -s -w -X github.com/cloudradar-monitoring/cagent.Version={{.Version}} -X "github.com/cloudradar-monitoring/cagent.LicenseInfo=released under a proprietary license. See license.txt"
-  env:
-    - CGO_ENABLED=0
+    - "-s -w -X {{.Env.PROJECT}}.Version={{.Version}} -X \"{{.Env.PROJECT}}.LicenseInfo={{.Env.LICENSE_PROPRIETARY}}\""
 - id: csender_proprietary
   main: ./cmd/csender
   binary: csender
@@ -84,17 +112,26 @@ builds:
     - 386
     - amd64
   ldflags:
-    - -s -w -X main.version={{.Version}} -X "main.licenseInfo=released under a proprietary license. See license.txt"
-  env:
-    - CGO_ENABLED=0
+    - "-s -w -X {{.Env.PROJECT}}.Version={{.Version}} -X \"{{.Env.PROJECT}}.LicenseInfo={{.Env.LICENSE_PROPRIETARY}}\""
+- id: jobmon_proprietary
+  main: ./cmd/jobmon
+  binary: jobmon
+  goos:
+    - windows
+  goarch:
+    - 386
+    - amd64
+  ldflags:
+    - "-s -w -X {{.Env.PROJECT}}.Version={{.Version}} -X \"{{.Env.PROJECT}}.LicenseInfo={{.Env.LICENSE_PROPRIETARY}}\""
 archives:
   - id: cagent
     builds:
       - cagent
       - csender
+      - jobmon
     files:
-    - README.md
-    - example.config.toml
+      - README.md
+      - example.config.toml
     replacements:
       darwin: Darwin
       linux: Linux
@@ -102,8 +139,8 @@ archives:
       386: i386
       amd64: x86_64
     format_overrides:
-    - goos: windows
-      format: zip
+      - goos: windows
+        format: zip
 checksum:
   name_template: 'checksums.txt'
 snapshot:
@@ -112,8 +149,8 @@ changelog:
   sort: asc
   filters:
     exclude:
-    - '^docs:'
-    - '^test:'
+      - '^docs:'
+      - '^test:'
 nfpm:
   name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
   maintainer: CloudRadar GmbH <ops@cloudradar.io>
@@ -125,25 +162,26 @@ nfpm:
 
   # Formats to be generated.
   formats:
-  - deb
-  - rpm
+    - deb
+    - rpm
 
   dependencies:
-  - sudo
+    - sudo
 
   recommends:
-  - dmidecode
-  - usbutils
-  - ca-certificates
-  - dbus
+    - dmidecode
+    - usbutils
+    - ca-certificates
+    - dbus
 
   # Override default /usr/local/bin destination for binaries
   bindir: /usr/bin
 
   # Empty folders that should be created and managed by the packager implementation.
   empty_folders:
-  - /var/log/cagent
-  - /etc/cagent
+    - /var/log/cagent
+    - /var/lib/cagent/jobmon
+    - /etc/cagent
 
   files:
     "example.config.toml": "/etc/cagent/example.config.toml"

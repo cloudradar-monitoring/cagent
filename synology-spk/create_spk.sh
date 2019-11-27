@@ -14,7 +14,8 @@ sed -i.bak "s/{PKG_ARCH}/noarch/g" 2_create_project/INFO
 rm 2_create_project/INFO.bak
 
 cp -f ../dist/cagent_linux_${ARCH}/cagent 1_create_package/cagent
-cp -f ../dist/csender_linux_${ARCH}/csender 1_create_package/cagent
+cp -f ../dist/csender_linux_${ARCH}/csender 1_create_package/cagent/csender
+cp -f ../dist/jobmon_linux_${ARCH}/jobmon 1_create_package/cagent/jobmon
 
 cd 1_create_package
 tar cvfz package.tgz *
