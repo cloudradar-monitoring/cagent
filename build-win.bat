@@ -6,7 +6,7 @@ CD %build_dir%
 
 
 COPY dist\cagent_386.exe cagent.exe
-COPY dist\cagent_386.exe csender.exe
+COPY dist\csender_386.exe csender.exe
 go-msi make --src pkg-scripts\msi-templates --msi dist/_cagent_32.msi --version %cagent_version% --arch 386
 DEL cagent.exe
 DEL csender.exe
