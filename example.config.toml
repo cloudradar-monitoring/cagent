@@ -88,4 +88,4 @@ temperature_monitoring = true # default true
   spool_dir = '/var/lib/cagent/jobmon' # Linux
   record_stderr = true # Record the last 4 KB of the error output. Default: true
   record_stdout = false # Record the last 4 KB of the standard output. Default: false
-  severity = "alert" # Failed jobs will be processed as alerts. Possible values alert or warning. Default: alert
+  severity = "alert" # Failed jobs will be processed as alerts. Possible values alert, warning or none. Default: alert

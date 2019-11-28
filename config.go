@@ -132,7 +132,7 @@ type JobMonitoringConfig struct {
 	SpoolDirPath string          `toml:"spool_dir" comment:"Path to spool dir"`
 	RecordStdErr bool            `toml:"record_stderr" comment:"Record the last 4 KB of the error output. Default: true"`
 	RecordStdOut bool            `toml:"record_stdout" comment:"Record the last 4 KB of the standard output. Default: false"`
-	Severity     jobmon.Severity `toml:"severity" comment:"Failed jobs will be processed as alerts. Possible values alert or warning. Default: alert"`
+	Severity     jobmon.Severity `toml:"severity" comment:"Failed jobs will be processed as alerts. Possible values alert, warning or none. Default: alert"`
 }
 
 func (j *JobMonitoringConfig) Validate() error {

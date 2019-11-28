@@ -37,6 +37,7 @@ func main() {
 	cfgPathPtr := flag.String("c", cagent.DefaultCfgPath, "config file path")
 
 	jobIDPtr := flag.String("id", "", fmt.Sprintf("id of the job, required, maximum %d characters", maxJobIDLength))
+	forceRunPtr := flag.Bool("f", false, "Force run of a job even if the job with the same ID is already running or its termination wasn't handled successfully.")
 	severityPtr := flag.String("s", "", "alert|warning|none process failed job with this severity. Overwrites the default severity of cagent.conf. Severity 'none' suppresses all messages.")
 	nextRunInPtr := flag.Duration("nr", 0, "<N>h|m indicates when the job should run for the next time. Allows triggering alters for not run jobs. The shortest interval is 5 minutes.")
 	maxExecutionTimePtr := flag.Duration("me", 0, "<N>h|m|s or just <N> for number of seconds. Max execution time for job.")
@@ -68,7 +69,7 @@ func main() {
 	)
 
 	jobMonRunner := jobmon.NewRunner(cfg.JobMonitoring.SpoolDirPath, jobConfig, logger)
-	err = jobMonRunner.RunJob(sigChan)
+	err = jobMonRunner.RunJob(sigChan, *forceRunPtr)
 	if err != nil {
 		logger.Fatalf("Could not start a job: %s", err.Error())
 		return

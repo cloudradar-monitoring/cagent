@@ -1,8 +1,12 @@
 package common
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type MeasurementsMap map[string]interface{}
@@ -27,36 +31,20 @@ func (t *Timestamp) MarshalJSON() ([]byte, error) {
 	ts := time.Time(*t).Unix()
 	stamp := fmt.Sprint(ts)
 
-	return []byte(stamp), nil
+	return json.Marshal(stamp)
 }
 
-// LimitedBuffer allows to store last N bytes written to it, discarding unneeded bytes
-type LimitedBuffer struct {
-	buf []byte
-	n   int
-}
-
-func NewLimitedBuffer(n int) *LimitedBuffer {
-	return &LimitedBuffer{buf: make([]byte, 0, n), n: n}
-}
-
-func (w *LimitedBuffer) String() string {
-	return string(w.buf)
-}
-
-func (w *LimitedBuffer) Write(p []byte) (n int, err error) {
-	gotLen := len(p)
-	if gotLen >= w.n {
-		w.buf = p[gotLen-w.n-1:]
-	} else if gotLen > 0 {
-		newLength := len(w.buf) + gotLen
-		if newLength <= w.n {
-			w.buf = append(w.buf, p...)
-		} else {
-			truncateIndex := newLength - w.n - 1
-			w.buf = append(w.buf[truncateIndex-1:], p...)
-		}
+func (t *Timestamp) UnmarshalJSON(raw []byte) error {
+	var strTimestamp string
+	if err := json.Unmarshal(raw, &strTimestamp); err != nil {
+		return err
 	}
 
-	return gotLen, nil
+	timestamp, err := strconv.ParseInt(strTimestamp, 10, 0)
+	if err != nil {
+		return errors.Wrap(err, "input is not Unix timestamp")
+	}
+
+	*t = Timestamp(time.Unix(timestamp, 0))
+	return nil
 }
