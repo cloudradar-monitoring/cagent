@@ -25,20 +25,17 @@ func NewRunner(spoolDirPath string, runConfig *JobRunConfig, logger *logrus.Logg
 	}
 }
 
-func (r *Runner) RunJob(interruptionSignalsChan chan os.Signal) error {
+func (r *Runner) RunJob(interruptionSignalsChan chan os.Signal, forceRun bool) error {
 	var job = newJobRun(r.cfg)
 	var cmd = r.createJobCommand()
 
-	stdOutBuffer := common.NewLimitedBuffer(maxStdStreamBufferSize)
-	if r.cfg.RecordStdOut {
-		cmd.Stdout = stdOutBuffer
-	}
-	stdErrBuffer := common.NewLimitedBuffer(maxStdStreamBufferSize)
-	if r.cfg.RecordStdErr {
-		cmd.Stderr = stdErrBuffer
-	}
+	stdOutBuffer := newCaptureWriter(os.Stdout, maxStdStreamBufferSize)
+	cmd.Stdout = stdOutBuffer
 
-	uid, err := r.spool.NewJob(job)
+	stdErrBuffer := newCaptureWriter(os.Stderr, maxStdStreamBufferSize)
+	cmd.Stderr = stdErrBuffer
+
+	uid, err := r.spool.NewJob(job, forceRun)
 	if err != nil {
 		return err
 	}
@@ -67,6 +64,9 @@ func (r *Runner) RunJob(interruptionSignalsChan chan os.Signal) error {
 		} else {
 			job.AddError(err.Error())
 		}
+	} else {
+		code := cmd.ProcessState.ExitCode()
+		exitCode = &code
 	}
 
 	endTimestamp := common.Timestamp(endedAt)

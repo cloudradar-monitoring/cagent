@@ -13,11 +13,33 @@ import (
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/hwinfo"
+	"github.com/cloudradar-monitoring/cagent/pkg/jobmon"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/networking"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/sensors"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 )
+
+type Cleaner interface {
+	Cleanup() error
+}
+
+// cleanupCommand allow to group multiple Cleanup steps into one object
+type cleanupCommand struct {
+	steps []func() error
+}
+
+func (c *cleanupCommand) AddStep(f func() error) {
+	c.steps = append(c.steps, f)
+}
+
+func (c *cleanupCommand) Cleanup() error {
+	errs := common.ErrorCollector{}
+	for _, step := range c.steps {
+		errs.Add(step())
+	}
+	return errs.Combine()
+}
 
 func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 	for {
@@ -36,12 +58,17 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 }
 
 func (ca *Cagent) RunOnce(outputFile *os.File, fullMode bool) error {
-	measurements := ca.collectMeasurements(fullMode)
-	return ca.reportMeasurements(measurements, outputFile)
+	measurements, cleaner := ca.collectMeasurements(fullMode)
+	err := ca.reportMeasurements(measurements, outputFile)
+	if err == nil {
+		err = cleaner.Cleanup()
+	}
+	return err
 }
 
-func (ca *Cagent) collectMeasurements(fullMode bool) common.MeasurementsMap {
+func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cleaner) {
 	var errCollector = common.ErrorCollector{}
+	var cleanupCommand = &cleanupCommand{}
 	var measurements = make(common.MeasurementsMap)
 
 	cpum, err := ca.CPUWatcher().Results()
@@ -138,6 +165,14 @@ func (ca *Cagent) collectMeasurements(fullMode bool) common.MeasurementsMap {
 		if len(smartMeas) > 0 {
 			measurements = measurements.AddInnerWithPrefix("smartmon", smartMeas)
 		}
+
+		spool := jobmon.NewSpoolManager(ca.Config.JobMonitoring.SpoolDirPath, log.StandardLogger())
+		ids, jobs, err := spool.GetFinishedJobs()
+		errCollector.Add(err)
+		measurements = measurements.AddWithPrefix("", common.MeasurementsMap{"jobmon": jobs})
+		cleanupCommand.AddStep(func() error {
+			return spool.RemoveJobs(ids)
+		})
 	}
 
 	measurements["operation_mode"] = ca.Config.OperationMode
@@ -149,7 +184,7 @@ func (ca *Cagent) collectMeasurements(fullMode bool) common.MeasurementsMap {
 		measurements["cagent.success"] = 1
 	}
 
-	return measurements
+	return measurements, cleanupCommand
 }
 
 func (ca *Cagent) reportMeasurements(measurements common.MeasurementsMap, outputFile *os.File) error {

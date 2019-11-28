@@ -12,11 +12,12 @@ type Severity string
 const (
 	SeverityAlert   = "alert"
 	SeverityWarning = "warning"
+	SeverityNone    = "none"
 
-	maxStdStreamBufferSize = 100 // 4 * 1024
+	maxStdStreamBufferSize = 4 * 1024
 )
 
-var ValidSeverities = []Severity{SeverityAlert, SeverityWarning}
+var ValidSeverities = []Severity{SeverityAlert, SeverityWarning, SeverityNone}
 
 func IsValidJobMonitoringSeverity(s Severity) bool {
 	for _, validSeverity := range ValidSeverities {
