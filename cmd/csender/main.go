@@ -77,11 +77,11 @@ func main() {
 	warningMessagePtr := flag.String("w", "", "warning message")
 
 	versionPtr := flag.Bool("version", false, "show the csender version")
-	flag.Usage = func(){
+	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 		fmt.Fprintln(flag.CommandLine.Output(), "  key=value\n"+
-						 "        Arbitrary data to send. Use multiple times.")
+			"        Arbitrary data to send. Use multiple times.")
 		fmt.Fprintln(flag.CommandLine.Output(), "See https://docs.cloudradar.io/configuring-hosts/managing-checks/custom-checks#sending-data-using-csender")
 
 		fmt.Fprintln(flag.CommandLine.Output(), "")
