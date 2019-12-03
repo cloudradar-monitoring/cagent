@@ -6,8 +6,10 @@
   "files": {
     "guid": "174d5f1a-04ae-4d99-8807-9e9ced201957",
     "items": [
-      "csender.exe",
       "cagent.exe",
+
+
+      "csender.exe",
       "example.config.toml"
     ]
   },

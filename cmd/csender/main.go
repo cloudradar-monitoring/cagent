@@ -77,7 +77,17 @@ func main() {
 	warningMessagePtr := flag.String("w", "", "warning message")
 
 	versionPtr := flag.Bool("version", false, "show the csender version")
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
+		flag.PrintDefaults()
+		fmt.Fprintln(flag.CommandLine.Output(), "  key=value\n"+
+			"        Arbitrary data to send. Use multiple times.")
+		fmt.Fprintln(flag.CommandLine.Output(), "See https://docs.cloudradar.io/configuring-hosts/managing-checks/custom-checks#sending-data-using-csender")
 
+		fmt.Fprintln(flag.CommandLine.Output(), "")
+		fmt.Fprintf(flag.CommandLine.Output(), `Example:
+%s -t <TOKEN> -n <CHECK_NAME> -s 1 -a "This text triggers an alert. Optional" -w "This text triggers a warning. Optional" any_number=1 any_float=0.1245 any_string="Put your check result here"`+"\n", os.Args[0])
+	}
 	flag.Parse()
 
 	if *versionPtr {

@@ -141,6 +141,14 @@
                         Part="all"
                         Action="set"
                         System="yes" />
+
+                       <Environment Id="PATH"
+                       Name="PATH"
+                       Value="[INSTALLDIR]"
+                       Permanent="no"
+                       Part="last"
+                       Action="set"
+                       System="yes" />
             </Component>
         </Directory>
 
