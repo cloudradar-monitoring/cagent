@@ -121,3 +121,17 @@ synology-spk:
 	github-release upload --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --name "cagent_${CIRCLE_TAG}_synology_amd64.spk" --file "${PROJECT_DIR}/dist/cagent_${CIRCLE_TAG}_synology_amd64.spk"
 	github-release upload --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --name "cagent_${CIRCLE_TAG}_synology_armv7.spk" --file "${PROJECT_DIR}/dist/cagent_${CIRCLE_TAG}_synology_armv7.spk"
 	github-release upload --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --name "cagent_${CIRCLE_TAG}_synology_arm64.spk" --file "${PROJECT_DIR}/dist/cagent_${CIRCLE_TAG}_synology_arm64.spk"
+
+docker-goreleaser:
+	docker run -it --rm --privileged \
+		-v ${PWD}:${PROJECT_DIR} \
+		-v $(go env GOCACHE):/root/.cache/go-build \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-w ${PROJECT_DIR} \
+		goreleaser/goreleaser:v0.111 --snapshot --rm-dist --skip-publish
+
+docker-golangci-lint:
+	docker run -it --rm \
+		-v ${PWD}:${PROJECT_DIR} \
+		-w ${PROJECT_DIR} \
+		golangci/golangci-lint:v1.17 golangci-lint -c .golangci.yml run
