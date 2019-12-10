@@ -216,14 +216,17 @@ func NewConfig() *Config {
 
 	cfg.MinValuableConfig = *(defaultMinValuableConfig())
 
-	if runtime.GOOS == "windows" {
+	switch runtime.GOOS {
+	case "windows":
 		cfg.WindowsUpdatesWatcherInterval = 3600
 		cfg.NetInterfaceExcludeRegex = append(cfg.NetInterfaceExcludeRegex, "Pseudo-Interface")
 		cfg.CPULoadDataGather = []string{}
 		cfg.CPUUtilTypes = []string{"user", "system", "idle"}
 		cfg.VirtualMachinesStat = []string{"hyper-v"}
 		cfg.JobMonitoring.SpoolDirPath = "C:\\ProgramData\\cagent\\jobmon"
-	} else {
+	case "darwin":
+		cfg.JobMonitoring.SpoolDirPath = "/usr/local/var/lib/cagent/jobmon"
+	default:
 		cfg.FSMetrics = append(cfg.FSMetrics, "inodes_used_percent")
 	}
 

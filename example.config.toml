@@ -85,6 +85,7 @@ temperature_monitoring = true # default true
 [jobmon]
   # Path to spool dir
   #   spool_dir = 'C:\ProgramData\cagent\jobmon' # Windows
+  #   spool_dir = '/usr/local/var/lib/cagent/jobmon' # MacOS
   spool_dir = '/var/lib/cagent/jobmon' # Linux
   record_stderr = true # Record the last 4 KB of the error output. Default: true
   record_stdout = false # Record the last 4 KB of the standard output. Default: false
