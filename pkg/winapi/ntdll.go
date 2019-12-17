@@ -7,7 +7,6 @@ import (
 	"unsafe"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/windows"
 )
 
@@ -103,12 +102,12 @@ func GetSystemProcessInformation(omitThreads bool) (map[uint32]*SystemProcessInf
 
 	if retCode != 0 {
 		log.Debugf(
-			"[PROC] winapi call to NtQuerySystemInformation returned code: %d. required buffer size: %d. actual size: %d",
+			"winapi call to NtQuerySystemInformation returned code: %d. required buffer size: %d. actual size: %d",
 			retCode, retSize, currBufferSize,
 		)
 
 		if uintptr(retSize) > currBufferSize {
-			log.Debugf("[PROC] winapi: trying to call again with increased buffer size")
+			log.Debugf("trying to call again with increased buffer size")
 			currBufferSize = uintptr(retSize)
 			callWithBufferSize(currBufferSize)
 		}
@@ -146,7 +145,7 @@ func GetSystemProcessInformation(omitThreads bool) (map[uint32]*SystemProcessInf
 	}
 
 	if len(result) != counter {
-		log.Warnf("[PROC] winapi: parsing information failed: Returned %d processes, saved %d", counter, len(result))
+		log.Warnf("parsing information failed: Returned %d processes, saved %d", counter, len(result))
 	}
 
 	return result, threadsPerProcess, nil

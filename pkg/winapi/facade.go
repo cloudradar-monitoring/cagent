@@ -10,7 +10,6 @@ import (
 	"unsafe"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/windows"
 )
 
@@ -34,7 +33,7 @@ func GetProcessCommandLine(pid uint32) (string, error) {
 	defer func() {
 		err := windows.CloseHandle(handle)
 		if err != nil {
-			log.Warnf("winapi: there was error closing process handle: %s", err)
+			log.Warnf("there was error closing process handle: %s", err)
 		}
 	}()
 
