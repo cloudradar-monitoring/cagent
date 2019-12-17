@@ -58,6 +58,10 @@
                                         ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
                     <RegistryValue Type="string" Value='"[INSTALLDIR]\csender.exe" "%1%"'/>
                 </RegistryKey>
+                <RegistryKey Root="HKCR" Key="jobmon\shell\open\command"
+                                        ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
+                    <RegistryValue Type="string" Value='"[INSTALLDIR]\jobmon.exe" "%1%"'/>
+                </RegistryKey>
                 <RegistryKey Root="HKCR" Key="cagent"
                                         ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
                     <RegistryValue Type="string" Name="URL Protocol" Value="" KeyPath="yes"/>
@@ -184,6 +188,20 @@
             {{end}}
         </InstallExecuteSequence>
 
+        <DirectoryRef Id="TARGETDIR">
+            <Directory Id="CommonAppDataFolder">
+                <Directory Id="CommonAppCagentFolder" Name="cagent">
+                    <Directory Id="CommonAppJobmonFolder" Name="jobmon">
+                        <Component Id="CreateProgramDataJobmonFolder" Guid="8d8a4c84-8135-4b5b-9815-057ba94e8025">
+                            <CreateFolder>
+                                <util:PermissionEx User="Users" Domain="[MachineName]" GenericAll="yes" />
+                            </CreateFolder>
+                        </Component>
+                    </Directory>
+                </Directory>
+            </Directory>
+        </DirectoryRef>
+
         <Feature Id="DefaultFeature" Level="1">
             <ComponentRef Id="ENVS"/>
             {{if gt (.Files.Items | len) 0}}
@@ -193,6 +211,7 @@
             <ComponentGroupRef Id="AppFiles{{$i}}" />
             {{end}}
             <ComponentRef Id="RegistryEntries"/>
+            <ComponentRef Id="CreateProgramDataJobmonFolder" />
             <Feature Id="Uninstall">
                 <ComponentRef Id="UninstallFolder" Primary="yes"/>
             </Feature>

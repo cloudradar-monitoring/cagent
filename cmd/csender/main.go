@@ -7,13 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cloudradar-monitoring/cagent"
 	"github.com/cloudradar-monitoring/cagent/pkg/csender"
-)
-
-var (
-	// set on build:
-	// go build -o csender -ldflags="-X main.version=$(git --git-dir=src/github.com/cloudradar-monitoring/cagent/.git describe --always --long --dirty --tag)" github.com/cloudradar-monitoring/cangent/cmd/csender
-	version string
 )
 
 type boolFlag struct {
@@ -91,7 +86,7 @@ func main() {
 	flag.Parse()
 
 	if *versionPtr {
-		fmt.Printf("csender v%s released under MIT license. https://github.com/cloudradar-monitoring/cagent/\n", version)
+		printVersion()
 		return
 	}
 
@@ -164,4 +159,8 @@ func main() {
 	if err != nil {
 		fatal(err.Error())
 	}
+}
+
+func printVersion() {
+	fmt.Printf("csender - tool for sending custom check results to Hub.\nPart of cagent package v%s %s\n", cagent.Version, cagent.LicenseInfo)
 }

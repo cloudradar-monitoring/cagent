@@ -2,6 +2,7 @@ package cagent
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/troian/toml"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
+	"github.com/cloudradar-monitoring/cagent/pkg/jobmon"
 )
 
 const (
@@ -109,6 +111,8 @@ type Config struct {
 	Logs            LogsFilesConfig `toml:"logs,omitempty"`
 
 	StorCLI StorCLIConfig `toml:"storcli,omitempty" comment:"Enable monitoring of hardware health for MegaRaids\nreported by the storcli command-line tool\nRefer to https://docs.cloudradar.io/cagent/modules#storcli\nOn Linux make sure a sudo rule exists. The storcli command is always executed via sudo. Example:\ncagent ALL= NOPASSWD: /opt/MegaRAID/storcli/storcli64 /call show all J"`
+
+	JobMonitoring JobMonitoringConfig `toml:"jobmon,omitempty" comment:"Settings for the jobmon wrapper for the job monitoring"`
 }
 
 type CPUUtilisationAnalysisConfig struct {
@@ -122,6 +126,25 @@ type CPUUtilisationAnalysisConfig struct {
 
 type StorCLIConfig struct {
 	BinaryPath string `toml:"binary" comment:"Enable on Windows:\n  binary = 'C:\\Program Files\\storcli\\storcli64.exe'\nEnable on Linux:\n  binary = '/opt/storcli/sbin/storcli64'"`
+}
+
+type JobMonitoringConfig struct {
+	SpoolDirPath string          `toml:"spool_dir" comment:"Path to spool dir"`
+	RecordStdErr bool            `toml:"record_stderr" comment:"Record the last 4 KB of the error output. Default: true"`
+	RecordStdOut bool            `toml:"record_stdout" comment:"Record the last 4 KB of the standard output. Default: false"`
+	Severity     jobmon.Severity `toml:"severity" comment:"Failed jobs will be processed as alerts. Possible values alert, warning or none. Default: alert"`
+}
+
+func (j *JobMonitoringConfig) Validate() error {
+	if len(j.SpoolDirPath) == 0 {
+		return errors.New("spool_dir is empty")
+	}
+
+	if !jobmon.IsValidJobMonitoringSeverity(j.Severity) {
+		return fmt.Errorf("severity has invalid value. Must be one of %v", jobmon.ValidSeverities)
+	}
+
+	return nil
 }
 
 func init() {
@@ -184,17 +207,26 @@ func NewConfig() *Config {
 		StorCLI: StorCLIConfig{
 			BinaryPath: "",
 		},
+		JobMonitoring: JobMonitoringConfig{
+			RecordStdErr: true,
+			Severity:     jobmon.SeverityAlert,
+			SpoolDirPath: "/var/lib/cagent/jobmon",
+		},
 	}
 
 	cfg.MinValuableConfig = *(defaultMinValuableConfig())
 
-	if runtime.GOOS == "windows" {
+	switch runtime.GOOS {
+	case "windows":
 		cfg.WindowsUpdatesWatcherInterval = 3600
 		cfg.NetInterfaceExcludeRegex = append(cfg.NetInterfaceExcludeRegex, "Pseudo-Interface")
 		cfg.CPULoadDataGather = []string{}
 		cfg.CPUUtilTypes = []string{"user", "system", "idle"}
 		cfg.VirtualMachinesStat = []string{"hyper-v"}
-	} else {
+		cfg.JobMonitoring.SpoolDirPath = "C:\\ProgramData\\cagent\\jobmon"
+	case "darwin":
+		cfg.JobMonitoring.SpoolDirPath = "/usr/local/var/lib/cagent/jobmon"
+	default:
 		cfg.FSMetrics = append(cfg.FSMetrics, "inodes_used_percent")
 	}
 
@@ -394,6 +426,11 @@ func (cfg *Config) validate() error {
 
 	if cfg.HubRequestTimeout < minHubRequestTimeout || cfg.HubRequestTimeout > maxHubRequestTimeout {
 		return fmt.Errorf("hub_request_timeout must be between %d and %d", minHubRequestTimeout, maxHubRequestTimeout)
+	}
+
+	err = cfg.JobMonitoring.Validate()
+	if err != nil {
+		return fmt.Errorf("invalid [jobmon] config: %s", err.Error())
 	}
 
 	return nil

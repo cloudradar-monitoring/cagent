@@ -1,8 +1,12 @@
 package common
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type MeasurementsMap map[string]interface{}
@@ -27,5 +31,20 @@ func (t *Timestamp) MarshalJSON() ([]byte, error) {
 	ts := time.Time(*t).Unix()
 	stamp := fmt.Sprint(ts)
 
-	return []byte(stamp), nil
+	return json.Marshal(stamp)
+}
+
+func (t *Timestamp) UnmarshalJSON(raw []byte) error {
+	var strTimestamp string
+	if err := json.Unmarshal(raw, &strTimestamp); err != nil {
+		return err
+	}
+
+	timestamp, err := strconv.ParseInt(strTimestamp, 10, 0)
+	if err != nil {
+		return errors.Wrap(err, "input is not Unix timestamp")
+	}
+
+	*t = Timestamp(time.Unix(timestamp, 0))
+	return nil
 }

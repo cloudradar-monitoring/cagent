@@ -5,6 +5,8 @@ CONFIG_PATH=/etc/cagent/cagent.conf
 if [ "$1" = configure ]; then
     # $2 contains previous version number
     if [ -z "$2" ]; then # fresh install
+        chown cagent:cagent -R /var/lib/cagent
+        chmod 6777 /var/lib/cagent/jobmon
         /usr/bin/cagent -y -s cagent -c ${CONFIG_PATH}
     else # package update
         serviceStatus=`/usr/bin/cagent -y -service_status -c ${CONFIG_PATH}`

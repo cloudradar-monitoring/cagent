@@ -80,3 +80,13 @@ temperature_monitoring = true # default true
   #   binary = 'C:\Program Files\storcli\storcli64.exe'
   # Enable on Linux:
   binary = '/opt/storcli/sbin/storcli64'
+
+# Settings for the jobmon wrapper for the  monitoring of jobs
+[jobmon]
+  # Path to spool dir
+  #   spool_dir = 'C:\ProgramData\cagent\jobmon' # Windows
+  #   spool_dir = '/usr/local/var/lib/cagent/jobmon' # MacOS
+  spool_dir = '/var/lib/cagent/jobmon' # Linux
+  record_stderr = true # Record the last 4 KB of the error output. Default: true
+  record_stdout = false # Record the last 4 KB of the standard output. Default: false
+  severity = "alert" # Failed jobs will be processed as alerts. Possible values alert, warning or none. Default: alert
