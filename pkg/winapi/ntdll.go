@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"unsafe"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/windows"
 )
 
@@ -25,6 +27,7 @@ var (
 )
 
 func checkNtDLLProceduresAvailable() error {
+	log.Debugf("checkNtDLLProceduresAvailable")
 	if ntDLLLoadErr != nil {
 		return errors.Wrap(ntDLLLoadErr, "winapi: can't load dll Ntdll.dll")
 	}
@@ -41,6 +44,7 @@ func GetSystemProcessorPerformanceInformation() ([]SystemProcessorPerformanceInf
 	if err := checkNtDLLProceduresAvailable(); err != nil {
 		return nil, err
 	}
+	log.Debugf("GetSystemProcessorPerformanceInformation")
 
 	// Make maxResults large for safety.
 	// We can't invoke the api call with a results array that's too small.
@@ -72,12 +76,14 @@ func GetSystemProcessorPerformanceInformation() ([]SystemProcessorPerformanceInf
 	return resultBuffer, nil
 }
 
-func GetSystemProcessInformation() (map[uint32]*SystemProcessInformation, error) {
+func GetSystemProcessInformation(omitThreads bool) (map[uint32]*SystemProcessInformation, map[uint32][]*SystemThreadInformation, error) {
 	if err := checkNtDLLProceduresAvailable(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	log.Errorf("GetSystemProcessInformation()")
 
 	var p *SystemProcessInformation
+
 	var retSize uint32
 	var retCode uintptr
 	var err error
@@ -85,6 +91,7 @@ func GetSystemProcessInformation() (map[uint32]*SystemProcessInformation, error)
 	callWithBufferSize := func(size uintptr) {
 		buffer := make([]byte, size)
 		p = (*SystemProcessInformation)(unsafe.Pointer(&buffer[0]))
+
 		retCode, _, err = procNtQuerySystemInformation.Call(
 			systemProcessInformationClass,
 			uintptr(unsafe.Pointer(p)),
@@ -112,7 +119,7 @@ func GetSystemProcessInformation() (map[uint32]*SystemProcessInformation, error)
 		}
 
 		if retCode != 0 {
-			return nil, errors.Wrapf(
+			return nil, nil, errors.Wrapf(
 				err,
 				"winapi call to NtQuerySystemInformation returned code: %d. required buffer size: %d. actual size: %d",
 				retCode, retSize, currBufferSize,
@@ -122,9 +129,28 @@ func GetSystemProcessInformation() (map[uint32]*SystemProcessInformation, error)
 
 	var counter int
 	result := make(map[uint32]*SystemProcessInformation)
+	windowByProcessId, err := WindowByProcessId()
+	if err != nil {
+		log.Errorf("WindowByProcessId error: %s", err.Error())
+	} else {
+		log.Errorf("WindowByProcessId done: %s", spew.Sdump(windowByProcessId))
+	}
+
+	threadsPerProcess := make(map[uint32][]*SystemThreadInformation)
 	for {
-		result[uint32((*p).UniqueProcessID)] = p
-		counter++
+		result[uint32(p.UniqueProcessID)] = p
+		if !omitThreads {
+			threadsPerProcess[uint32((*p).UniqueProcessID)] = []*SystemThreadInformation{}
+			counter++
+
+			ts := []*SystemThreadInformation{}
+			for i := 0; i < int((*p).NumberOfThreads); i++ {
+				t := (*SystemThreadInformation)(add(unsafe.Pointer(p), systemProcessInfoSize+systemThreadInfoSize*uintptr(i)))
+				ts = append(ts, t)
+			}
+
+			threadsPerProcess[uint32((*p).UniqueProcessID)] = ts
+		}
 		if p.NextEntryOffset == 0 {
 			break
 		}
@@ -135,7 +161,7 @@ func GetSystemProcessInformation() (map[uint32]*SystemProcessInformation, error)
 		logrus.Warnf("winapi: parsing information failed: Returned %d processes, saved %d", counter, len(result))
 	}
 
-	return result, nil
+	return result, threadsPerProcess, nil
 }
 
 // returns address for ProcessEnvironmentBlock struct

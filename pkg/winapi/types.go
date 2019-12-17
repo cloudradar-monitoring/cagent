@@ -20,7 +20,7 @@ const (
 	// https://docs.microsoft.com/en-us/windows/desktop/api/winternl/nf-winternl-ntquerysysteminformation#system_process_information
 	systemProcessInformationClass = 5
 	systemProcessInfoSize         = unsafe.Sizeof(SystemProcessInformation{})
-	systemThreadInfoSize          = unsafe.Sizeof(systemThreadInformation{})
+	systemThreadInfoSize          = unsafe.Sizeof(SystemThreadInformation{})
 
 	// systemProcessAllAccess class to query with OpenProcess()
 	// https://docs.microsoft.com/ru-ru/windows/desktop/ProcThread/process-security-and-access-rights
@@ -37,6 +37,34 @@ const (
 	// IOCTL_DISK_PERFORMANCE to query with DeviceIoControl
 	// https://docs.microsoft.com/en-us/windows/win32/api/winioctl/ni-winioctl-ioctl_disk_performance
 	systemIOCTLDiskPerformance = 0x70020
+)
+
+const (
+	SystemThreadStateInitialized uint32 = iota
+	SystemThreadStateReady
+	SystemThreadStateRunning
+	SystemThreadStateStandby
+	SystemThreadStateTerminated
+	SystemThreadStateWait
+	SystemThreadStateTransition
+	SystemThreadStateUnknown
+)
+
+const (
+	SystemThreadWaitReasonExecutive kWaitReason = iota
+	SystemThreadWaitReasonFreePage
+	SystemThreadWaitReasonPageIn
+	SystemThreadWaitReasonSystemAllocation
+	SystemThreadWaitReasonExecutionDelay
+	SystemThreadWaitReasonSuspended
+	SystemThreadWaitReasonUserRequest
+	SystemThreadWaitReasonEventPairHigh
+	SystemThreadWaitReasonEventPairLow
+	SystemThreadWaitReasonLpcReceive
+	SystemThreadWaitReasonLpcReply
+	SystemThreadWaitReasonVirtualMemory
+	SystemThreadWaitReasonPageOut
+	SystemThreadWaitReasonUnknown
 )
 
 // SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION
@@ -117,7 +145,7 @@ type clientID struct {
 }
 
 // SYSTEM_THREAD_INFORMATION
-type systemThreadInformation struct {
+type SystemThreadInformation struct {
 	KernelTime      int64       // LARGE_INTEGER
 	UserTime        int64       // LARGE_INTEGER
 	CreateTime      int64       // LARGE_INTEGER
