@@ -3,7 +3,6 @@
 package winapi
 
 import (
-	"fmt"
 	"syscall"
 	"unsafe"
 )
@@ -68,8 +67,6 @@ func IsHangWindow(hwnd syscall.Handle) (bool, error) {
 	if e1 != 0 {
 		return false, error(e1)
 	}
-
-	fmt.Printf("IsHangWindow %d", isHang)
 
 	return isHang == 1, nil
 }
