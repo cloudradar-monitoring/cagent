@@ -10,7 +10,7 @@ import (
 )
 
 func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfoSnapshot, error) {
-	processesOld, err := winapi.GetSystemProcessInformation()
+	processesOld, _, err := winapi.GetSystemProcessInformation(true)
 	if err != nil {
 		return nil, err
 	}
@@ -18,7 +18,7 @@ func (t *Top) GetProcesses(interval time.Duration) ([]*ProcessInfoSnapshot, erro
 
 	time.Sleep(interval)
 
-	processesNew, err := winapi.GetSystemProcessInformation()
+	processesNew, _, err := winapi.GetSystemProcessInformation(true)
 	if err != nil {
 		return nil, err
 	}

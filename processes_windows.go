@@ -17,7 +17,7 @@ var monitoredProcessCache = make(map[uint32]*winapi.SystemProcessInformation)
 var lastProcessQueryTime time.Time
 
 func processes(systemMemorySize uint64) ([]ProcStat, error) {
-	procs, err := winapi.GetSystemProcessInformation()
+	procByPid, threadsByProcPid, err := winapi.GetSystemProcessInformation(false)
 	if err != nil {
 		return nil, errors.Wrap(err, "[PROC] can't get system processes")
 	}
@@ -32,7 +32,12 @@ func processes(systemMemorySize uint64) ([]ProcStat, error) {
 	var updatedProcessCache = make(map[uint32]*winapi.SystemProcessInformation)
 	cmdLineRetrievalFailuresCount := 0
 	logicalCPUCount := uint8(runtime.NumCPU())
-	for pid, proc := range procs {
+	windowByProcessId, err := winapi.WindowByProcessId()
+	if err != nil {
+		log.Errorf("[PROC] failed to list all windows by processId")
+	}
+
+	for pid, proc := range procByPid {
 		if pid == 0 {
 			continue
 		}
@@ -50,11 +55,39 @@ func processes(systemMemorySize uint64) ([]ProcStat, error) {
 			cpuUsagePercent = winapi.CalculateProcessCPUUsagePercent(oldProcessInfo, proc, timeElapsedReal, logicalCPUCount)
 		}
 
+		allSuspended := true
+		for _, thread := range threadsByProcPid[pid] {
+			if thread.ThreadState != winapi.SystemThreadStateWait {
+				allSuspended = false
+			} else {
+				if thread.WaitReason != winapi.SystemThreadWaitReasonSuspended {
+					allSuspended = false
+				}
+			}
+		}
+
+		// default state is running
+		var state = "running"
+
+		if allSuspended {
+			// all threads suspended so mark the process as suspended
+			state = "suspended"
+		} else if windowByProcessId != nil {
+			if window, exists := windowByProcessId[pid]; exists {
+				isHanging, err := winapi.IsHangWindow(window)
+				if err != nil {
+					log.Errorf("[PROC] can't query hang window got error: %s", err.Error())
+				} else if isHanging {
+					state = "not responding"
+				}
+			}
+		}
+
 		memoryUsagePercent := (float64(proc.WorkingSetSize) / float64(systemMemorySize)) * 100
 		ps := ProcStat{
 			PID:                    int(pid),
 			ParentPID:              int(proc.InheritedFromUniqueProcessID),
-			State:                  "running",
+			State:                  state,
 			Name:                   proc.ImageName.String(),
 			Cmdline:                cmdLine,
 			CPUAverageUsagePercent: float32(common.RoundToTwoDecimalPlaces(cpuUsagePercent)),
