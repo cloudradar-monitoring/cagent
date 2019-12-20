@@ -140,6 +140,10 @@ func (j *JobMonitoringConfig) Validate() error {
 		return errors.New("spool_dir is empty")
 	}
 
+	if !filepath.IsAbs(j.SpoolDirPath) {
+		return errors.New("spool_dir path must be absolute")
+	}
+
 	if !jobmon.IsValidJobMonitoringSeverity(j.Severity) {
 		return fmt.Errorf("severity has invalid value. Must be one of %v", jobmon.ValidSeverities)
 	}
