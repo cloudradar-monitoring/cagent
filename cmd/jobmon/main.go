@@ -21,28 +21,56 @@ const (
 	maxJobIDLength         = 100
 )
 
+const (
+	usageExamples = `Examples:
+  jobmon -id my-rsync-job -- rsync -a /etc /var/backups
+  jobmon -id my-rsync-job -ro -- rsync -av /etc /var/backups
+  jobmon -id my-rsync-job -re=false -s none -- rsync -av /etc /var/backups
+  jobmon -id my-robocopy-job -- robocopy C:\Users\nobody\Downloads "C:\My Backups" /MIR
+  jobmon -id my-robocopy-job -nr 24h -- robocopy C:\Users\nobody\Downloads "C:\My Backups" /MIR`
+)
+
 var logger *logrus.Logger
+
+type plainFormatter struct {
+}
+
+func (f *plainFormatter) Format(entry *logrus.Entry) ([]byte, error) {
+	fieldValuesFormatted := ""
+	for key, value := range entry.Data {
+		fieldValuesFormatted = fmt.Sprintf("%s %s=%s", fieldValuesFormatted, key, value)
+	}
+	return []byte(fmt.Sprintf("%s%s\n", entry.Message, fieldValuesFormatted)), nil
+}
 
 func init() {
 	// jobmon binary should not write any messages to log file
 	logger = logrus.New()
 	logger.SetOutput(os.Stderr)
-
-	tfmt := logrus.TextFormatter{DisableTimestamp: true, DisableColors: true}
-	logger.SetFormatter(&tfmt)
+	logger.SetFormatter(&plainFormatter{})
 }
 
 func main() {
-	versionPtr := flag.Bool("version", false, "show the jobmon version")
-	cfgPathPtr := flag.String("c", cagent.DefaultCfgPath, "config file path")
+	versionPtr := flag.Bool("version", false, "Show the jobmon version")
+	cfgPathPtr := flag.String("c", cagent.DefaultCfgPath, "Config file path")
 
 	jobIDPtr := flag.String("id", "", fmt.Sprintf("id of the job, required, maximum %d characters", maxJobIDLength))
 	forceRunPtr := flag.Bool("f", false, "Force run of a job even if the job with the same ID is already running or its termination wasn't handled successfully.")
-	severityPtr := flag.String("s", "", "alert|warning|none process failed job with this severity. Overwrites the default severity of cagent.conf. Severity 'none' suppresses all messages.")
-	nextRunInPtr := flag.Duration("nr", 0, "<N>h|m indicates when the job should run for the next time. Allows triggering alters for not run jobs. The shortest interval is 5 minutes.")
+	severityPtr := flag.String("s", "", "alert|warning|none If job fails (exit code != 0) trigger an event with this severity. 'alert' is used by default.\nOverwrites the default severity of cagent.conf. Severity 'none' suppresses all messages.")
+	nextRunInPtr := flag.Duration("nr", 0, "<N>h|m indicates when the job should run for the next time. Allows triggering alerts for not run jobs.\nThe shortest interval is 5 minutes.")
 	maxExecutionTimePtr := flag.Duration("me", 0, "<N>h|m|s or just <N> for number of seconds. Max execution time for job.")
-	recordStdErrPtr := flag.Bool("re", false, "record errors from stderr, overwrites the default settings of cagent.conf, limited to the last 4 KB")
-	recordStdOutPtr := flag.Bool("ro", false, "record errors from stdout, overwrites the default settings of cagent.conf, limited to the last 4 KB")
+
+	recordStdErrPtr := flag.Bool("re", false, "or -re=true|false\nRecord errors from stderr, overwrites the default settings of cagent.conf.\nLimited to the last 4 KB.\nUse '-re=false' to disable the recording")
+	recordStdOutPtr := flag.Bool("ro", false, "or -ro=true|false\nRecord errors from stdout, overwrites the default settings of cagent.conf\nLimited to the last 4 KB.")
+
+	flag.Usage = func() {
+		_, _ = fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
+		_, _ = fmt.Fprintf(flag.CommandLine.Output(), "%s -id <JOB_ID> {ARGS} -- <COMMAND_TO_EXECUTE> {COMMAND_ARGS}\n", os.Args[0])
+		_, _ = fmt.Fprintln(flag.CommandLine.Output(), "")
+		flag.PrintDefaults()
+		_, _ = fmt.Fprintln(flag.CommandLine.Output(), "")
+		_, _ = fmt.Fprintln(flag.CommandLine.Output(), usageExamples)
+	}
 
 	flag.Parse()
 

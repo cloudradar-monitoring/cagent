@@ -6,9 +6,10 @@ CONFIG_PATH=/etc/cagent/cagent.conf
 # Upgrade:	2 or higher (depending on the number of versions installed)
 versionsCount=$1
 
+chown cagent:cagent -R /var/lib/cagent
+chmod 6777 /var/lib/cagent/jobmon
+
 if [ ${versionsCount} == 1 ]; then # fresh install
-    chown cagent:cagent -R /var/lib/cagent
-    chmod 6777 /var/lib/cagent/jobmon
     /usr/bin/cagent -y -s cagent -c ${CONFIG_PATH}
 else # package update
     serviceStatus=`/usr/bin/cagent -y -service_status -c ${CONFIG_PATH}`
