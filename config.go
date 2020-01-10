@@ -106,6 +106,8 @@ type Config struct {
 
 	TemperatureMonitoring bool `toml:"temperature_monitoring" comment:"default true"`
 
+	SoftwareRAIDMonitoring bool `toml:"software_raid_monitoring" comment:"Software raid monitoring\nAuto-detect software raids by reading /proc/mdstat and monitor them\ndefault true"`
+
 	SMARTMonitoring bool            `toml:"smart_monitoring" comment:"Enable S.M.A.R.T monitoring of hard disks\ndefault false"`
 	SMARTCtl        string          `toml:"smartctl" comment:"Path to a smartctl binary (smartctl.exe on windows, path must be escaped) version >= 7\nSee https://docs.cloudradar.io/configuring-hosts/installing-agents/troubleshoot-s.m.a.r.t-monitoring\nsmartctl = \"C:\\\\Program Files\\\\smartmontools\\\\bin\\\\smartctl.exe\"\nsmartctl = \"/usr/local/bin/smartctl\""`
 	Logs            LogsFilesConfig `toml:"logs,omitempty"`
@@ -203,8 +205,9 @@ func NewConfig() *Config {
 			ReportProcesses:                5,
 			TrailingProcessAnalysisMinutes: 5,
 		},
-		SMARTMonitoring:       false,
-		TemperatureMonitoring: true,
+		SMARTMonitoring:        false,
+		TemperatureMonitoring:  true,
+		SoftwareRAIDMonitoring: true,
 		Logs: LogsFilesConfig{
 			HubFile: "",
 		},
