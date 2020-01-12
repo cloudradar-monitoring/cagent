@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/cloudradar-monitoring/cagent/pkg/proxydetect"
 	"github.com/pkg/errors"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
@@ -29,6 +30,8 @@ func (cs *Csender) httpClient() *http.Client {
 			RootCAs: rootCAs,
 		}
 	}
+
+	tr.Proxy = proxydetect.GetProxyForRequest
 
 	return &http.Client{
 		Timeout:   HubTimeout,

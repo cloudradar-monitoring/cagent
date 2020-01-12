@@ -6,6 +6,9 @@ import (
 	"reflect"
 	"unicode/utf16"
 	"unsafe"
+
+	"github.com/lxn/win"
+	"golang.org/x/sys/windows"
 )
 
 const (
@@ -189,4 +192,92 @@ type DiskPerformance struct {
 	QueryTime           int64
 	StorageDeviceNumber uint32
 	StorageManagerName  [8]uint16
+}
+
+type HInternet uintptr
+
+// Wrap it to provide useful String() method
+// syscall sets the inline struct's field as it was same-level field
+type Lpwstr struct {
+	Value *uint16
+}
+
+func (l Lpwstr) Set(s string) error {
+	if s == "" {
+		return nil
+	}
+
+	r, err := windows.UTF16PtrFromString(s)
+	if err != nil {
+		return err
+	}
+
+	l.Value = r
+	return nil
+}
+
+func (l Lpwstr) UTF16Ptr() *uint16 {
+	return l.Value
+}
+
+func (l Lpwstr) String() string {
+	return win.UTF16PtrToString(l.Value)
+}
+
+func (l Lpwstr) Free() error {
+	return GlobalFree(l.Value)
+}
+
+type Lpwstrs []Lpwstr
+
+func (strs Lpwstrs) Free() error {
+	var firstErr error
+	for _, lpwstr := range strs {
+		err := lpwstr.Free()
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+
+	return firstErr
+}
+
+// WINHTTP_AUTOPROXY_OPTIONS
+// https://docs.microsoft.com/en-us/windows/win32/api/winhttp/ns-winhttp-winhttp_autoproxy_options#syntax
+type HttpAutoProxyOptions struct {
+	DwFlags                uint32  // DWORD
+	DwAutoDetectFlags      uint32  // DWORD
+	LpszAutoConfigUrl      Lpwstr  // LPCWSTR (same as LPWSTR, but const)
+	lpvReserved            uintptr // LPVOID
+	dwReserved             uint32  // DWORD
+	FAutoLogonIfChallenged bool    // BOOL
+}
+
+func (c HttpAutoProxyOptions) Free() error {
+	return c.LpszAutoConfigUrl.Free()
+}
+
+// WINHTTP_PROXY_INFO
+// https://docs.microsoft.com/en-us/windows/win32/api/winhttp/ns-winhttp-winhttp_proxy_info
+type HttpProxyInfo struct {
+	DwAccessType    uint32 // DWORD
+	LpszProxy       Lpwstr // LPWSTR
+	LpszProxyBypass Lpwstr // LPWSTR
+}
+
+func (c HttpProxyInfo) Free() error {
+	return Lpwstrs([]Lpwstr{c.LpszProxy, c.LpszProxyBypass}).Free()
+}
+
+// WINHTTP_CURRENT_USER_IE_PROXY_CONFIG
+// https://docs.microsoft.com/en-us/windows/win32/api/winhttp/ns-winhttp-winhttp_connection_info
+type HttpCurrentUserIEProxyConfig struct {
+	FAutoDetect       bool   // BOOL
+	LpszAutoConfigUrl Lpwstr // LPWSTR
+	LpszProxy         Lpwstr // LPWSTR
+	LpszProxyBypass   Lpwstr // LPWSTR
+}
+
+func (c HttpCurrentUserIEProxyConfig) Free() error {
+	return Lpwstrs([]Lpwstr{c.LpszAutoConfigUrl, c.LpszProxy, c.LpszProxyBypass}).Free()
 }
