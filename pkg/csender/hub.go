@@ -12,10 +12,10 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/proxydetect"
 	"github.com/pkg/errors"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
+	"github.com/cloudradar-monitoring/cagent/pkg/proxydetect"
 )
 
 func (cs *Csender) httpClient() *http.Client {

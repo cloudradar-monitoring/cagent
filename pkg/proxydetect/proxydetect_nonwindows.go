@@ -6,6 +6,8 @@ import "net/url"
 
 // todo: darwin proxy detection
 
-func getProxyForUrl(u *url.URL) (*url.URL, error) {
+func getProxyForURL(u *url.URL) (*url.URL, error) {
+	// workaround non-used warning on windows
+	_ = log
 	return nil, ErrNotFound
 }

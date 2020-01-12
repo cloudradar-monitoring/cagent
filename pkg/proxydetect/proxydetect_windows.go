@@ -19,7 +19,7 @@ const (
 	receiveTimeout = 10000
 )
 
-func getProxyForUrl(u *url.URL) (proxy *url.URL, err error) {
+func getProxyForURL(u *url.URL) (proxy *url.URL, err error) {
 	ieProxy, err := winapi.HttpGetIEProxyConfigForCurrentUser()
 	if err != nil {
 		log.Errorf("HttpGetIEProxyConfigForCurrentUser error: %s", err.Error())

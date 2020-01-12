@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudradar-monitoring/cagent/pkg/proxydetect"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
+	"github.com/cloudradar-monitoring/cagent/pkg/proxydetect"
 )
 
 func (ca *Cagent) initHubClientOnce() {

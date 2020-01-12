@@ -11,7 +11,7 @@ import (
 var ErrNotFound = fmt.Errorf("not found")
 var log = logrus.WithField("package", "proxydetect")
 
-func GetProxyForUrl(u *url.URL) (*url.URL, error) {
+func GetProxyForURL(u *url.URL) (*url.URL, error) {
 	// priority for the proxy set in the environment vars
 	req := http.Request{URL: u}
 	proxy, err := http.ProxyFromEnvironment(&req)
@@ -22,7 +22,7 @@ func GetProxyForUrl(u *url.URL) (*url.URL, error) {
 	}
 
 	// then fallback to the system-specific proxy detection(only windows is implemented right now)
-	return getProxyForUrl(u)
+	return getProxyForURL(u)
 }
 
 func GetProxyForRequest(r *http.Request) (*url.URL, error) {
@@ -37,7 +37,7 @@ func GetProxyForRequest(r *http.Request) (*url.URL, error) {
 		return nil, nil
 	}
 
-	proxy, err := GetProxyForUrl(r.URL)
+	proxy, err := GetProxyForURL(r.URL)
 	if err == ErrNotFound {
 		return nil, nil
 	}
