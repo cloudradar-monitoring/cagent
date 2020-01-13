@@ -1,0 +1,1 @@
+cagent ALL= NOPASSWD: /usr/bin/dnf -q check-update

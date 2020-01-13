@@ -113,6 +113,8 @@ type Config struct {
 	StorCLI StorCLIConfig `toml:"storcli,omitempty" comment:"Enable monitoring of hardware health for MegaRaids\nreported by the storcli command-line tool\nRefer to https://docs.cloudradar.io/cagent/modules#storcli\nOn Linux make sure a sudo rule exists. The storcli command is always executed via sudo. Example:\ncagent ALL= NOPASSWD: /opt/MegaRAID/storcli/storcli64 /call show all J"`
 
 	JobMonitoring JobMonitoringConfig `toml:"jobmon,omitempty" comment:"Settings for the jobmon wrapper for the job monitoring"`
+
+	LinuxUpdatesChecks LinuxUpdatesMonitoringConfig `toml:"linux_updates_checks" comment:"Monitor the available updates using apt-get, yum or dfn\nIgnored on distributions using other package managers.\nRequires sudo rules. DEB and RPM packages install them automatically."`
 }
 
 type CPUUtilisationAnalysisConfig struct {
@@ -126,6 +128,19 @@ type CPUUtilisationAnalysisConfig struct {
 
 type StorCLIConfig struct {
 	BinaryPath string `toml:"binary" comment:"Enable on Windows:\n  binary = 'C:\\Program Files\\storcli\\storcli64.exe'\nEnable on Linux:\n  binary = '/opt/storcli/sbin/storcli64'"`
+}
+
+type LinuxUpdatesMonitoringConfig struct {
+	Enabled       bool `toml:"enabled" comment:"Set 'false' to disable checking available updates"`
+	FetchTimeout  uint `toml:"fetch_timeout" comment:"Maximum time the package manager is allowed to spend fetching available updates"`
+	CheckInterval uint `toml:"check_interval" comment:"Check for available updates every N seconds"`
+}
+
+func (l *LinuxUpdatesMonitoringConfig) Validate() error {
+	if l.FetchTimeout >= l.CheckInterval {
+		return errors.New("fetch_timeout should be less than check_interval")
+	}
+	return nil
 }
 
 type JobMonitoringConfig struct {
@@ -215,6 +230,11 @@ func NewConfig() *Config {
 			RecordStdErr: true,
 			Severity:     jobmon.SeverityAlert,
 			SpoolDirPath: "/var/lib/cagent/jobmon",
+		},
+		LinuxUpdatesChecks: LinuxUpdatesMonitoringConfig{
+			Enabled:       true,
+			FetchTimeout:  30,
+			CheckInterval: 14400,
 		},
 	}
 
@@ -435,6 +455,11 @@ func (cfg *Config) validate() error {
 	err = cfg.JobMonitoring.Validate()
 	if err != nil {
 		return fmt.Errorf("invalid [jobmon] config: %s", err.Error())
+	}
+
+	err = cfg.LinuxUpdatesChecks.Validate()
+	if err != nil {
+		return fmt.Errorf("invalid [linux_updates_checks] config: %s", err.Error())
 	}
 
 	return nil

@@ -90,3 +90,11 @@ temperature_monitoring = true # default true
   record_stderr = true # Record the last 4 KB of the error output. Default: true
   record_stdout = false # Record the last 4 KB of the standard output. Default: false
   severity = "alert" # Failed jobs will be processed as alerts. Possible values alert, warning or none. Default: alert
+
+# Monitor the available updates using apt-get, yum or dfn
+# Ignored on distributions using other package managers.
+# Requires sudo rules. DEB and RPM packages install them automatically.
+[linux_updates_checks]
+  enabled = true # Set 'false' to disable checking available updates
+  fetch_timeout = 30 # Maximum time the package manager is allowed to spend fetching available updates
+  check_interval = 14400 # Check for available updates every N seconds.
