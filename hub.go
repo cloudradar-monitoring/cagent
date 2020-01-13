@@ -37,6 +37,7 @@ func (ca *Cagent) initHubClientOnce() {
 		}
 
 		transport.Proxy = proxydetect.GetProxyForRequest
+		proxydetect.UserAgent = ca.userAgent()
 
 		if len(ca.Config.HubProxy) > 0 {
 			// in case we have proxy set in the config

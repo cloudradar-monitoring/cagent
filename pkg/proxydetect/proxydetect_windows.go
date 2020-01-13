@@ -119,7 +119,7 @@ func getProxyForURL(u *url.URL) (proxy *url.URL, err error) {
 }
 
 func getProxyInfoForUrl(targetUrl *url.URL, autoProxyOptions *winapi.HttpAutoProxyOptions) (*winapi.HttpProxyInfo, error) {
-	userAgent, _ := windows.UTF16PtrFromString("cagent")
+	userAgent, _ := windows.UTF16PtrFromString(UserAgent)
 
 	h, err := winapi.HttpOpen(
 		userAgent,
@@ -154,7 +154,6 @@ func matchProxyForURLAndBypassList(targetUrl *url.URL, proxies []string, bypassL
 	// lets try to find the one that match the requested protocol, otherwise choose the one without specified protocol
 	for _, s := range proxies {
 		parts := strings.SplitN(s, "=", 2)
-		//
 		if len(parts) < 2 {
 			// assign a match, but keep looking in case we have a protocol specific match
 			proxyUrlStr = s

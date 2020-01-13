@@ -10,6 +10,7 @@ import (
 
 var ErrNotFound = fmt.Errorf("not found")
 var log = logrus.WithField("package", "proxydetect")
+var UserAgent = "proxydetect" // used for autoconfig requests
 
 func GetProxyForURL(u *url.URL) (*url.URL, error) {
 	// priority for the proxy set in the environment vars
