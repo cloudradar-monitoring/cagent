@@ -22,7 +22,7 @@ func (ca *Cagent) initModules() {
 			return storcli.CreateModule(ca.Config.StorCLI.BinaryPath)
 		},
 		func() monitoring.Module {
-			return raid.CreateModule()
+			return raid.CreateModule(ca.Config.SoftwareRAIDMonitoring)
 		},
 	}
 

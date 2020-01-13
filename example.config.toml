@@ -61,6 +61,11 @@ hardware_inventory = true
 discover_autostarting_services_only = true
 temperature_monitoring = true # default true
 
+# Software raid monitoring
+# Auto-detect software raids by reading /proc/mdstat and monitor them
+# default true
+software_raid_monitoring = true
+
 # default
 [cpu_utilisation_analysis]
   threshold = 10.0 # target value to start the analysis

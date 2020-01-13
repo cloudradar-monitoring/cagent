@@ -24,11 +24,13 @@ var log = logrus.WithField("package", "raid")
 
 type RAID struct {
 	mdstatFilePath string
+	enabled        bool
 }
 
-func CreateModule() monitoring.Module {
+func CreateModule(enabled bool) monitoring.Module {
 	return &RAID{
 		mdstatFilePath: common.HostProc("mdstat"),
+		enabled:        enabled,
 	}
 }
 
@@ -37,7 +39,7 @@ func (r *RAID) GetDescription() string {
 }
 
 func (r *RAID) IsEnabled() bool {
-	return runtime.GOOS == "linux"
+	return r.enabled && runtime.GOOS == "linux"
 }
 
 func (r *RAID) readAndParseMdstat() raidArrays {
