@@ -38,6 +38,8 @@ func (a *pkgMgrApt) FetchUpdates(timeout time.Duration) error {
 }
 
 func (a *pkgMgrApt) GetAvailableUpdatesCount() (int, error) {
+	// disable gosec G204 cmd audit:
+	/* #nosec */
 	cmd := exec.Command("sudo", a.GetBinaryPath(), "upgrade", "--dry-run")
 	out, err := cmd.Output()
 	if err != nil {
