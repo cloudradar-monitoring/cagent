@@ -33,7 +33,7 @@ func (cs *Csender) httpClient() *http.Client {
 
 	tr.Proxy = proxydetect.GetProxyForRequest
 	proxydetect.UserAgent = cs.userAgent()
-	
+
 	return &http.Client{
 		Timeout:   HubTimeout,
 		Transport: &tr,
