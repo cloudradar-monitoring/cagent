@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
+	"github.com/cloudradar-monitoring/cagent/pkg/proxydetect"
 )
 
 func (cs *Csender) httpClient() *http.Client {
@@ -29,6 +30,9 @@ func (cs *Csender) httpClient() *http.Client {
 			RootCAs: rootCAs,
 		}
 	}
+
+	tr.Proxy = proxydetect.GetProxyForRequest
+	proxydetect.UserAgent = cs.userAgent()
 
 	return &http.Client{
 		Timeout:   HubTimeout,

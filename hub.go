@@ -16,13 +16,14 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
+	"github.com/cloudradar-monitoring/cagent/pkg/proxydetect"
 )
 
 func (ca *Cagent) initHubClientOnce() {
 	ca.hubClientOnce.Do(func() {
-		transport := &http.Transport{
-			ResponseHeaderTimeout: 15 * time.Second,
-		}
+		// copy the default transport struct
+		transport := *(http.DefaultTransport.(*http.Transport))
+		transport.ResponseHeaderTimeout = 15 * time.Second
 
 		rootCAs, err := common.CustomRootCertPool()
 		if err != nil {
@@ -35,7 +36,12 @@ func (ca *Cagent) initHubClientOnce() {
 			}
 		}
 
+		transport.Proxy = proxydetect.GetProxyForRequest
+		proxydetect.UserAgent = ca.userAgent()
+
 		if len(ca.Config.HubProxy) > 0 {
+			// in case we have proxy set in the config
+			// it will override the proxy from the system
 			if !strings.HasPrefix(ca.Config.HubProxy, "http://") {
 				ca.Config.HubProxy = "http://" + ca.Config.HubProxy
 			}
@@ -55,7 +61,7 @@ func (ca *Cagent) initHubClientOnce() {
 		}
 		ca.hubClient = &http.Client{
 			Timeout:   time.Duration(ca.Config.HubRequestTimeout) * time.Second,
-			Transport: transport,
+			Transport: &transport,
 		}
 	})
 }
