@@ -198,11 +198,11 @@ type HInternet uintptr
 
 // Wrap it to provide useful String() method
 // syscall sets the inline struct's field as it was same-level field
-type Lpwstr struct {
+type LPWSTR struct {
 	Value *uint16
 }
 
-func (l Lpwstr) Set(s string) error {
+func (l LPWSTR) Set(s string) error {
 	if s == "" {
 		return nil
 	}
@@ -216,21 +216,21 @@ func (l Lpwstr) Set(s string) error {
 	return nil
 }
 
-func (l Lpwstr) UTF16Ptr() *uint16 {
+func (l LPWSTR) UTF16Ptr() *uint16 {
 	return l.Value
 }
 
-func (l Lpwstr) String() string {
+func (l LPWSTR) String() string {
 	return win.UTF16PtrToString(l.Value)
 }
 
-func (l Lpwstr) Free() error {
+func (l LPWSTR) Free() error {
 	return GlobalFree(l.Value)
 }
 
-type Lpwstrs []Lpwstr
+type LPWSTRs []LPWSTR
 
-func (strs Lpwstrs) Free() error {
+func (strs LPWSTRs) Free() error {
 	var firstErr error
 	for _, lpwstr := range strs {
 		err := lpwstr.Free()
@@ -247,7 +247,7 @@ func (strs Lpwstrs) Free() error {
 type HttpAutoProxyOptions struct {
 	DwFlags                uint32  // DWORD
 	DwAutoDetectFlags      uint32  // DWORD
-	LpszAutoConfigUrl      Lpwstr  // LPCWSTR (same as LPWSTR, but const)
+	LpszAutoConfigUrl      LPWSTR  // LPCWSTR (same as LPWSTR, but const)
 	lpvReserved            uintptr // LPVOID
 	dwReserved             uint32  // DWORD
 	FAutoLogonIfChallenged bool    // BOOL
@@ -261,23 +261,23 @@ func (c HttpAutoProxyOptions) Free() error {
 // https://docs.microsoft.com/en-us/windows/win32/api/winhttp/ns-winhttp-winhttp_proxy_info
 type HttpProxyInfo struct {
 	DwAccessType    uint32 // DWORD
-	LpszProxy       Lpwstr // LPWSTR
-	LpszProxyBypass Lpwstr // LPWSTR
+	LpszProxy       LPWSTR // LPWSTR
+	LpszProxyBypass LPWSTR // LPWSTR
 }
 
 func (c HttpProxyInfo) Free() error {
-	return Lpwstrs([]Lpwstr{c.LpszProxy, c.LpszProxyBypass}).Free()
+	return LPWSTRs([]LPWSTR{c.LpszProxy, c.LpszProxyBypass}).Free()
 }
 
 // WINHTTP_CURRENT_USER_IE_PROXY_CONFIG
 // https://docs.microsoft.com/en-us/windows/win32/api/winhttp/ns-winhttp-winhttp_connection_info
 type HttpCurrentUserIEProxyConfig struct {
 	FAutoDetect       bool   // BOOL
-	LpszAutoConfigUrl Lpwstr // LPWSTR
-	LpszProxy         Lpwstr // LPWSTR
-	LpszProxyBypass   Lpwstr // LPWSTR
+	LpszAutoConfigUrl LPWSTR // LPWSTR
+	LpszProxy         LPWSTR // LPWSTR
+	LpszProxyBypass   LPWSTR // LPWSTR
 }
 
 func (c HttpCurrentUserIEProxyConfig) Free() error {
-	return Lpwstrs([]Lpwstr{c.LpszAutoConfigUrl, c.LpszProxy, c.LpszProxyBypass}).Free()
+	return LPWSTRs([]LPWSTR{c.LpszAutoConfigUrl, c.LpszProxy, c.LpszProxyBypass}).Free()
 }
