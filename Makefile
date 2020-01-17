@@ -60,11 +60,8 @@ windows-sign:
 	# Create remote build dir
 	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} mkdir -p ${WIN_BUILD_MACHINE_CI_DIR}/dist
 	# Copy exe files to Windows VM for bundling and signing
-	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${PROJECT_DIR}/dist/cagent_windows_386/cagent.exe ${WIN_BUILD_MACHINE_AUTH}:${WIN_BUILD_MACHINE_CI_DIR}/dist/cagent_386.exe
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${PROJECT_DIR}/dist/cagent_windows_amd64/cagent.exe ${WIN_BUILD_MACHINE_AUTH}:${WIN_BUILD_MACHINE_CI_DIR}/dist/cagent_64.exe
-	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${PROJECT_DIR}/dist/csender_windows_386/csender.exe ${WIN_BUILD_MACHINE_AUTH}:${WIN_BUILD_MACHINE_CI_DIR}/dist/csender_386.exe
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${PROJECT_DIR}/dist/csender_windows_amd64/csender.exe ${WIN_BUILD_MACHINE_AUTH}:${WIN_BUILD_MACHINE_CI_DIR}/dist/csender_64.exe
-	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${PROJECT_DIR}/dist/jobmon_windows_386/jobmon.exe ${WIN_BUILD_MACHINE_AUTH}:${WIN_BUILD_MACHINE_CI_DIR}/dist/jobmon_386.exe
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${PROJECT_DIR}/dist/jobmon_windows_amd64/jobmon.exe ${WIN_BUILD_MACHINE_AUTH}:${WIN_BUILD_MACHINE_CI_DIR}/dist/jobmon_64.exe
 	# Copy other build dependencies
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${PROJECT_DIR}/build-win.bat ${WIN_BUILD_MACHINE_AUTH}:${WIN_BUILD_MACHINE_CI_DIR}/build-win.bat
@@ -78,25 +75,18 @@ windows-sign:
 	# Trigger MSI build
 	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} ${WIN_BUILD_MACHINE_CI_DIR}/build-win.bat ${CIRCLE_BUILD_NUM} ${CIRCLE_TAG}
 	# Trigger signing
-	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} curl -s -S -f http://localhost:8080/?file=cagent_32.msi
-	sleep 10
 	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} curl -s -S -f http://localhost:8080/?file=cagent_64.msi
-	# Copy MSI files back to build machine
-	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH}:/cygdrive/C/Users/hero/ci/cagent_32.msi ${PROJECT_DIR}/dist/cagent_386.msi
+	# Copy MSI back to build machine
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH}:/cygdrive/C/Users/hero/ci/cagent_64.msi ${PROJECT_DIR}/dist/cagent_64.msi
 	# Add files to Github release
-	github-release upload --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --name "cagent_${CIRCLE_TAG}_Windows_386.msi" --file "${PROJECT_DIR}/dist/cagent_386.msi"
 	github-release upload --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --name "cagent_${CIRCLE_TAG}_Windows_x86_64.msi" --file "${PROJECT_DIR}/dist/cagent_64.msi"
 
 	# BUILD PROPRIETARY MSI:
 	# Create remote build dir
 	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} mkdir -p ${WIN_BUILD_MACHINE_CI_DIR_PROPRIETARY}/dist
 	# Copy exe files to Windows VM for bundling and signing
-	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${PROJECT_DIR}/dist/cagent_proprietary_windows_386/cagent.exe ${WIN_BUILD_MACHINE_AUTH}:${WIN_BUILD_MACHINE_CI_DIR_PROPRIETARY}/dist/cagent_386.exe
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${PROJECT_DIR}/dist/cagent_proprietary_windows_amd64/cagent.exe ${WIN_BUILD_MACHINE_AUTH}:${WIN_BUILD_MACHINE_CI_DIR_PROPRIETARY}/dist/cagent_64.exe
-	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${PROJECT_DIR}/dist/csender_proprietary_windows_386/csender.exe ${WIN_BUILD_MACHINE_AUTH}:${WIN_BUILD_MACHINE_CI_DIR_PROPRIETARY}/dist/csender_386.exe
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${PROJECT_DIR}/dist/csender_proprietary_windows_amd64/csender.exe ${WIN_BUILD_MACHINE_AUTH}:${WIN_BUILD_MACHINE_CI_DIR_PROPRIETARY}/dist/csender_64.exe
-	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${PROJECT_DIR}/dist/jobmon_proprietary_windows_386/jobmon.exe ${WIN_BUILD_MACHINE_AUTH}:${WIN_BUILD_MACHINE_CI_DIR_PROPRIETARY}/dist/jobmon_386.exe
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${PROJECT_DIR}/dist/jobmon_proprietary_windows_amd64/jobmon.exe ${WIN_BUILD_MACHINE_AUTH}:${WIN_BUILD_MACHINE_CI_DIR_PROPRIETARY}/dist/jobmon_64.exe
 	# Copy other build dependencies
 	scp -r ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${PROJECT_DIR}/pkg-scripts/ ${WIN_BUILD_MACHINE_AUTH}:${WIN_BUILD_MACHINE_CI_DIR_PROPRIETARY}
@@ -107,15 +97,11 @@ windows-sign:
 	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} cp -r ${WIN_BUILD_MACHINE_PROPRIETARY_DEPS_DIR}/. ${WIN_BUILD_MACHINE_CI_DIR_PROPRIETARY}
 	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} ${WIN_BUILD_MACHINE_CI_DIR_PROPRIETARY}/build-proprietary-win.bat ${CIRCLE_BUILD_NUM}_proprietary ${CIRCLE_TAG}
 	# Trigger signing
-	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} curl -s -S -f http://localhost:8080/?file=cagent_32.msi
-	sleep 10
 	ssh ${SSH_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH} curl -s -S -f http://localhost:8080/?file=cagent_64.msi
-	# Copy MSI files back to build machine
-	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH}:/cygdrive/C/Users/hero/ci/cagent_32.msi ${PROJECT_DIR}/dist/cagent_proprietary_386.msi
+	# Copy MSI back to build machine
 	scp ${SCP_WIN_BUILD_MACHINE_OPTIONS} ${WIN_BUILD_MACHINE_AUTH}:/cygdrive/C/Users/hero/ci/cagent_64.msi ${PROJECT_DIR}/dist/cagent_proprietary_64.msi
 	# Upload proprietary MSI files to cloudradar package server
-	chmod a+r ${PROJECT_DIR}/dist/cagent_proprietary_386.msi ${PROJECT_DIR}/dist/cagent_proprietary_64.msi
-	scp -P 24480 -oStrictHostKeyChecking=no -p ${PROJECT_DIR}/dist/cagent_proprietary_386.msi cr@repo.cloudradar.io:/var/repos/cloudradar/windows/cagent/cagent-plus_${CIRCLE_TAG}_Windows_386.msi
+	chmod a+r ${PROJECT_DIR}/dist/cagent_proprietary_64.msi
 	scp -P 24480 -oStrictHostKeyChecking=no -p ${PROJECT_DIR}/dist/cagent_proprietary_64.msi cr@repo.cloudradar.io:/var/repos/cloudradar/windows/cagent/cagent-plus_${CIRCLE_TAG}_Windows_64.msi
 
 synology-spk:
