@@ -24,6 +24,8 @@ builds:
     - goos: darwin
       goarch: 386
     - goos: windows
+      goarch: 386
+    - goos: windows
       goarch: arm
     - goos: darwin
       goarch: arm
@@ -52,6 +54,8 @@ builds:
   # List of combinations of GOOS + GOARCH + GOARM to ignore.
   ignore:
     - goos: darwin
+      goarch: 386
+    - goos: windows
       goarch: 386
     - goos: windows
       goarch: arm
@@ -84,6 +88,8 @@ builds:
     - goos: darwin
       goarch: 386
     - goos: windows
+      goarch: 386
+    - goos: windows
       goarch: arm
     - goos: darwin
       goarch: arm
@@ -99,7 +105,6 @@ builds:
   goos:
     - windows
   goarch:
-    - 386
     - amd64
   ldflags:
     - "-s -w -X {{.Env.PROJECT}}.Version={{.Version}} -X \"{{.Env.PROJECT}}.LicenseInfo={{.Env.LICENSE_PROPRIETARY}}\""
@@ -109,7 +114,6 @@ builds:
   goos:
     - windows
   goarch:
-    - 386
     - amd64
   ldflags:
     - "-s -w -X {{.Env.PROJECT}}.Version={{.Version}} -X \"{{.Env.PROJECT}}.LicenseInfo={{.Env.LICENSE_PROPRIETARY}}\""
@@ -119,7 +123,6 @@ builds:
   goos:
     - windows
   goarch:
-    - 386
     - amd64
   ldflags:
     - "-s -w -X {{.Env.PROJECT}}.Version={{.Version}} -X \"{{.Env.PROJECT}}.LicenseInfo={{.Env.LICENSE_PROPRIETARY}}\""
