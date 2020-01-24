@@ -18,6 +18,7 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/networking"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/sensors"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/updates"
 )
 
 type Cleaner interface {
@@ -70,6 +71,7 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 	var errCollector = common.ErrorCollector{}
 	var cleanupCommand = &cleanupCommand{}
 	var measurements = make(common.MeasurementsMap)
+	var cfg = ca.Config
 
 	cpum, err := ca.CPUWatcher().Results()
 	errCollector.Add(err)
@@ -89,7 +91,7 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 	if cpuUtilisationAnalysisIsActive {
 		measurements = measurements.AddWithPrefix(
 			"cpu_utilisation_analysis.",
-			common.MeasurementsMap{"settings": ca.Config.CPUUtilisationAnalysis},
+			common.MeasurementsMap{"settings": cfg.CPUUtilisationAnalysis},
 		)
 	}
 
@@ -139,7 +141,14 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 			measurements = measurements.AddWithPrefix("windows_update.", wu)
 		}
 
-		servicesList, err := services.ListServices(ca.Config.DiscoverAutostartingServicesOnly)
+		if cfg.LinuxUpdatesChecks.Enabled {
+			watcher := updates.GetWatcher(cfg.LinuxUpdatesChecks.FetchTimeout, cfg.LinuxUpdatesChecks.CheckInterval)
+			u, err := watcher.GetSystemUpdatesInfo()
+			errCollector.Add(err)
+			measurements = measurements.AddWithPrefix("linux_update.", u)
+		}
+
+		servicesList, err := services.ListServices(cfg.DiscoverAutostartingServicesOnly)
 		if err != services.ErrorNotImplementedForOS {
 			errCollector.Add(err)
 		}
@@ -151,7 +160,7 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 		}
 		measurements = measurements.AddWithPrefix("docker.", containersList)
 
-		if ca.Config.TemperatureMonitoring {
+		if cfg.TemperatureMonitoring {
 			temperatures, err := sensors.ReadTemperatureSensors()
 			errCollector.Add(err)
 			measurements = measurements.AddWithPrefix("temperatures.", common.MeasurementsMap{"list": temperatures})
@@ -166,7 +175,7 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 			measurements = measurements.AddInnerWithPrefix("smartmon", smartMeas)
 		}
 
-		spool := jobmon.NewSpoolManager(ca.Config.JobMonitoring.SpoolDirPath, log.StandardLogger())
+		spool := jobmon.NewSpoolManager(cfg.JobMonitoring.SpoolDirPath, log.StandardLogger())
 		ids, jobs, err := spool.GetFinishedJobs()
 		errCollector.Add(err)
 		measurements = measurements.AddWithPrefix("", common.MeasurementsMap{"jobmon": jobs})
@@ -175,7 +184,7 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 		})
 	}
 
-	measurements["operation_mode"] = ca.Config.OperationMode
+	measurements["operation_mode"] = cfg.OperationMode
 
 	if errCollector.HasErrors() {
 		measurements["message"] = errCollector.Combine()

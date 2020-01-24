@@ -11,6 +11,7 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/fs"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/networking"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/sensors"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/updates"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/vmstat/types"
 	"github.com/cloudradar-monitoring/cagent/pkg/smart"
@@ -72,6 +73,7 @@ func (ca *Cagent) userAgent() string {
 
 func (ca *Cagent) Shutdown() {
 	defer sensors.Shutdown()
+	defer updates.Shutdown()
 
 	for name, p := range ca.vmWatchers {
 		if err := vmstat.Release(p); err != nil {

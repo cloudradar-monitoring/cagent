@@ -1,0 +1,1 @@
+cagent ALL= NOPASSWD: /usr/bin/yum -q check-update

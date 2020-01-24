@@ -196,7 +196,13 @@ nfpm:
     preremove: "pkg-scripts/preremove.sh"
 
   overrides:
+    deb:
+      files:
+        "pkg-scripts/cagent-apt-get": "/etc/sudoers.d/cagent-apt-get"
     rpm:
+      files:
+        "pkg-scripts/cagent-yum": "/etc/sudoers.d/cagent-yum"
+        "pkg-scripts/cagent-dnf": "/etc/sudoers.d/cagent-dnf"
       scripts:
         postinstall: "pkg-scripts/postinstall-rpm.sh"
         preremove: "pkg-scripts/preremove-rpm.sh"
