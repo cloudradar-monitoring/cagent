@@ -16,6 +16,7 @@ import (
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/jobmon"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/mysql"
 )
 
 const (
@@ -116,7 +117,9 @@ type Config struct {
 
 	JobMonitoring JobMonitoringConfig `toml:"jobmon,omitempty" comment:"Settings for the jobmon wrapper for the job monitoring"`
 
-	LinuxUpdatesChecks LinuxUpdatesMonitoringConfig `toml:"linux_updates_checks" comment:"Monitor the available updates using apt-get, yum or dfn\nIgnored on distributions using other package managers.\nRequires sudo rules. DEB and RPM packages install them automatically."`
+	LinuxUpdatesChecks LinuxUpdatesMonitoringConfig `toml:"linux_updates_checks" comment:"Monitor the available updates using apt-get, yum or dfn\nIgnored on distributions using other package managers.\nRequires sudo rules. DEB and RPM packages install them automatically"`
+
+	MysqlMonitoring mysql.Config `toml:"mysql_monitoring" comment:"Monitor the basic performance metrics of a MySQL or MariaDB database"`
 }
 
 type CPUUtilisationAnalysisConfig struct {
@@ -463,6 +466,11 @@ func (cfg *Config) validate() error {
 	err = cfg.LinuxUpdatesChecks.Validate()
 	if err != nil {
 		return fmt.Errorf("invalid [linux_updates_checks] config: %s", err.Error())
+	}
+
+	err = cfg.MysqlMonitoring.Validate()
+	if err != nil {
+		return fmt.Errorf("invalid [mysql_monitoring] config: %s", err.Error())
 	}
 
 	return nil

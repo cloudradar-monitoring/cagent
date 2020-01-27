@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/mysql"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/raid"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/storcli"
 )
@@ -23,6 +24,9 @@ func (ca *Cagent) initModules() {
 		},
 		func() monitoring.Module {
 			return raid.CreateModule(ca.Config.SoftwareRAIDMonitoring)
+		},
+		func() monitoring.Module {
+			return mysql.CreateModule(&ca.Config.MysqlMonitoring)
 		},
 	}
 

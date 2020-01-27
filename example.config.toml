@@ -103,3 +103,13 @@ software_raid_monitoring = true
   enabled = true # Set 'false' to disable checking available updates
   fetch_timeout = 30 # Maximum time the package manager is allowed to spend fetching available updates
   check_interval = 14400 # Check for available updates every N seconds.
+
+# Monitor the basic performance metrics of a MySQL or MariaDB database
+[mysql_monitoring]
+  enabled = false
+  connect = "127.0.0.1:3306" # Use 127.0.0.1 or the path to the mysql.socket, connecting to remote databases is not supported
+  # Create a user with minimal rights
+  # mysql > GRANT USAGE ON *.* TO cagent@localhost IDENTIFIED BY 'confidential';
+  user = "cagent"
+  password = "confidential"
+  connect_timeout = 1.0

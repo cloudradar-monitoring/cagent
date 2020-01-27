@@ -79,6 +79,14 @@
   version = "v1.2.2"
 
 [[projects]]
+  digest = "1:a3af33fd30536d9c5a7b6ad542390919e57c1125097a194c7b3d9904109a0611"
+  name = "github.com/go-sql-driver/mysql"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "17ef3dd9d98b69acec3e85878995ada9533a9370"
+  version = "v1.5.0"
+
+[[projects]]
   digest = "1:628d50fef8c9c3a70fc87ad59d57ecfdfb121454942fb33142372bbde6c4a10e"
   name = "github.com/jaypipes/ghw"
   packages = ["."]
@@ -284,6 +292,7 @@
     "github.com/gentlemanautomaton/windevice/deviceclass",
     "github.com/go-ole/go-ole",
     "github.com/go-ole/go-ole/oleutil",
+    "github.com/go-sql-driver/mysql",
     "github.com/jaypipes/ghw",
     "github.com/kardianos/service",
     "github.com/lxn/walk",
