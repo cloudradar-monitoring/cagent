@@ -55,7 +55,7 @@ func (r *Mysql) getClient() (*sql.DB, error) {
 	}
 
 	if len(r.config.Connect) == 0 {
-		return nil, fmt.Errorf("connect: address is empty")
+		return nil, fmt.Errorf("connect address is empty")
 	}
 
 	if len(r.config.User) == 0 {
@@ -83,7 +83,7 @@ func (r *Mysql) getClient() (*sql.DB, error) {
 	if host == "127.0.0.1" || host == "localhost" {
 		db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/information_schema?timeout=%.2fs", r.config.User, r.config.Password, host, port, r.config.ConnectTimeout))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to connect %s: %s", r.config.Connect, err.Error())
 		}
 
 		r.client = db
@@ -92,24 +92,24 @@ func (r *Mysql) getClient() (*sql.DB, error) {
 
 	ip := net.ParseIP(host)
 	if ip != nil {
-		return nil, fmt.Errorf("connect: only local mysql is supported. Please use neither 127.0.0.1 or localhost")
+		return nil, fmt.Errorf("connect: only local mysql server is supported. Please use 127.0.0.1, localhost or unix socket path")
 
 	}
 	// this is probably unix socket filepath
 	absPath, err := filepath.Abs(r.config.Connect)
 	if err != nil {
-		return nil, fmt.Errorf("connect: not unix socket path: %s", err.Error())
+		return nil, fmt.Errorf("connect: not a unix socket path: %s", err.Error())
 	}
 
 	if _, err := os.Stat(absPath); err == os.ErrNotExist {
-		return nil, fmt.Errorf("connect: unix socket path not found")
+		return nil, fmt.Errorf("connect: provided unix socket path not found")
 	} else if err != nil {
-		return nil, fmt.Errorf("connect: unix socket not valid, %s", err.Error())
+		return nil, fmt.Errorf("connect: provided unix socket not valid, %s", err.Error())
 	}
 
 	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@unix(%s)/information_schema?timeout=%.2fs", r.config.User, r.config.Password, absPath, r.config.ConnectTimeout))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect %s: %s", r.config.Connect, err.Error())
 	}
 
 	r.client = db
@@ -133,25 +133,27 @@ func (r *Mysql) Run() ([]*monitoring.ModuleReport, error) {
 
 	client, err := r.getClient()
 	if err != nil {
-		report.AddAlert(fmt.Sprintf("failed to connect: %s", err.Error()))
-		return nil, err
+		report.AddAlert(err.Error())
+		return []*monitoring.ModuleReport{&report}, nil
 	}
 
 	statusTime := time.Now()
 	status, err := getStatus(client)
 	if err != nil {
 		report.AddAlert(fmt.Sprintf("failed to get status: %s", err.Error()))
-		return []*monitoring.ModuleReport{&report}, err
+		return []*monitoring.ModuleReport{&report}, nil
 	}
 
 	if r.lastStatus == nil {
 		r.lastStatus = status
 		r.lastStatusTime = statusTime
+
 		// need one more iteration to calculate
-		return []*monitoring.ModuleReport{}, nil
+		// but we need to provide nil measurements for consistency
+		report.Measurements = emptyResults()
+		return []*monitoring.ModuleReport{&report}, nil
 	}
 
-	report.Measurements = map[string]interface{}{}
 	fillResultsPerSecond(status, r.lastStatus, statusTime.Sub(r.lastStatusTime), report.Measurements)
 	return []*monitoring.ModuleReport{&report}, nil
 }

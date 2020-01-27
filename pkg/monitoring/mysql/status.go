@@ -100,6 +100,21 @@ func fillResultsPerSecond(new *Status, old *Status, durationBetween time.Duratio
 	result["Queries per sec"] = roundUp(onlyPositive(float64(new.Queries()-old.Queries()) / sec))
 }
 
+func emptyResults() map[string]interface{} {
+	return map[string]interface{}{
+		"Selects per sec":       nil,
+		"Updates per sec":       nil,
+		"Inserts per sec":       nil,
+		"Deletes per sec":       nil,
+		"Commits per sec":       nil,
+		"Innodb data read bps":  nil,
+		"Innodb data write bps": nil,
+		"Bytes read bps":        nil,
+		"Bytes write bps":       nil,
+		"Queries per sec":       nil,
+	}
+}
+
 func onlyPositive(f float64) float64 {
 	if f < 0 {
 		return 0
