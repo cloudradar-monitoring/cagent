@@ -1,13 +1,15 @@
-package cagent
+package processes
 
 import (
 	"runtime"
 
 	"github.com/shirou/gopsutil/mem"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
+
+var log = logrus.WithField("package", "processes")
 
 type ProcStat struct {
 	PID                    int     `json:"pid"`
@@ -47,21 +49,21 @@ func getPossibleProcStates() []string {
 	return fields
 }
 
-func (ca *Cagent) ProcessesResult(memStat *mem.VirtualMemoryStat) (m common.MeasurementsMap, procs []ProcStat, err error) {
+func GetMeasurements(memStat *mem.VirtualMemoryStat) (m common.MeasurementsMap, procs []ProcStat, err error) {
 	states := getPossibleProcStates()
 
 	var systemMemorySize uint64
 	if memStat == nil {
-		log.Warn("[PROC] system memory information in unavailable. Some process stats will not calculated...")
+		log.Warn("system memory information in unavailable. Some process stats will not calculated...")
 	} else {
 		systemMemorySize = memStat.Total
 	}
 	procs, err = processes(systemMemorySize)
 	if err != nil {
-		log.Error("[PROC] error: ", err.Error())
+		log.WithError(err).Error()
 		return nil, nil, err
 	}
-	log.Debugf("[PROC] results: %d", len(procs))
+	log.Debugf("results: %d", len(procs))
 
 	m = common.MeasurementsMap{"list": procs, "possible_states": states}
 

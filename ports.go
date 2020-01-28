@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/processes"
 )
 
 type PortStat struct {
@@ -18,7 +19,7 @@ type PortStat struct {
 }
 
 // PortsResult lists all active connections
-func (ca *Cagent) PortsResult(processList []ProcStat) (common.MeasurementsMap, error) {
+func (ca *Cagent) PortsResult(processList []processes.ProcStat) (common.MeasurementsMap, error) {
 	connections, err := net.Connections("inet")
 	if err != nil {
 		log.Error("[PORTS] could not list connections: ", err.Error())

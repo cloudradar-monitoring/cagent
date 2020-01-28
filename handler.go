@@ -16,6 +16,7 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/jobmon"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/networking"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/processes"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/sensors"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/services"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/updates"
@@ -108,7 +109,7 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 		errCollector.Add(err)
 		measurements = measurements.AddWithPrefix("net.", netResults)
 
-		proc, processList, err := ca.ProcessesResult(memStat)
+		proc, processList, err := processes.GetMeasurements(memStat)
 		errCollector.Add(err)
 		measurements = measurements.AddWithPrefix("proc.", proc)
 

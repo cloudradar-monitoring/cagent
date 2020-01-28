@@ -1,13 +1,12 @@
 // +build windows
 
-package cagent
+package processes
 
 import (
 	"runtime"
 	"time"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/winapi"
@@ -34,7 +33,7 @@ func processes(systemMemorySize uint64) ([]ProcStat, error) {
 	logicalCPUCount := uint8(runtime.NumCPU())
 	windowByProcessId, err := winapi.WindowByProcessId()
 	if err != nil {
-		log.Errorf("[PROC] failed to list all windows by processId")
+		log.Errorf("failed to list all windows by processId")
 	}
 
 	for pid, proc := range procByPid {
@@ -76,7 +75,7 @@ func processes(systemMemorySize uint64) ([]ProcStat, error) {
 			if window, exists := windowByProcessId[pid]; exists {
 				isHanging, err := winapi.IsHangWindow(window)
 				if err != nil {
-					log.Errorf("[PROC] can't query hang window got error: %s", err.Error())
+					log.WithError(err).Error("can't query hang window")
 				} else if isHanging {
 					state = "not responding"
 				}
@@ -103,7 +102,7 @@ func processes(systemMemorySize uint64) ([]ProcStat, error) {
 	monitoredProcessCache = updatedProcessCache
 
 	if cmdLineRetrievalFailuresCount > 0 {
-		log.Debugf("[PROC] could not get command line for %d processes", cmdLineRetrievalFailuresCount)
+		log.Debugf("could not get command line for %d processes", cmdLineRetrievalFailuresCount)
 	}
 
 	return result, nil
