@@ -33,7 +33,7 @@ type procStatus struct {
 var dockerContainerIDRE = regexp.MustCompile(`(?m)/docker/([a-f0-9]*)$`)
 var monitoredProcessCache = make(map[int]*process.Process)
 
-func processes(systemMemorySize uint64) ([]ProcStat, error) {
+func processes(systemMemorySize uint64) ([]*ProcStat, error) {
 	if runtime.GOOS == "linux" {
 		return processesFromProc(systemMemorySize)
 	}
@@ -64,13 +64,13 @@ func getProcLongState(shortState byte) string {
 }
 
 // get process states from /proc/(pid)/stat
-func processesFromProc(systemMemorySize uint64) ([]ProcStat, error) {
+func processesFromProc(systemMemorySize uint64) ([]*ProcStat, error) {
 	filepaths, err := filepath.Glob(common.HostProc() + "/[0-9]*/status")
 	if err != nil {
 		return nil, err
 	}
 
-	var procs []ProcStat
+	var procs []*ProcStat
 	var updatedProcessCache = make(map[int]*process.Process)
 
 	for _, statusFilepath := range filepaths {
@@ -82,8 +82,8 @@ func processesFromProc(systemMemorySize uint64) ([]ProcStat, error) {
 			continue
 		}
 
-		procStatus := parseProcStatusFile(statusFile)
-		stat := ProcStat{ParentPID: procStatus.PPID, State: procStatus.State}
+		parsedProcStatus := parseProcStatusFile(statusFile)
+		stat := &ProcStat{ParentPID: parsedProcStatus.PPID, State: parsedProcStatus.State}
 		// get the PID from the filepath(/proc/<pid>/status) itself
 		pathParts := strings.Split(statusFilepath, string(filepath.Separator))
 		pidString := pathParts[len(pathParts)-2]
@@ -125,6 +125,14 @@ func processesFromProc(systemMemorySize uint64) ([]ProcStat, error) {
 					stat.Container = containerName
 				}
 			}
+		}
+
+		statFilepath := common.HostProc() + "/" + pidString + "/stat"
+		statFileContent, err := readProcFile(statFilepath)
+		if err != nil && err != errorProcessTerminated {
+			log.WithError(err).Errorf("failed to read stat (%s)", statFilepath)
+		} else if err == nil {
+			stat.ProcessGID = parseStatFileContent(statFileContent)
 		}
 
 		if stat.PID > 0 {
@@ -185,6 +193,22 @@ func parseProcStatusFile(b []byte) procStatus {
 	return status
 }
 
+func parseStatFileContent(b []byte) int {
+	fields := strings.Fields(string(b))
+
+	i := 1
+	for !strings.HasSuffix(fields[i], ")") {
+		i++
+	}
+
+	pgrp, err := strconv.ParseInt(fields[i+3], 10, 32)
+	if err != nil {
+		log.WithError(err).Errorf("proc/stat: failed to convert PGRP (%s) to int", fields[i+3])
+		return -1
+	}
+	return int(pgrp)
+}
+
 func readProcFile(filename string) ([]byte, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -211,7 +235,7 @@ func execPS() ([]byte, error) {
 		return nil, err
 	}
 
-	out, err := exec.Command(bin, "axwwo", "pid,ppid,state,command").Output()
+	out, err := exec.Command(bin, "axwwo", "pid,ppid,pgrp,state,command").Output()
 	if err != nil {
 		return nil, err
 	}
@@ -219,14 +243,14 @@ func execPS() ([]byte, error) {
 	return out, err
 }
 
-func processesFromPS(systemMemorySize uint64) ([]ProcStat, error) {
+func processesFromPS(systemMemorySize uint64) ([]*ProcStat, error) {
 	out, err := execPS()
 	if err != nil {
 		return nil, err
 	}
 
 	lines := strings.Split(string(out), "\n")
-	var procs []ProcStat
+	var procs []*ProcStat
 	var updatedProcessCache = make(map[int]*process.Process)
 	var columnsIndex = map[string]int{}
 
@@ -245,7 +269,7 @@ func processesFromPS(systemMemorySize uint64) ([]ProcStat, error) {
 			continue
 		}
 
-		stat := ProcStat{}
+		stat := &ProcStat{}
 
 		if pidIndex, exists := columnsIndex["PID"]; exists {
 			pidString := parts[pidIndex]
@@ -265,8 +289,19 @@ func processesFromPS(systemMemorySize uint64) ([]ProcStat, error) {
 				log.WithError(err).Errorf("ps: failed to convert PPID(%s) to int", ppidString)
 			}
 		} else {
-			// we can't left ParentPID set to default 0 if it is unavailable for some reason, because 0 PID means the kernel(Swapper) process
+			// we can't left ParentPID set to default 0 if it is unavailable for some reason, because 0 PID means the kernel task process
 			stat.ParentPID = -1
+		}
+
+		if pgidIndex, exists := columnsIndex["PGRP"]; exists {
+			pgidString := parts[pgidIndex]
+			stat.ProcessGID, err = strconv.Atoi(pgidString)
+			if err != nil {
+				log.WithError(err).Errorf("ps: failed to convert PGID(%s) to int", pgidString)
+			}
+		} else {
+			// we can't left ProcessGID set to default 0 if it is unavailable for some reason, because 0 PGID means the kernel task group
+			stat.ProcessGID = -1
 		}
 
 		if statIndex, exists := columnsIndex["STAT"]; exists {
@@ -321,4 +356,8 @@ func gatherProcessResourceUsage(proc *process.Process, systemMemorySize uint64) 
 	}
 
 	return memoryInfo.RSS, memoryInfo.VMS, float32(common.RoundToTwoDecimalPlaces(memUsagePercent)), float32(common.RoundToTwoDecimalPlaces(cpuUsagePercent))
+}
+
+func isKernelTask(procStat *ProcStat) bool {
+	return procStat.ParentPID == 0 || procStat.ProcessGID == 0
 }

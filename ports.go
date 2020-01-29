@@ -19,7 +19,7 @@ type PortStat struct {
 }
 
 // PortsResult lists all active connections
-func (ca *Cagent) PortsResult(processList []processes.ProcStat) (common.MeasurementsMap, error) {
+func (ca *Cagent) PortsResult(processList []*processes.ProcStat) (common.MeasurementsMap, error) {
 	connections, err := net.Connections("inet")
 	if err != nil {
 		log.Error("[PORTS] could not list connections: ", err.Error())

@@ -2,6 +2,7 @@ package processes
 
 import (
 	"runtime"
+	"sort"
 
 	"github.com/shirou/gopsutil/mem"
 	"github.com/sirupsen/logrus"
@@ -11,9 +12,24 @@ import (
 
 var log = logrus.WithField("package", "processes")
 
+type Config struct {
+	Enabled                     bool `toml:"enabled"`
+	EnableKernelTaskMonitoring  bool `toml:"enable_kerneltask_monitoring" comment:"Monitor kernel tasks identified by process group 0\nIgnored on Windows."`
+	MaxNumberMonitoredProcesses uint `toml:"max_number_monitored_processes" comment:"The process list is sorted by PID descending. Only the top N processes are monitored."`
+}
+
+func GetDefaultConfig() Config {
+	return Config{
+		Enabled:                     true,
+		EnableKernelTaskMonitoring:  true,
+		MaxNumberMonitoredProcesses: 500,
+	}
+}
+
 type ProcStat struct {
 	PID                    int     `json:"pid"`
 	ParentPID              int     `json:"parent_pid"`
+	ProcessGID             int     `json:"-"`
 	Name                   string  `json:"name"`
 	Cmdline                string  `json:"cmdline"`
 	State                  string  `json:"state"`
@@ -49,7 +65,7 @@ func getPossibleProcStates() []string {
 	return fields
 }
 
-func GetMeasurements(memStat *mem.VirtualMemoryStat) (m common.MeasurementsMap, procs []ProcStat, err error) {
+func GetMeasurements(memStat *mem.VirtualMemoryStat, cfg *Config) (common.MeasurementsMap, []*ProcStat, error) {
 	states := getPossibleProcStates()
 
 	var systemMemorySize uint64
@@ -58,14 +74,40 @@ func GetMeasurements(memStat *mem.VirtualMemoryStat) (m common.MeasurementsMap, 
 	} else {
 		systemMemorySize = memStat.Total
 	}
-	procs, err = processes(systemMemorySize)
+	procs, err := processes(systemMemorySize)
 	if err != nil {
 		log.WithError(err).Error()
 		return nil, nil, err
 	}
 	log.Debugf("results: %d", len(procs))
 
-	m = common.MeasurementsMap{"list": procs, "possible_states": states}
+	var m common.MeasurementsMap
+	if cfg.Enabled {
+		m = common.MeasurementsMap{"list": filterProcs(procs, cfg), "possible_states": states}
+	}
 
-	return
+	return m, procs, nil
+}
+
+func filterProcs(procs []*ProcStat, cfg *Config) []*ProcStat {
+	// sort by PID descending:
+	sort.Slice(procs, func(i, j int) bool {
+		return procs[i].PID > procs[j].PID
+	})
+
+	result := make([]*ProcStat, 0, cfg.MaxNumberMonitoredProcesses)
+	var count uint
+	for _, p := range procs {
+		if count == cfg.MaxNumberMonitoredProcesses {
+			break
+		}
+
+		if !cfg.EnableKernelTaskMonitoring && isKernelTask(p) {
+			continue
+		}
+
+		result = append(result, p)
+		count++
+	}
+	return result
 }

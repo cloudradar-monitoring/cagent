@@ -109,7 +109,7 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 		errCollector.Add(err)
 		measurements = measurements.AddWithPrefix("net.", netResults)
 
-		proc, processList, err := processes.GetMeasurements(memStat)
+		proc, processList, err := processes.GetMeasurements(memStat, &ca.Config.ProcessMonitoring)
 		errCollector.Add(err)
 		measurements = measurements.AddWithPrefix("proc.", proc)
 
