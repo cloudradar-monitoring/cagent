@@ -11,8 +11,9 @@ import (
 )
 
 type pkgMgrYUM struct {
-	BinaryPath                   string
-	fetchedAvailableUpdatesCount int
+	BinaryPath             string
+	fetchedTotalUpdates    int
+	fetchedSecurityUpdates *int
 }
 
 func (a *pkgMgrYUM) GetBinaryPath() string {
@@ -20,7 +21,18 @@ func (a *pkgMgrYUM) GetBinaryPath() string {
 }
 
 func (a *pkgMgrYUM) FetchUpdates(timeout time.Duration) error {
-	a.fetchedAvailableUpdatesCount = 0
+	a.fetchedTotalUpdates = 0
+	a.fetchedSecurityUpdates = nil
+
+	err := a.fetchTotalUpdates(timeout)
+	if err != nil {
+		return err
+	}
+
+	return a.fetchSecurityUpdates(timeout)
+}
+
+func (a *pkgMgrYUM) fetchTotalUpdates(timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
@@ -42,7 +54,7 @@ func (a *pkgMgrYUM) FetchUpdates(timeout time.Duration) error {
 
 			// Returns exit value of 100 if there are packages available for an update.
 			if code == 100 {
-				a.fetchedAvailableUpdatesCount = parseYUMOutput(&out)
+				a.fetchedTotalUpdates = parseYUMOutput(&out)
 				return nil
 			}
 
@@ -51,6 +63,29 @@ func (a *pkgMgrYUM) FetchUpdates(timeout time.Duration) error {
 	}
 
 	return err
+}
+
+func (a *pkgMgrYUM) fetchSecurityUpdates(timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "sudo", a.GetBinaryPath(), "-q", "list-security")
+
+	out, err := cmd.CombinedOutput()
+	if ctx.Err() == context.DeadlineExceeded {
+		return fmt.Errorf("timeout of %s exceeded while fetching security updates list", timeout)
+	}
+
+	if err != nil {
+		// list-security isn't available on all systems with yum. Ignore error
+		log.WithError(err).Debugf("while executing 'list-security'. Check that yum plugin installed. %s", out)
+		return nil
+	}
+
+	securityUpdatesCount := parseYUMOutput(&out)
+	a.fetchedSecurityUpdates = &securityUpdatesCount
+
+	return nil
 }
 
 func parseYUMOutput(out *[]byte) int {
@@ -66,6 +101,6 @@ func parseYUMOutput(out *[]byte) int {
 	return result
 }
 
-func (a *pkgMgrYUM) GetAvailableUpdatesCount() (int, error) {
-	return a.fetchedAvailableUpdatesCount, nil
+func (a *pkgMgrYUM) GetAvailableUpdatesCount() (int, *int, error) {
+	return a.fetchedTotalUpdates, a.fetchedSecurityUpdates, nil
 }

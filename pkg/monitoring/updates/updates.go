@@ -87,13 +87,14 @@ func (w *Watcher) tryFetchAndParseUpdatesInfo() (map[string]interface{}, error) 
 		return nil, err
 	}
 
-	available, err := mgr.GetAvailableUpdatesCount()
+	totalUpgrades, securityUpgrades, err := mgr.GetAvailableUpdatesCount()
 	if err != nil {
 		return nil, err
 	}
 
 	results := map[string]interface{}{
-		"updates_available": available,
+		"updates_available":          totalUpgrades,
+		"security_updates_available": securityUpgrades,
 	}
 	return results, nil
 }

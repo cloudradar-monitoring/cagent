@@ -11,7 +11,7 @@ const (
 type pkgMgr interface {
 	GetBinaryPath() string
 	FetchUpdates(timeout time.Duration) error
-	GetAvailableUpdatesCount() (int, error)
+	GetAvailableUpdatesCount() (int, *int, error)
 }
 
 func newPkgMgr(pkgMgrName string) pkgMgr {

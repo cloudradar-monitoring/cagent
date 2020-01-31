@@ -1,1 +1,1 @@
-cagent ALL= NOPASSWD: /usr/bin/dnf -q check-update
+cagent ALL= NOPASSWD: /usr/bin/dnf -q check-update, /usr/bin/dnf -q list-security

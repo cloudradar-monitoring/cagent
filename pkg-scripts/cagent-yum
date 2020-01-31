@@ -1,1 +1,1 @@
-cagent ALL= NOPASSWD: /usr/bin/yum -q check-update
+cagent ALL= NOPASSWD: /usr/bin/yum -q check-update, /usr/bin/yum -q list-security

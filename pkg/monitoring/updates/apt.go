@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -37,7 +38,18 @@ func (a *pkgMgrApt) FetchUpdates(timeout time.Duration) error {
 	return err
 }
 
-func (a *pkgMgrApt) GetAvailableUpdatesCount() (int, error) {
+func (a *pkgMgrApt) GetAvailableUpdatesCount() (int, *int, error) {
+	totalUpgrades, securityUpgrades, err := tryCallAptCheck()
+	if err == nil {
+		return totalUpgrades, &securityUpgrades, nil
+	}
+	log.WithError(err).Debugf("apt-check call failed. Falling back to apt-get")
+
+	totalUpgrades, err = a.tryCallAptGet()
+	return totalUpgrades, nil, err
+}
+
+func (a *pkgMgrApt) tryCallAptGet() (int, error) {
 	// disable gosec G204 cmd audit:
 	/* #nosec */
 	cmd := exec.Command("sudo", a.GetBinaryPath(), "upgrade", "--dry-run")
@@ -46,12 +58,35 @@ func (a *pkgMgrApt) GetAvailableUpdatesCount() (int, error) {
 		return 0, errors.Wrap(err, "while trying to list available updates")
 	}
 
-	result := 0
+	totalUpgrades := 0
 	outLines := strings.Split(string(out), "\n")
 	for _, line := range outLines {
 		if strings.HasPrefix(line, "Inst ") { // this prefix is locale-independent
-			result++
+			totalUpgrades++
 		}
 	}
-	return result, nil
+	return totalUpgrades, nil
+}
+
+func tryCallAptCheck() (int, int, error) {
+	cmd := exec.Command("/usr/lib/update-notifier/apt-check")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	parts := strings.Split(string(out), ";")
+	if len(parts) < 2 {
+		return 0, 0, fmt.Errorf("unexpected output of apt-check: %s", out)
+	}
+
+	upgrades, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, 0, fmt.Errorf("can't parse upgrades count: %s", parts[0])
+	}
+	securityUpgrades, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, 0, fmt.Errorf("can't parse security upgrades count: %s", parts[1])
+	}
+	return upgrades, securityUpgrades, nil
 }
