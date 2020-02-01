@@ -2,12 +2,13 @@ package mysql
 
 import (
 	"database/sql"
-	"math"
 	"strconv"
 	"time"
 
 	// import mysql driver to inject into database/sql
 	_ "github.com/go-sql-driver/mysql"
+
+	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 type Status struct {
@@ -88,16 +89,16 @@ func getStatus(db *sql.DB) (*Status, error) {
 
 func fillResultsPerSecond(new *Status, old *Status, durationBetween time.Duration, result map[string]interface{}) {
 	sec := durationBetween.Seconds()
-	result["Selects per sec"] = roundUp(onlyPositive(float64(new.Selects-old.Selects) / sec))
-	result["Updates per sec"] = roundUp(onlyPositive(float64(new.Updates-old.Updates) / sec))
-	result["Inserts per sec"] = roundUp(onlyPositive(float64(new.Inserts-old.Inserts) / sec))
-	result["Deletes per sec"] = roundUp(onlyPositive(float64(new.Deletes-old.Deletes) / sec))
-	result["Commits per sec"] = roundUp(onlyPositive(float64(new.Commits-old.Commits) / sec))
-	result["Innodb data read bps"] = roundUp(onlyPositive(float64(new.InnoDBReadBytes-old.InnoDBReadBytes) / sec))
-	result["Innodb data write bps"] = roundUp(onlyPositive(float64(new.InnoDBWriteBytes-old.InnoDBWriteBytes) / sec))
-	result["Bytes read bps"] = roundUp(onlyPositive(float64(new.ReadBytes-old.ReadBytes) / sec))
-	result["Bytes write bps"] = roundUp(onlyPositive(float64(new.WriteBytes-old.WriteBytes) / sec))
-	result["Queries per sec"] = roundUp(onlyPositive(float64(new.Queries()-old.Queries()) / sec))
+	result["Selects per sec"] = formatPerSec(new.Selects, old.Selects, sec)
+	result["Updates per sec"] = formatPerSec(new.Updates, old.Updates, sec)
+	result["Inserts per sec"] = formatPerSec(new.Inserts, old.Inserts, sec)
+	result["Deletes per sec"] = formatPerSec(new.Deletes, old.Deletes, sec)
+	result["Commits per sec"] = formatPerSec(new.Commits, old.Commits, sec)
+	result["Innodb data read bps"] = formatPerSec(new.InnoDBReadBytes, old.InnoDBReadBytes, sec)
+	result["Innodb data write bps"] = formatPerSec(new.InnoDBWriteBytes, old.InnoDBWriteBytes, sec)
+	result["Bytes read bps"] = formatPerSec(new.ReadBytes, old.ReadBytes, sec)
+	result["Bytes write bps"] = formatPerSec(new.WriteBytes, old.WriteBytes, sec)
+	result["Queries per sec"] = formatPerSec(new.Queries(), old.Queries(), sec)
 }
 
 func emptyResults() map[string]interface{} {
@@ -115,14 +116,11 @@ func emptyResults() map[string]interface{} {
 	}
 }
 
-func onlyPositive(f float64) float64 {
-	if f < 0 {
+func formatPerSec(new int64, old int64, seconds float64) float64 {
+	v := float64(new-old) / seconds
+	if v < 0 {
 		return 0
 	}
-	return f
-}
 
-func roundUp(p float64) float64 {
-	k := math.Pow10(2)
-	return float64(int64(p*k+0.5)) / k
+	return common.RoundToTwoDecimalPlaces(v)
 }
