@@ -3,9 +3,10 @@
 package cagent
 
 import (
+	"fmt"
 	"time"
 
-	"github.com/go-ole/go-ole"
+	ole "github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 	log "github.com/sirupsen/logrus"
 
@@ -37,19 +38,22 @@ func windowsUpdates() (available int, pending int, lastTimeUpdated time.Time, er
 	start := time.Now()
 	err = ole.CoInitializeEx(0, 0)
 	if err != nil {
+		// we can continue and try to execute query
 		log.Error("[Windows Updates] OLE CoInitializeEx: ", err.Error())
 	}
 
 	defer ole.CoUninitialize()
-	mus, err := oleutil.CreateObject("Microsoft.Update.Session")
-	if err != nil {
+	mus, err2 := oleutil.CreateObject("Microsoft.Update.Session")
+	if err2 != nil {
+		err = err2
 		log.Errorf("[Windows Updates] Failed to create Microsoft.Update.Session: %s", err.Error())
 		return
 	}
 
 	defer mus.Release()
-	update, err := mus.QueryInterface(ole.IID_IDispatch)
-	if err != nil {
+	update, err2 := mus.QueryInterface(ole.IID_IDispatch)
+	if err2 != nil {
+		err = err2
 		log.Error("[Windows Updates] Failed to create QueryInterface:: ", err.Error())
 		return
 	}
@@ -57,8 +61,9 @@ func windowsUpdates() (available int, pending int, lastTimeUpdated time.Time, er
 	defer update.Release()
 	oleutil.PutProperty(update, "ClientApplicationID", "Cagent")
 
-	us, err := oleutil.CallMethod(update, "CreateUpdateSearcher")
-	if err != nil {
+	us, err2 := oleutil.CallMethod(update, "CreateUpdateSearcher")
+	if err2 != nil {
+		err = err2
 		log.Error("[Windows Updates] Failed CallMethod CreateUpdateSearcher: ", err.Error())
 		return
 	}
@@ -66,9 +71,11 @@ func windowsUpdates() (available int, pending int, lastTimeUpdated time.Time, er
 	usd := us.ToIDispatch()
 	defer usd.Release()
 
-	usr, err := oleutil.CallMethod(usd, "Search", "IsInstalled=0 and Type='Software' and IsHidden=0")
-	if err != nil {
-		log.Error("[Windows Updates] Failed CallMethod Search: ", err.Error())
+	usr, err2 := oleutil.CallMethod(usd, "Search", "IsInstalled=0 and Type='Software' and IsHidden=0")
+	if err2 != nil {
+		// here we got an error if Windows Updates is disabled
+		err = fmt.Errorf("failed to query Windows Updates, probably it is disabled: %s", err.Error())
+		log.Error("[Windows Updates] Failed to query Windows Updates, probably it is disabled: ", err.Error())
 		return
 	}
 	log.Debugf("[Windows Updates] OLE query took %.1fs", time.Since(start).Seconds())
@@ -76,8 +83,9 @@ func windowsUpdates() (available int, pending int, lastTimeUpdated time.Time, er
 	usrd := usr.ToIDispatch()
 	defer usrd.Release()
 
-	upd, err := oleutil.GetProperty(usrd, "Updates")
-	if err != nil {
+	upd, err2 := oleutil.GetProperty(usrd, "Updates")
+	if err2 != nil {
+		err = err2
 		log.Error("[Windows Updates] Failed to get Updates property: ", err.Error())
 		return
 	}
@@ -85,16 +93,18 @@ func windowsUpdates() (available int, pending int, lastTimeUpdated time.Time, er
 	updd := upd.ToIDispatch()
 	defer updd.Release()
 
-	updn, err := oleutil.GetProperty(updd, "Count")
-	if err != nil {
+	updn, err2 := oleutil.GetProperty(updd, "Count")
+	if err2 != nil {
+		err = err2
 		log.Error("[Windows Updates] Failed to get Count property: ", err.Error())
 		return
 	}
 
 	available = int(updn.Val)
 
-	thc, err := oleutil.CallMethod(usd, "GetTotalHistoryCount")
-	if err != nil {
+	thc, err2 := oleutil.CallMethod(usd, "GetTotalHistoryCount")
+	if err2 != nil {
+		err = err2
 		log.Error("[Windows Updates] Failed CallMethod GetTotalHistoryCount: ", err.Error())
 		return
 	}
@@ -102,8 +112,9 @@ func windowsUpdates() (available int, pending int, lastTimeUpdated time.Time, er
 	thcn := int(thc.Val)
 
 	// uhistRaw is list of update event records on the computer in descending chronological order
-	uhistRaw, err := oleutil.CallMethod(usd, "QueryHistory", 0, thcn)
-	if err != nil {
+	uhistRaw, err2 := oleutil.CallMethod(usd, "QueryHistory", 0, thcn)
+	if err2 != nil {
+		err = err2
 		log.Error("[Windows Updates] Failed CallMethod QueryHistory: ", err.Error())
 		return
 	}
@@ -111,8 +122,9 @@ func windowsUpdates() (available int, pending int, lastTimeUpdated time.Time, er
 	uhist := uhistRaw.ToIDispatch()
 	defer uhist.Release()
 
-	countUhist, err := oleutil.GetProperty(uhist, "Count")
-	if err != nil {
+	countUhist, err2 := oleutil.GetProperty(uhist, "Count")
+	if err2 != nil {
+		err = err2
 		log.Error("[Windows Updates] Failed to get Count property: ", err.Error())
 		return
 	}

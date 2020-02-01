@@ -94,7 +94,8 @@ type Config struct {
 
 	SystemFields []string `toml:"system_fields" comment:"default ['uname','os_kernel','os_family','os_arch','cpu_model','fqdn','memory_total_B']"`
 
-	WindowsUpdatesWatcherInterval int `toml:"windows_updates_watcher_interval" comment:"default 3600"`
+	WindowsUpdates                bool `toml:"windows_updates" comment:"default true"`
+	WindowsUpdatesWatcherInterval int  `toml:"windows_updates_watcher_interval" comment:"default 3600"`
 
 	VirtualMachinesStat []string `toml:"virtual_machines_stat" comment:"default ['hyper-v'], available options 'hyper-v'"`
 
@@ -245,6 +246,7 @@ func NewConfig() *Config {
 
 	switch runtime.GOOS {
 	case "windows":
+		cfg.WindowsUpdates = true
 		cfg.WindowsUpdatesWatcherInterval = 3600
 		cfg.NetInterfaceExcludeRegex = append(cfg.NetInterfaceExcludeRegex, "Pseudo-Interface")
 		cfg.CPULoadDataGather = []string{}
