@@ -113,3 +113,14 @@ software_raid_monitoring = true
   user = "cagent"
   password = "confidential"
   connect_timeout = 1.0
+
+# Cagent monitors all running processes and reports them for further processing to the Hub.
+# On heavy loaded systems or if you don't need process monitoring at all,
+# you can change the following settings.
+[process_monitoring]
+  enabled = true
+  # Monitor kernel tasks identified by process group 0
+  # Ignored on Windows
+  enable_kerneltask_monitoring = true
+  # The process list is sorted by PID descending. Only the top N processes are monitored.
+  max_number_monitored_processes = 500

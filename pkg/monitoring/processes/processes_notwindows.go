@@ -1,6 +1,6 @@
 // +build !windows
 
-package cagent
+package processes
 
 import (
 	"bufio"
@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/shirou/gopsutil/process"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/docker"
@@ -34,7 +33,7 @@ type procStatus struct {
 var dockerContainerIDRE = regexp.MustCompile(`(?m)/docker/([a-f0-9]*)$`)
 var monitoredProcessCache = make(map[int]*process.Process)
 
-func processes(systemMemorySize uint64) ([]ProcStat, error) {
+func processes(systemMemorySize uint64) ([]*ProcStat, error) {
 	if runtime.GOOS == "linux" {
 		return processesFromProc(systemMemorySize)
 	}
@@ -65,38 +64,38 @@ func getProcLongState(shortState byte) string {
 }
 
 // get process states from /proc/(pid)/stat
-func processesFromProc(systemMemorySize uint64) ([]ProcStat, error) {
+func processesFromProc(systemMemorySize uint64) ([]*ProcStat, error) {
 	filepaths, err := filepath.Glob(common.HostProc() + "/[0-9]*/status")
 	if err != nil {
 		return nil, err
 	}
 
-	var procs []ProcStat
+	var procs []*ProcStat
 	var updatedProcessCache = make(map[int]*process.Process)
 
 	for _, statusFilepath := range filepaths {
 		statusFile, err := readProcFile(statusFilepath)
 		if err != nil {
 			if err != errorProcessTerminated {
-				log.Error("[PROC] readProcFile error ", err.Error())
+				log.WithError(err).Error("readProcFile error")
 			}
 			continue
 		}
 
-		procStatus := parseProcStatusFile(statusFile)
-		stat := ProcStat{ParentPID: procStatus.PPID, State: procStatus.State}
+		parsedProcStatus := parseProcStatusFile(statusFile)
+		stat := &ProcStat{ParentPID: parsedProcStatus.PPID, State: parsedProcStatus.State}
 		// get the PID from the filepath(/proc/<pid>/status) itself
 		pathParts := strings.Split(statusFilepath, string(filepath.Separator))
 		pidString := pathParts[len(pathParts)-2]
 		stat.PID, err = strconv.Atoi(pidString)
 		if err != nil {
-			log.Errorf("[PROC] proc/status: failed to convert PID(%s) to int: %s", pidString, err.Error())
+			log.WithError(err).Errorf("proc/status: failed to convert PID(%s) to int", pidString)
 		}
 
 		commFilepath := common.HostProc() + "/" + pidString + "/comm"
 		comm, err := readProcFile(commFilepath)
 		if err != nil && err != errorProcessTerminated {
-			log.Errorf("[PROC] failed to read comm(%s): %s", commFilepath, err.Error())
+			log.WithError(err).Errorf("failed to read comm(%s)", commFilepath)
 		} else if err == nil {
 			stat.Name = string(bytes.TrimRight(comm, "\n"))
 		}
@@ -104,7 +103,7 @@ func processesFromProc(systemMemorySize uint64) ([]ProcStat, error) {
 		cmdLineFilepath := common.HostProc() + "/" + pidString + "/cmdline"
 		cmdline, err := readProcFile(cmdLineFilepath)
 		if err != nil && err != errorProcessTerminated {
-			log.Errorf("[PROC] failed to read cmdline(%s): %s", cmdLineFilepath, err.Error())
+			log.WithError(err).Errorf("failed to read cmdline(%s)", cmdLineFilepath)
 		} else if err == nil {
 			stat.Cmdline = strings.Replace(string(bytes.TrimRight(cmdline, "\x00")), "\x00", " ", -1)
 		}
@@ -112,7 +111,7 @@ func processesFromProc(systemMemorySize uint64) ([]ProcStat, error) {
 		cgroupFilepath := common.HostProc() + "/" + pidString + "/cgroup"
 		cgroup, err := readProcFile(cgroupFilepath)
 		if err != nil && err != errorProcessTerminated {
-			log.Errorf("[PROC] failed to read cgroup(%s): %s", cgroupFilepath, err.Error())
+			log.WithError(err).Errorf("failed to read cgroup(%s)", cgroupFilepath)
 		} else if err == nil {
 			reParts := dockerContainerIDRE.FindStringSubmatch(string(cgroup))
 			if len(reParts) > 0 {
@@ -120,12 +119,20 @@ func processesFromProc(systemMemorySize uint64) ([]ProcStat, error) {
 				containerName, err := docker.ContainerNameByID(containerID)
 				if err != nil {
 					if err != docker.ErrorNotImplementedForOS && err != docker.ErrorDockerNotAvailable {
-						log.Errorf("[PROC] failed to read docker container name by id(%s): %s", containerID, err.Error())
+						log.WithError(err).Errorf("failed to read docker container name by id(%s)", containerID)
 					}
 				} else {
 					stat.Container = containerName
 				}
 			}
+		}
+
+		statFilepath := common.HostProc() + "/" + pidString + "/stat"
+		statFileContent, err := readProcFile(statFilepath)
+		if err != nil && err != errorProcessTerminated {
+			log.WithError(err).Errorf("failed to read stat (%s)", statFilepath)
+		} else if err == nil {
+			stat.ProcessGID = parseStatFileContent(statFileContent)
 		}
 
 		if stat.PID > 0 {
@@ -158,7 +165,7 @@ func parseProcStatusFile(b []byte) procStatus {
 			var err error
 			status.PPID, err = strconv.Atoi(fields[1])
 			if err != nil {
-				log.Errorf("[PROC] proc/status: failed to convert PPID(%s) to int: %s", fields[1], err.Error())
+				log.WithError(err).Errorf("proc/status: failed to convert PPID(%s) to int", fields[1])
 			}
 		case "state:":
 			// extract raw long state
@@ -184,6 +191,22 @@ func parseProcStatusFile(b []byte) procStatus {
 	}
 
 	return status
+}
+
+func parseStatFileContent(b []byte) int {
+	fields := strings.Fields(string(b))
+
+	i := 1
+	for !strings.HasSuffix(fields[i], ")") {
+		i++
+	}
+
+	pgrp, err := strconv.ParseInt(fields[i+3], 10, 32)
+	if err != nil {
+		log.WithError(err).Errorf("proc/stat: failed to convert PGRP (%s) to int", fields[i+3])
+		return -1
+	}
+	return int(pgrp)
 }
 
 func readProcFile(filename string) ([]byte, error) {
@@ -212,7 +235,7 @@ func execPS() ([]byte, error) {
 		return nil, err
 	}
 
-	out, err := exec.Command(bin, "axwwo", "pid,ppid,state,command").Output()
+	out, err := exec.Command(bin, "axwwo", "pid,ppid,pgrp,state,command").Output()
 	if err != nil {
 		return nil, err
 	}
@@ -220,14 +243,14 @@ func execPS() ([]byte, error) {
 	return out, err
 }
 
-func processesFromPS(systemMemorySize uint64) ([]ProcStat, error) {
+func processesFromPS(systemMemorySize uint64) ([]*ProcStat, error) {
 	out, err := execPS()
 	if err != nil {
 		return nil, err
 	}
 
 	lines := strings.Split(string(out), "\n")
-	var procs []ProcStat
+	var procs []*ProcStat
 	var updatedProcessCache = make(map[int]*process.Process)
 	var columnsIndex = map[string]int{}
 
@@ -246,13 +269,13 @@ func processesFromPS(systemMemorySize uint64) ([]ProcStat, error) {
 			continue
 		}
 
-		stat := ProcStat{}
+		stat := &ProcStat{}
 
 		if pidIndex, exists := columnsIndex["PID"]; exists {
 			pidString := parts[pidIndex]
 			stat.PID, err = strconv.Atoi(pidString)
 			if err != nil {
-				log.Errorf("[PROC] ps: failed to convert PID(%s) to int: %s", pidString, err.Error())
+				log.WithError(err).Errorf("ps: failed to convert PID(%s) to int", pidString)
 			}
 		} else {
 			// we can't set PID set to default 0 if it is unavailable for some reason, because 0 PID means the kernel(Swapper) process
@@ -263,11 +286,22 @@ func processesFromPS(systemMemorySize uint64) ([]ProcStat, error) {
 			ppidString := parts[ppidIndex]
 			stat.ParentPID, err = strconv.Atoi(ppidString)
 			if err != nil {
-				log.Errorf("[PROC] ps: failed to convert PPID(%s) to int: %s", ppidString, err.Error())
+				log.WithError(err).Errorf("ps: failed to convert PPID(%s) to int", ppidString)
 			}
 		} else {
-			// we can't left ParentPID set to default 0 if it is unavailable for some reason, because 0 PID means the kernel(Swapper) process
+			// we can't left ParentPID set to default 0 if it is unavailable for some reason, because 0 PID means the kernel task process
 			stat.ParentPID = -1
+		}
+
+		if pgidIndex, exists := columnsIndex["PGRP"]; exists {
+			pgidString := parts[pgidIndex]
+			stat.ProcessGID, err = strconv.Atoi(pgidString)
+			if err != nil {
+				log.WithError(err).Errorf("ps: failed to convert PGID(%s) to int", pgidString)
+			}
+		} else {
+			// we can't left ProcessGID set to default 0 if it is unavailable for some reason, because 0 PGID means the kernel task group
+			stat.ProcessGID = -1
 		}
 
 		if statIndex, exists := columnsIndex["STAT"]; exists {
@@ -310,7 +344,7 @@ func getProcessByPID(pid int) *process.Process {
 func gatherProcessResourceUsage(proc *process.Process, systemMemorySize uint64) (uint64, uint64, float32, float32) {
 	memoryInfo, err := proc.MemoryInfo()
 	if err != nil {
-		log.WithError(err).Error("[PROC] failed to get memory info")
+		log.WithError(err).Error("failed to get memory info")
 		return 0, 0, 0.0, 0.0
 	}
 	memUsagePercent := (float64(memoryInfo.RSS) / float64(systemMemorySize)) * 100
@@ -318,8 +352,12 @@ func gatherProcessResourceUsage(proc *process.Process, systemMemorySize uint64) 
 	// side effect: p.Percent() call update process internally
 	cpuUsagePercent, err := proc.Percent(time.Duration(0))
 	if err != nil {
-		log.WithError(err).Error("[PROC] failed to get CPU usage")
+		log.WithError(err).Error("failed to get CPU usage")
 	}
 
 	return memoryInfo.RSS, memoryInfo.VMS, float32(common.RoundToTwoDecimalPlaces(memUsagePercent)), float32(common.RoundToTwoDecimalPlaces(cpuUsagePercent))
+}
+
+func isKernelTask(procStat *ProcStat) bool {
+	return procStat.ParentPID == 0 || procStat.ProcessGID == 0
 }

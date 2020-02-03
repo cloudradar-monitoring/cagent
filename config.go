@@ -17,6 +17,7 @@ import (
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/jobmon"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/mysql"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/processes"
 )
 
 const (
@@ -121,6 +122,8 @@ type Config struct {
 	LinuxUpdatesChecks LinuxUpdatesMonitoringConfig `toml:"linux_updates_checks" comment:"Monitor the available updates using apt-get, yum or dfn\nIgnored on distributions using other package managers.\nRequires sudo rules. DEB and RPM packages install them automatically"`
 
 	MysqlMonitoring mysql.Config `toml:"mysql_monitoring" comment:"Monitor the basic performance metrics of a MySQL or MariaDB database"`
+
+	ProcessMonitoring processes.Config `toml:"process_monitoring" comment:"Cagent monitors all running processes and reports them for further processing to the Hub.\nOn heavy loaded systems or if you don't need process monitoring at all,\nyou can change the following settings."`
 }
 
 type CPUUtilisationAnalysisConfig struct {
@@ -243,6 +246,7 @@ func NewConfig() *Config {
 			FetchTimeout:  30,
 			CheckInterval: 14400,
 		},
+		ProcessMonitoring: processes.GetDefaultConfig(),
 	}
 
 	cfg.MinValuableConfig = *(defaultMinValuableConfig())

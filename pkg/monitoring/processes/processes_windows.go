@@ -1,13 +1,12 @@
 // +build windows
 
-package cagent
+package processes
 
 import (
 	"runtime"
 	"time"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/winapi"
@@ -16,10 +15,10 @@ import (
 var monitoredProcessCache = make(map[uint32]*winapi.SystemProcessInformation)
 var lastProcessQueryTime time.Time
 
-func processes(systemMemorySize uint64) ([]ProcStat, error) {
+func processes(systemMemorySize uint64) ([]*ProcStat, error) {
 	procByPid, threadsByProcPid, err := winapi.GetSystemProcessInformation(false)
 	if err != nil {
-		return nil, errors.Wrap(err, "[PROC] can't get system processes")
+		return nil, errors.Wrap(err, "can't get system processes")
 	}
 
 	now := time.Now()
@@ -28,13 +27,13 @@ func processes(systemMemorySize uint64) ([]ProcStat, error) {
 		timeElapsedReal = now.Sub(lastProcessQueryTime).Seconds()
 	}
 
-	var result []ProcStat
+	var result []*ProcStat
 	var updatedProcessCache = make(map[uint32]*winapi.SystemProcessInformation)
 	cmdLineRetrievalFailuresCount := 0
 	logicalCPUCount := uint8(runtime.NumCPU())
 	windowByProcessId, err := winapi.WindowByProcessId()
 	if err != nil {
-		log.Errorf("[PROC] failed to list all windows by processId")
+		log.Errorf("failed to list all windows by processId")
 	}
 
 	for pid, proc := range procByPid {
@@ -76,7 +75,7 @@ func processes(systemMemorySize uint64) ([]ProcStat, error) {
 			if window, exists := windowByProcessId[pid]; exists {
 				isHanging, err := winapi.IsHangWindow(window)
 				if err != nil {
-					log.Errorf("[PROC] can't query hang window got error: %s", err.Error())
+					log.WithError(err).Error("can't query hang window")
 				} else if isHanging {
 					state = "not responding"
 				}
@@ -84,9 +83,10 @@ func processes(systemMemorySize uint64) ([]ProcStat, error) {
 		}
 
 		memoryUsagePercent := (float64(proc.WorkingSetSize) / float64(systemMemorySize)) * 100
-		ps := ProcStat{
+		ps := &ProcStat{
 			PID:                    int(pid),
 			ParentPID:              int(proc.InheritedFromUniqueProcessID),
+			ProcessGID:             -1,
 			State:                  state,
 			Name:                   proc.ImageName.String(),
 			Cmdline:                cmdLine,
@@ -103,8 +103,19 @@ func processes(systemMemorySize uint64) ([]ProcStat, error) {
 	monitoredProcessCache = updatedProcessCache
 
 	if cmdLineRetrievalFailuresCount > 0 {
-		log.Debugf("[PROC] could not get command line for %d processes", cmdLineRetrievalFailuresCount)
+		log.Debugf("could not get command line for %d processes", cmdLineRetrievalFailuresCount)
 	}
 
 	return result, nil
+}
+
+func isKernelTask(p *ProcStat) bool {
+	// For Windows we can't distinct if the process is a system process without additional API calls.
+	// For performance reasons this feature will be ignored for Windows:
+	return false
+
+	// if needed it can be implemented using next pseudocode:
+	// return p.PID < 1 || RtlEqualSid(p.SessionId, LocalSystemSid)
+	// Where LocalSystemSID is { SID_REVISION, 1, SECURITY_NT_AUTHORITY, { SECURITY_LOCAL_SYSTEM_RID } };
+	// See https://github.com/processhacker/processhacker/blob/master/phlib/data.c for more details
 }
