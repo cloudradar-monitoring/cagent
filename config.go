@@ -16,8 +16,8 @@ import (
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/jobmon"
-	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/processes"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/mysql"
+	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/processes"
 )
 
 const (
