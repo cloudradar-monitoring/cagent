@@ -92,9 +92,16 @@ func (w *Watcher) tryFetchAndParseUpdatesInfo() (map[string]interface{}, error) 
 		return nil, err
 	}
 
+	systemRestartRequired := tryDetectIfSystemRestartRequired()
+	var systemRestartRequiredInt int
+	if systemRestartRequired {
+		systemRestartRequiredInt = 1
+	}
+
 	results := map[string]interface{}{
 		"updates_available":          totalUpgrades,
 		"security_updates_available": securityUpgrades,
+		"system_restart_required":    systemRestartRequiredInt,
 	}
 	return results, nil
 }
@@ -143,4 +150,15 @@ func tryParseMajorVersion(versionStr string) int {
 		return -1
 	}
 	return majorVer
+}
+
+func tryDetectIfSystemRestartRequired() bool {
+	_, err := os.Stat("/var/run/reboot-required")
+	if err != nil && os.IsNotExist(err) {
+		return false
+	} else if err != nil {
+		log.WithError(err).Warn("while checking if system restart required")
+		return false
+	}
+	return true
 }
