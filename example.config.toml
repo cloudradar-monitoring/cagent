@@ -54,9 +54,6 @@ net_interface_max_speed = ""
 # System
 system_fields = ['uname','os_kernel','os_family','os_arch','cpu_model','fqdn','memory_total_B'] # default ['uname','os_kernel','os_family','os_arch','cpu_model','fqdn','memory_total_B']
 
-# Windows
-windows_updates_watcher_interval = 3600 # default 3600
-
 hardware_inventory = true
 discover_autostarting_services_only = true
 temperature_monitoring = true # default true
@@ -99,12 +96,14 @@ software_raid_monitoring = true
 # Monitor the available updates using apt-get, yum or dfn
 # Ignored on distributions using other package managers.
 # Requires sudo rules. DEB and RPM packages install them automatically.
-[linux_updates_checks]
+[system_updates_checks]
   enabled = true # Set 'false' to disable checking available updates
   fetch_timeout = 30 # Maximum time the package manager is allowed to spend fetching available updates
   check_interval = 14400 # Check for available updates every N seconds.
 
 # Monitor the basic performance metrics of a MySQL or MariaDB database
+# ** EXPERIMENTAL                          **
+# ** Do not use in production environments **
 [mysql_monitoring]
   enabled = false
   connect = "127.0.0.1:3306" # Use 127.0.0.1 or the path to the mysql.socket, connecting to remote databases is not supported

@@ -1,6 +1,6 @@
 // +build windows
 
-package cagent
+package updates
 
 import (
 	"fmt"
@@ -8,10 +8,9 @@ import (
 
 	ole "github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
-	log "github.com/sirupsen/logrus"
-
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
+
+var ErrorDisabledOnHost = fmt.Errorf("windows updates disabled on the host")
 
 type WindowsUpdateStatus int
 
@@ -24,22 +23,30 @@ const (
 	WUStatusAborted
 )
 
-type WindowsUpdateWatcher struct {
-	LastFetchedAt     time.Time
-	LastTimeUpdatedAt time.Time
-	Available         int
-	Pending           int
-	Err               error
+func (w *Watcher) tryFetchAndParseUpdatesInfo() (results map[string]interface{}, err error) {
+	available, pending, updated, err := w.query()
+	if err != nil {
+		return map[string]interface{}{
+			"updates_available":     nil,
+			"updates_pending":       nil,
+			"last_update_timestamp": nil,
+			"query_state":           "failed",
+		}, err
+	}
 
-	ca *Cagent
+	return map[string]interface{}{
+		"updates_available":     available,
+		"updates_pending":       pending,
+		"last_update_timestamp": updated.Unix(),
+		"query_state":           "succeeded"}, nil
 }
 
-func windowsUpdates() (available int, pending int, lastTimeUpdated time.Time, err error) {
+func (w *Watcher) query() (available int, pending int, lastTimeUpdated time.Time, err error) {
 	start := time.Now()
 	err = ole.CoInitializeEx(0, 0)
 	if err != nil {
-		// we can continue and try to execute query
 		log.Error("[Windows Updates] OLE CoInitializeEx: ", err.Error())
+		return
 	}
 
 	defer ole.CoUninitialize()
@@ -68,14 +75,23 @@ func windowsUpdates() (available int, pending int, lastTimeUpdated time.Time, er
 		return
 	}
 
+	ush := us.ToIDispatch()
+	defer ush.Release()
+	// lets use the fast local-only query to check if WindowsUpdates service is enabled on the host
+	_, err2 = oleutil.CallMethod(ush, "GetTotalHistoryCount")
+	if err2 != nil {
+		// that means Windows Updates service is disabled
+		err = ErrorDisabledOnHost
+		log.Warningf("[Windows Updates] Windows Updates service is disabled: ", err.Error())
+		return
+	}
+
 	usd := us.ToIDispatch()
 	defer usd.Release()
-
 	usr, err2 := oleutil.CallMethod(usd, "Search", "IsInstalled=0 and Type='Software' and IsHidden=0")
 	if err2 != nil {
-		// here we got an error if Windows Updates is disabled
-		err = fmt.Errorf("failed to query Windows Updates, probably it is disabled: %s", err.Error())
-		log.Error("[Windows Updates] Failed to query Windows Updates, probably it is disabled: ", err.Error())
+		err = err2
+		log.Error("[Windows Updates] Failed to query Windows Updates: ", err.Error())
 		return
 	}
 	log.Debugf("[Windows Updates] OLE query took %.1fs", time.Since(start).Seconds())
@@ -101,6 +117,7 @@ func windowsUpdates() (available int, pending int, lastTimeUpdated time.Time, er
 	}
 
 	available = int(updn.Val)
+	pending = 0
 
 	thc, err2 := oleutil.CallMethod(usd, "GetTotalHistoryCount")
 	if err2 != nil {
@@ -154,76 +171,19 @@ func windowsUpdates() (available int, pending int, lastTimeUpdated time.Time, er
 			pending++
 		}
 
-		if lastTimeUpdated.IsZero() && updateStatus == WUStatusCompleted {
+		if updateStatus == WUStatusCompleted {
 			date, err := oleutil.GetProperty(item, "Date")
 			if err != nil {
 				log.Warn("[Windows Updates] Failed to get Date property: ", err.Error())
 				continue
 			}
 			if updateDate, ok := date.Value().(time.Time); ok {
-				lastTimeUpdated = updateDate
+				if lastTimeUpdated.IsZero() || updateDate.After(lastTimeUpdated) {
+					lastTimeUpdated = updateDate
+				}
 			}
 		}
 	}
+
 	return
-}
-
-func (ca *Cagent) WindowsUpdatesWatcher() *WindowsUpdateWatcher {
-	if ca.windowsUpdateWatcher != nil {
-		return ca.windowsUpdateWatcher
-	}
-
-	ca.windowsUpdateWatcher = &WindowsUpdateWatcher{ca: ca}
-
-	go func() {
-		for {
-			available, pending, lastTimeUpdated, err := windowsUpdates()
-			ca.windowsUpdateWatcher.LastFetchedAt = time.Now()
-			ca.windowsUpdateWatcher.Err = err
-			ca.windowsUpdateWatcher.Available = available
-			ca.windowsUpdateWatcher.LastTimeUpdatedAt = lastTimeUpdated
-			ca.windowsUpdateWatcher.Pending = pending
-
-			time.Sleep(time.Second * time.Duration(ca.Config.WindowsUpdatesWatcherInterval))
-		}
-	}()
-
-	return ca.windowsUpdateWatcher
-}
-
-func (wuw *WindowsUpdateWatcher) WindowsUpdates() (common.MeasurementsMap, error) {
-	results := common.MeasurementsMap{}
-	if wuw.LastFetchedAt.IsZero() {
-		results["updates_available"] = nil
-		results["updates_pending"] = nil
-		results["last_update_timestamp"] = nil
-		results["query_state"] = "pending"
-		results["query_timestamp"] = nil
-
-		return results, nil
-	}
-
-	log.Debugf("[Windows Updates] last time fetched: %.1f seconds ago", time.Since(wuw.LastFetchedAt).Seconds())
-	results["query_timestamp"] = wuw.LastFetchedAt.Unix()
-
-	if wuw.Err != nil {
-		results["updates_available"] = nil
-		results["updates_pending"] = nil
-		results["last_update_timestamp"] = nil
-		results["query_state"] = "failed"
-		results["query_message"] = wuw.Err.Error()
-
-		return results, nil
-	}
-
-	results["updates_available"] = wuw.Available
-	results["updates_pending"] = wuw.Pending
-	results["query_state"] = "succeeded"
-	if wuw.LastTimeUpdatedAt.IsZero() {
-		results["last_update_timestamp"] = nil
-	} else {
-		results["last_update_timestamp"] = wuw.LastTimeUpdatedAt.Unix()
-	}
-
-	return results, nil
 }

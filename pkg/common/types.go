@@ -12,6 +12,10 @@ import (
 type MeasurementsMap map[string]interface{}
 
 func (mm MeasurementsMap) AddWithPrefix(prefix string, m MeasurementsMap) MeasurementsMap {
+	if m == nil {
+		return mm
+	}
+
 	for k, v := range m {
 		mm[prefix+k] = v
 	}
@@ -19,6 +23,10 @@ func (mm MeasurementsMap) AddWithPrefix(prefix string, m MeasurementsMap) Measur
 }
 
 func (mm MeasurementsMap) AddInnerWithPrefix(prefix string, m MeasurementsMap) MeasurementsMap {
+	if m == nil {
+		return mm
+	}
+
 	mm[prefix] = m
 
 	return mm
