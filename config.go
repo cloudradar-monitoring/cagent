@@ -96,9 +96,6 @@ type Config struct {
 
 	SystemFields []string `toml:"system_fields" comment:"default ['uname','os_kernel','os_family','os_arch','cpu_model','fqdn','memory_total_B']"`
 
-	WindowsUpdates                bool `toml:"windows_updates" comment:"default true"`
-	WindowsUpdatesWatcherInterval int  `toml:"windows_updates_watcher_interval" comment:"default 3600"`
-
 	VirtualMachinesStat []string `toml:"virtual_machines_stat" comment:"default ['hyper-v'], available options 'hyper-v'"`
 
 	HardwareInventory bool `toml:"hardware_inventory" comment:"default true"`
@@ -119,11 +116,15 @@ type Config struct {
 
 	JobMonitoring JobMonitoringConfig `toml:"jobmon,omitempty" comment:"Settings for the jobmon wrapper for the job monitoring"`
 
-	LinuxUpdatesChecks LinuxUpdatesMonitoringConfig `toml:"linux_updates_checks" comment:"Monitor the available updates using apt-get, yum or dfn\nIgnored on distributions using other package managers.\nRequires sudo rules. DEB and RPM packages install them automatically"`
+	SystemUpdatesChecks UpdatesMonitoringConfig `toml:"system_updates_checks" comment:"Monitor the available updates using apt-get, yum or dfn\nIgnored on distributions using other package managers.\nRequires sudo rules. DEB and RPM packages install them automatically\nOn Windows, it requires windows updates to be switched on, ignored if windows updates are switched off"`
 
-	MysqlMonitoring mysql.Config `toml:"mysql_monitoring" comment:"Monitor the basic performance metrics of a MySQL or MariaDB database"`
+	MysqlMonitoring mysql.Config `toml:"mysql_monitoring" comment:"Monitor the basic performance metrics of a MySQL or MariaDB database\n** EXPERIMENTAL                          **\n** Do not use in production environments **"`
 
 	ProcessMonitoring processes.Config `toml:"process_monitoring" comment:"Cagent monitors all running processes and reports them for further processing to the Hub.\nOn heavy loaded systems or if you don't need process monitoring at all,\nyou can change the following settings."`
+}
+
+type ConfigDeprecated struct {
+	WindowsUpdatesWatcherInterval int `toml:"windows_updates_watcher_interval" comment:""`
 }
 
 type CPUUtilisationAnalysisConfig struct {
@@ -139,13 +140,13 @@ type StorCLIConfig struct {
 	BinaryPath string `toml:"binary" comment:"Enable on Windows:\n  binary = 'C:\\Program Files\\storcli\\storcli64.exe'\nEnable on Linux:\n  binary = '/opt/storcli/sbin/storcli64'"`
 }
 
-type LinuxUpdatesMonitoringConfig struct {
+type UpdatesMonitoringConfig struct {
 	Enabled       bool `toml:"enabled" comment:"Set 'false' to disable checking available updates"`
-	FetchTimeout  uint `toml:"fetch_timeout" comment:"Maximum time the package manager is allowed to spend fetching available updates"`
+	FetchTimeout  uint `toml:"fetch_timeout" comment:"Maximum time the package manager is allowed to spend fetching available updates, ignored on windows"`
 	CheckInterval uint `toml:"check_interval" comment:"Check for available updates every N seconds"`
 }
 
-func (l *LinuxUpdatesMonitoringConfig) Validate() error {
+func (l *UpdatesMonitoringConfig) Validate() error {
 	if l.FetchTimeout >= l.CheckInterval {
 		return errors.New("fetch_timeout should be less than check_interval")
 	}
@@ -241,7 +242,7 @@ func NewConfig() *Config {
 			Severity:     jobmon.SeverityAlert,
 			SpoolDirPath: "/var/lib/cagent/jobmon",
 		},
-		LinuxUpdatesChecks: LinuxUpdatesMonitoringConfig{
+		SystemUpdatesChecks: UpdatesMonitoringConfig{
 			Enabled:       true,
 			FetchTimeout:  30,
 			CheckInterval: 14400,
@@ -253,8 +254,6 @@ func NewConfig() *Config {
 
 	switch runtime.GOOS {
 	case "windows":
-		cfg.WindowsUpdates = true
-		cfg.WindowsUpdatesWatcherInterval = 3600
 		cfg.NetInterfaceExcludeRegex = append(cfg.NetInterfaceExcludeRegex, "Pseudo-Interface")
 		cfg.CPULoadDataGather = []string{}
 		cfg.CPUUtilTypes = []string{"user", "system", "idle"}
@@ -329,12 +328,28 @@ func TryUpdateConfigFromFile(cfg *Config, configFilePath string) error {
 		return err
 	}
 
-	_, err = toml.DecodeFile(configFilePath, cfg)
+	cfgFile, err := os.Open(configFilePath)
 	if err != nil {
 		return err
 	}
 
-	// log.Printf("WARP: %+v", cfg)
+	_, err = toml.DecodeReader(cfgFile, cfg)
+	if err != nil {
+		return err
+	}
+
+	_, err = cfgFile.Seek(0, 0)
+	if err != nil {
+		return err
+	}
+
+	var deprecatedCfg ConfigDeprecated
+	meta, err := toml.DecodeReader(cfgFile, &deprecatedCfg)
+	if err != nil {
+		return err
+	}
+
+	cfg.migrate(&deprecatedCfg, meta)
 
 	return nil
 }
@@ -469,9 +484,9 @@ func (cfg *Config) validate() error {
 		return fmt.Errorf("invalid [jobmon] config: %s", err.Error())
 	}
 
-	err = cfg.LinuxUpdatesChecks.Validate()
+	err = cfg.SystemUpdatesChecks.Validate()
 	if err != nil {
-		return fmt.Errorf("invalid [linux_updates_checks] config: %s", err.Error())
+		return fmt.Errorf("invalid [system_updates_checks] config: %s", err.Error())
 	}
 
 	err = cfg.MysqlMonitoring.Validate()
@@ -507,4 +522,15 @@ func HandleAllConfigSetup(configFilePath string) (*Config, error) {
 		return nil, err
 	}
 	return cfg, nil
+}
+
+func (cfg *Config) migrate(cfgDeprecated *ConfigDeprecated, metadata toml.MetaData) {
+	// migrate windows_updates_watcher_interval into system_updates_checks.check_interval
+	if runtime.GOOS == "windows" && metadata.IsDefined("windows_updates_watcher_interval") {
+		if cfgDeprecated.WindowsUpdatesWatcherInterval <= 0 {
+			cfg.SystemUpdatesChecks.Enabled = false
+		} else {
+			cfg.SystemUpdatesChecks.CheckInterval = uint(cfgDeprecated.WindowsUpdatesWatcherInterval)
+		}
+	}
 }
