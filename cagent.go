@@ -34,9 +34,8 @@ type Cagent struct {
 	cpuWatcher             *CPUWatcher
 	cpuUtilisationAnalyser *CPUUtilisationAnalyser
 
-	fsWatcher            *fs.FileSystemWatcher
-	netWatcher           *networking.NetWatcher
-	windowsUpdateWatcher *WindowsUpdateWatcher // nolint: structcheck,megacheck
+	fsWatcher  *fs.FileSystemWatcher
+	netWatcher *networking.NetWatcher
 
 	vmstatLazyInit sync.Once
 	vmWatchers     map[string]types.Provider

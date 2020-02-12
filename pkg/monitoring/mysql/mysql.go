@@ -154,6 +154,7 @@ func (r *Mysql) Run() ([]*monitoring.ModuleReport, error) {
 		return []*monitoring.ModuleReport{&report}, nil
 	}
 
+	report.Measurements = make(map[string]interface{})
 	fillResultsPerSecond(status, r.lastStatus, statusTime.Sub(r.lastStatusTime), report.Measurements)
 	return []*monitoring.ModuleReport{&report}, nil
 }

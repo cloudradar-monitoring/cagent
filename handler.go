@@ -136,20 +136,19 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 			}
 		})
 
-		if runtime.GOOS == "windows" && ca.Config.WindowsUpdates && ca.Config.WindowsUpdatesWatcherInterval > 0 {
-			watcher := ca.WindowsUpdatesWatcher()
-			if watcher != nil {
-				wu, err := watcher.WindowsUpdates()
-				errCollector.Add(err)
-				measurements = measurements.AddWithPrefix("windows_update.", wu)
-			}
-		}
-
-		if cfg.LinuxUpdatesChecks.Enabled {
-			watcher := updates.GetWatcher(cfg.LinuxUpdatesChecks.FetchTimeout, cfg.LinuxUpdatesChecks.CheckInterval)
+		if cfg.SystemUpdatesChecks.Enabled {
+			watcher := updates.GetWatcher(cfg.SystemUpdatesChecks.FetchTimeout, cfg.SystemUpdatesChecks.CheckInterval)
 			u, err := watcher.GetSystemUpdatesInfo()
-			errCollector.Add(err)
-			measurements = measurements.AddWithPrefix("linux_update.", u)
+			if err != updates.ErrorDisabledOnHost {
+				errCollector.Add(err)
+				var prefix string
+				if runtime.GOOS == "windows" {
+					prefix = "windows_update."
+				} else {
+					prefix = "linux_update."
+				}
+				measurements = measurements.AddWithPrefix(prefix, u)
+			}
 		}
 
 		servicesList, err := services.ListServices(cfg.DiscoverAutostartingServicesOnly)
