@@ -53,7 +53,8 @@ func getProxyForURL(u *url.URL) (proxy *url.URL, err error) {
 					return proxy, nil
 				}
 			}
-			if err != ErrNotFound {
+			if err != ErrNotFound && err.Error() != "winapi error #12180" {
+				// we can discard error 12180 according to https://docs.microsoft.com/en-gb/archive/blogs/avkashchauhan/winhttpgetproxyforurl-failed-error_winhttp_autodetection_failed-12180-error-message-in-windows-azure-infrastructure-log
 				log.Errorf("WINHTTP_AUTOPROXY_AUTO_DETECT got error: %s", err.Error())
 			}
 		}
