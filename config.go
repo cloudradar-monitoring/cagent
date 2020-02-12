@@ -116,7 +116,7 @@ type Config struct {
 
 	JobMonitoring JobMonitoringConfig `toml:"jobmon,omitempty" comment:"Settings for the jobmon wrapper for the job monitoring"`
 
-	SystemUpdatesChecks UpdatesMonitoringConfig `toml:"system_updates_checks" comment:"Monitor the available updates using apt-get, yum or dfn\nIgnored on distributions using other package managers.\nRequires sudo rules. DEB and RPM packages install them automatically\nOn Windows, it requires windows updates to be switched on, ignored if windows updates are switched off"`
+	SystemUpdatesChecks UpdatesMonitoringConfig `toml:"system_updates_checks" comment:"Monitor the available updates using the operating system updates service\nUses apt-get, apt-check or yum, Requires sudo rules. DEB and RPM packages install them automatically.\nOn Windows, it requires windows updates to be switched on, ignored if windows updates are switched off"`
 
 	MysqlMonitoring mysql.Config `toml:"mysql_monitoring" comment:"Monitor the basic performance metrics of a MySQL or MariaDB database\n** EXPERIMENTAL                          **\n** Do not use in production environments **"`
 
