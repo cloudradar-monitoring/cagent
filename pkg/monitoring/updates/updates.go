@@ -16,7 +16,6 @@ type Watcher struct {
 	fetchTimeout    time.Duration
 	checkInterval   time.Duration
 	lastFetchedInfo map[string]interface{}
-	lastFetchedTime time.Time
 
 	lastError     error
 	interruptChan chan struct{}
@@ -52,7 +51,6 @@ func (w *Watcher) GetSystemUpdatesInfo() (map[string]interface{}, error) {
 func (w *Watcher) Run() {
 	for {
 		w.lastFetchedInfo, w.lastError = w.tryFetchAndParseUpdatesInfo()
-		w.lastFetchedTime = time.Now()
 		select {
 		case <-w.interruptChan:
 			return

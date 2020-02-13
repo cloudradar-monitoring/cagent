@@ -23,22 +23,41 @@ const (
 	WUStatusAborted
 )
 
+type SecondsAgo struct {
+	since time.Time
+}
+
+func (t SecondsAgo) MarshalJSON() ([]byte, error) {
+	return t.MarshalText()
+}
+
+func (t SecondsAgo) MarshalText() ([]byte, error) {
+	if t.since.IsZero() {
+		return nil, fmt.Errorf("since time not set")
+	}
+
+	return []byte(fmt.Sprintf("%.0f", time.Since(t.since).Seconds())), nil
+}
+
 func (w *Watcher) tryFetchAndParseUpdatesInfo() (results map[string]interface{}, err error) {
 	available, pending, updated, err := w.query()
 	if err != nil {
 		return map[string]interface{}{
-			"updates_available":     nil,
-			"updates_pending":       nil,
-			"last_update_timestamp": nil,
-			"query_state":           "failed",
+			"updates_available":              nil,
+			"updates_pending":                nil,
+			"last_updates_installed_ago_sec": nil,
+			"last_query_age_sec":             nil,
+			"query_state":                    "failed",
 		}, err
 	}
 
 	return map[string]interface{}{
-		"updates_available":     available,
-		"updates_pending":       pending,
-		"last_update_timestamp": updated.Unix(),
-		"query_state":           "succeeded"}, nil
+		"updates_available":              available,
+		"updates_pending":                pending,
+		"last_updates_installed_ago_sec": SecondsAgo{updated},
+		"last_query_age_sec":             SecondsAgo{time.Now()},
+		"query_state":                    "succeeded",
+	}, nil
 }
 
 func (w *Watcher) query() (available int, pending int, lastTimeUpdated time.Time, err error) {
