@@ -98,8 +98,8 @@ software_raid_monitoring = true
 # On Windows, it requires windows updates to be switched on, ignored if windows updates are switched off
 [system_updates_checks]
   enabled = true # Set 'false' to disable checking available updates
-  fetch_timeout = 30 # Maximum time the package manager is allowed to spend fetching available updates
-  check_interval = 14400 # Check for available updates every N seconds.
+  fetch_timeout = 30 # Maximum time the package manager is allowed to spend fetching available updates. Not supported on Windows
+  check_interval = 14400 # Check for available updates every N seconds. Minimum is 300 seconds
 
 # Monitor the basic performance metrics of a MySQL or MariaDB database
 # ** EXPERIMENTAL                          **

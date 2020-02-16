@@ -33,6 +33,8 @@ const (
 
 	minHubRequestTimeout = 1
 	maxHubRequestTimeout = 600
+
+	minSystemUpdatesCheckInterval = 300
 )
 
 var operationModes = []string{OperationModeFull, OperationModeMinimal, OperationModeHeartbeat}
@@ -143,13 +145,19 @@ type StorCLIConfig struct {
 type UpdatesMonitoringConfig struct {
 	Enabled       bool `toml:"enabled" comment:"Set 'false' to disable checking available updates"`
 	FetchTimeout  uint `toml:"fetch_timeout" comment:"Maximum time the package manager is allowed to spend fetching available updates, ignored on windows"`
-	CheckInterval uint `toml:"check_interval" comment:"Check for available updates every N seconds"`
+	CheckInterval uint `toml:"check_interval" comment:"Check for available updates every N seconds. Minimum is 300 seconds"`
 }
 
 func (l *UpdatesMonitoringConfig) Validate() error {
 	if l.FetchTimeout >= l.CheckInterval {
 		return errors.New("fetch_timeout should be less than check_interval")
 	}
+
+	if l.CheckInterval < minSystemUpdatesCheckInterval {
+		log.Warningf("system_updates_checks.check_interval is less than minimum(%d). It was set to %d", minSystemUpdatesCheckInterval, minSystemUpdatesCheckInterval)
+		l.CheckInterval = minSystemUpdatesCheckInterval
+	}
+
 	return nil
 }
 

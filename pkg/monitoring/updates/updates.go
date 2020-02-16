@@ -50,7 +50,14 @@ func (w *Watcher) GetSystemUpdatesInfo() (map[string]interface{}, error) {
 
 func (w *Watcher) Run() {
 	for {
-		w.lastFetchedInfo, w.lastError = w.tryFetchAndParseUpdatesInfo()
+		info, err := w.tryFetchAndParseUpdatesInfo()
+		if err != nil {
+			w.lastError = err
+		}
+
+		if info != nil {
+			w.lastFetchedInfo = info
+		}
 		select {
 		case <-w.interruptChan:
 			return
