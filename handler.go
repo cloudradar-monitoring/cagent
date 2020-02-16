@@ -136,7 +136,7 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 			}
 		})
 
-		if cfg.SystemUpdatesChecks.Enabled {
+		if cfg.SystemUpdatesChecks.Enabled && cfg.SystemUpdatesChecks.CheckInterval > 0 {
 			watcher := updates.GetWatcher(cfg.SystemUpdatesChecks.FetchTimeout, cfg.SystemUpdatesChecks.CheckInterval)
 			u, err := watcher.GetSystemUpdatesInfo()
 			if err != updates.ErrorDisabledOnHost {

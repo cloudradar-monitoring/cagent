@@ -4,6 +4,7 @@ package updates
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	ole "github.com/go-ole/go-ole"
@@ -11,7 +12,7 @@ import (
 )
 
 var ErrorDisabledOnHost = fmt.Errorf("windows updates disabled on the host")
-
+var ErrorPreviousQueryStillInProcess = fmt.Errorf("previous request still in process")
 type WindowsUpdateStatus int
 
 const (
@@ -39,9 +40,19 @@ func (t SecondsAgo) MarshalText() ([]byte, error) {
 	return []byte(fmt.Sprintf("%.0f", time.Since(t.since).Seconds())), nil
 }
 
+var queryInProccess bool
+var queryInProccessMutex sync.Mutex
+
 func (w *Watcher) tryFetchAndParseUpdatesInfo() (results map[string]interface{}, err error) {
 	available, pending, updated, err := w.query()
 	if err != nil {
+		if err == ErrorPreviousQueryStillInProcess {
+			// do not return any error in this case
+			// because we can't control the timeout on Windows
+			// so lets skip the new request
+			return nil, nil
+		}
+
 		return map[string]interface{}{
 			"updates_available":              nil,
 			"updates_pending":                nil,
@@ -61,7 +72,20 @@ func (w *Watcher) tryFetchAndParseUpdatesInfo() (results map[string]interface{},
 }
 
 func (w *Watcher) query() (available int, pending int, lastTimeUpdated time.Time, err error) {
+	queryInProccessMutex.Lock()
+	if queryInProccess {
+		queryInProccessMutex.Unlock()
+		err = ErrorPreviousQueryStillInProcess
+		return
+	}
 	start := time.Now()
+
+	queryInProccess = true
+	defer func() {
+		queryInProccess = false
+	}()
+	queryInProccessMutex.Unlock()
+
 	err = ole.CoInitializeEx(0, 0)
 	if err != nil {
 		log.Error("[Windows Updates] OLE CoInitializeEx: ", err.Error())
