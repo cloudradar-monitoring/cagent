@@ -485,12 +485,13 @@ func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 		}
 		file, err := os.OpenFile(ca.Config.OutFile, os.O_WRONLY, 0666)
 		if err != nil {
-			log.WithFields(localFields).WithError(err).Fatalln("Failed to validate config")
+			fmt.Printf("Failed to validate config %+v: %s\n", localFields, err.Error())
 		}
 		if err := file.Close(); err != nil {
-			log.WithFields(localFields).WithError(err).Fatalln("Could not close the config file")
+			fmt.Printf("Could not close the config file %+v: %s\n", localFields, err.Error())
 		}
-		log.WithFields(localFields).Infoln("Config verified")
+		fmt.Printf("Config verified! %+v\n", localFields)
+
 		os.Exit(0)
 	}
 
@@ -502,10 +503,11 @@ func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 			// toast error probably means toast not supported on the system
 			_ = sendErrorNotification("Hub connection check failed", err.Error())
 		}
-		log.WithError(err).Errorln("Hub connection check failed")
+		fmt.Printf("Hub connection check failed: %s\n", err.Error())
+
 		systemService, err := getServiceFromFlags(ca, "", "")
 		if err != nil {
-			log.WithError(err).Fatalln("Failed to get system service")
+			fmt.Printf("Failed to get system service failed: %s\n", err.Error())
 		}
 
 		status, err := systemService.Status()
@@ -518,9 +520,7 @@ func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 		systemManager := service.ChosenSystem()
 		if status == service.StatusRunning || status == service.StatusStopped {
 			restartCmdSpec := getSystemManagerCommand(systemManager.String(), svcConfig.Name, "restart")
-			log.WithFields(log.Fields{
-				"restartCmd": restartCmdSpec,
-			}).Infoln("Fix the config and then restart the service")
+			fmt.Printf("Fix the config and then restart the service: %s\n", restartCmdSpec)
 		}
 
 		os.Exit(1)
@@ -529,7 +529,7 @@ func handleFlagTest(testConfig bool, ca *cagent.Cagent) {
 	if runtime.GOOS == "windows" {
 		_ = sendSuccessNotification("Hub connection check is done", "")
 	}
-	log.Infoln("Hub connection check is done and credentials are correct!")
+	fmt.Printf("Hub connection check is done and credentials are correct!\n")
 	os.Exit(0)
 }
 
