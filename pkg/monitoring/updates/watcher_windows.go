@@ -29,12 +29,21 @@ type SecondsAgo struct {
 }
 
 func (t SecondsAgo) MarshalJSON() ([]byte, error) {
-	return t.MarshalText()
+	b, err := t.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+
+	if b == nil {
+		return []byte("null"), nil
+	}
+
+	return b, nil
 }
 
 func (t SecondsAgo) MarshalText() ([]byte, error) {
 	if t.since.IsZero() {
-		return nil, fmt.Errorf("since time not set")
+		return nil, nil
 	}
 
 	return []byte(fmt.Sprintf("%.0f", time.Since(t.since).Seconds())), nil
