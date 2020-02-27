@@ -92,8 +92,8 @@
                                         RestartServiceDelayInSeconds="60"
                                         ResetPeriodInDays="0"
                                         FirstFailureActionType="restart"
-                                        SecondFailureActionType="none"
-                                        ThirdFailureActionType="none"
+                                        SecondFailureActionType="restart"
+                                        ThirdFailureActionType="restart"
                                     />
                                 </ServiceInstall>
                                 <ServiceControl Id="StartService" Name="Cagent" Stop="both" Start="install" Remove="uninstall" Wait="yes">

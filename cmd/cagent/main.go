@@ -150,6 +150,8 @@ func main() {
 
 	handleFlagOneRunOnlyMode(ca, *oneRunOnlyModePtr, output)
 
+	log.Errorf("cagent v%s starting...", cagent.Version)
+
 	// nothing resulted in os.Exit
 	// so lets use the default continuous run mode and wait for interrupt
 	// setup interrupt handler
@@ -570,6 +572,8 @@ func (sw *serviceWrapper) Start(s service.Service) error {
 	sw.InterruptChan = make(chan struct{})
 	sw.WG = sync.WaitGroup{}
 	sw.HeartbeatInterruptChan = make(chan struct{})
+
+	log.Errorf("cagent v%s starting in service mode...", cagent.Version)
 
 	sw.WG.Add(1)
 	go func() {

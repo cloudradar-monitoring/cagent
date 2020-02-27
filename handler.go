@@ -44,6 +44,13 @@ func (c *cleanupCommand) Cleanup() error {
 }
 
 func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Errorf("Unexpected error occurred (main routine): %s", err)
+			panic(err)
+		}
+	}()
+
 	for {
 		err := ca.RunOnce(outputFile, ca.Config.OperationMode == OperationModeFull)
 		if err != nil {

@@ -251,7 +251,7 @@ func NewConfig() *Config {
 			SpoolDirPath: "/var/lib/cagent/jobmon",
 		},
 		SystemUpdatesChecks: UpdatesMonitoringConfig{
-			Enabled:       runtime.GOOS != "windows", // Temporarily disabled by default on Windows. will be fixed in next version.
+			Enabled:       true,
 			FetchTimeout:  30,
 			CheckInterval: 14400,
 		},
