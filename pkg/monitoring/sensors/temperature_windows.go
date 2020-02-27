@@ -5,10 +5,10 @@ package sensors
 import (
 	"fmt"
 	"math"
-	"strings"
 	"time"
 
 	"github.com/StackExchange/wmi"
+	"github.com/go-ole/go-ole"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/hwinfolib"
 	wmiutil "github.com/cloudradar-monitoring/cagent/pkg/wmi"
@@ -28,6 +28,12 @@ type msAcpi_ThermalZoneTemperature struct {
 	CurrentTemperature uint32
 	InstanceName       string
 }
+
+const (
+	// WBEM_E_NOT_SUPPORTED
+	// https://docs.microsoft.com/en-us/windows/win32/wmisdk/wmi-error-constants
+	wmiErrorNotSupported uint32 = 0x8004100C // Feature or operation is not supported.
+)
 
 // ReadTemperatureSensors tries to read sensor info from hwinfo.dll if it's available. Fallbacks to WMI class msAcpi_ThermalZoneTemperature
 func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
@@ -104,11 +110,18 @@ func readWMITemperatureSensors() ([]*TemperatureSensorInfo, error) {
 	err := wmiutil.QueryWithTimeout(readTimeout, query, &thermalSensors, wmiConnectServerArgs...)
 	if err != nil {
 		l := log.WithError(err)
-		errText := strings.ToLower(err.Error())
-		if strings.Contains(errText, "not supported") {
-			l.Debugf("not supported by BIOS or driver is required")
-			return nil, nil
+
+		// try get more detailed information to ignore some non-error cases:
+		if oleErr, ok := err.(*ole.OleError); ok {
+			oleSubErr := oleErr.SubError()
+			if oleExceptInfo, ok := oleSubErr.(ole.EXCEPINFO); ok {
+				if oleExceptInfo.SCODE() == wmiErrorNotSupported {
+					l.Debug("not supported by BIOS or driver is required")
+					return nil, nil
+				}
+			}
 		}
+
 		l.Error("failed to read temperature sensors")
 		return nil, err
 	}
