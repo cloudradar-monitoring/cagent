@@ -83,6 +83,13 @@ func (t *Top) startMeasureProcessLoad(interval time.Duration) {
 	var len5 = 5 * 60 / int(interval.Seconds())
 	var len15 = 15 * 60 / int(interval.Seconds())
 
+	defer func() {
+		if err := recover(); err != nil {
+			log.Errorf("Unexpected error occurred (startMeasureProcessLoad): %s", err)
+			panic(err)
+		}
+	}()
+
 	for {
 		select {
 		case <-t.interruptChan:

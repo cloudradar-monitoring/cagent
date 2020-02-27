@@ -49,6 +49,13 @@ func (w *Watcher) GetSystemUpdatesInfo() (map[string]interface{}, error) {
 }
 
 func (w *Watcher) Run() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Errorf("Unexpected error occurred (updates watcher): %s", err)
+			panic(err)
+		}
+	}()
+
 	for {
 		info, err := w.tryFetchAndParseUpdatesInfo()
 		if err != nil {
