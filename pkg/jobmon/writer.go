@@ -22,7 +22,7 @@ func (w *captureWriter) String() string {
 func (w *captureWriter) Write(p []byte) (n int, err error) {
 	gotLen := len(p)
 	if gotLen >= w.n {
-		w.buf = p[gotLen-w.n-1:]
+		w.buf = p[gotLen-w.n:]
 	} else if gotLen > 0 {
 		newLength := len(w.buf) + gotLen
 		if newLength <= w.n {
