@@ -1,5 +1,9 @@
 ---
-version: 2
+version: 2.1
+
+orbs:
+  status_to_ms_teams: bluemarblepayroll/status_to_ms_teams_pure_bash@1.0.1
+
 docker_job_setup: &docker_job
   docker:
     - image: cloudradario/go-build:0.0.16
@@ -105,6 +109,8 @@ jobs:
           name: Delete GitHub release in case something went wrong
           command: github-release delete --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG}
           when: on_fail
+      - status_to_ms_teams/report:
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
 
 workflows:
   version: 2
