@@ -10,6 +10,10 @@ orbs:
           webhook_url:
             description: The Microsoft Teams Webhook URL.
             type: string
+          only_on_fail:
+            description: Whether send notification only if previous steps failed
+            type: boolean
+            default: false
         steps:
           - run:
               name: Prepare Template
@@ -32,15 +36,15 @@ orbs:
                 {
                   "@type": "MessageCard",
                   "@context": "http://schema.org/extensions",
-                  "themeColor": "__theme_color__",
+                  "themeCdocker_jobolor": "__theme_color__",
                   "summary": "CircleCI Build Notification",
                   "sections": [
                     {
                       "activityTitle": "__build_status__: $CIRCLE_PROJECT_REPONAME build [#${CIRCLE_BUILD_NUM}]($CIRCLE_BUILD_URL)",
                       "facts": [
                         {
-                          "name": "Branch",
-                          "value": "$CIRCLE_BRANCH"
+                          "name": "Git ref",
+                          "value": "$CIRCLE_BRANCH $CIRCLE_TAG"
                         },
                         {
                           "name": "Commit",
@@ -54,18 +58,19 @@ orbs:
                 END_HEREDOC
                 )
                 echo "$MS_TEAMS_MSG_TEMPLATE" > /tmp/ms_teams_message
-
-          - run:
-              name: Report Build Success
-              command: |
-                MSG_PATH=/tmp/ms_teams_success_message
-                sed -e 's/__build_status__/Success/' -e 's/__theme_color__/14a603/' \
-                    /tmp/ms_teams_message > $MSG_PATH
-                curl --fail -H "Content-Type: application/json" \
-                      --data-binary @$MSG_PATH \
-                      << parameters.webhook_url >>
-              when: on_success
-
+          - unless:
+              condition: << parameters.only_on_fail >>
+              steps:
+              - run:
+                  name: Report Build Success
+                  command: |
+                    MSG_PATH=/tmp/ms_teams_success_message
+                    sed -e 's/__build_status__/Success/' -e 's/__theme_color__/14a603/' \
+                        /tmp/ms_teams_message > $MSG_PATH
+                    curl --fail -H "Content-Type: application/json" \
+                          --data-binary @$MSG_PATH \
+                          << parameters.webhook_url >>
+                  when: on_success
           - run:
               name: Report Build Failure
               command: |
@@ -85,6 +90,12 @@ docker_job_setup: &docker_job
 attach_workspace: &workspace
   attach_workspace:
     at: /go/src/github.com/cloudradar-monitoring
+
+common_post_steps_setup: &common_post_steps
+  post-steps:
+    - ms-teams/report:
+        only_on_fail: false
+        webhook_url: $MS_TEAMS_WEBHOOK_URL
 
 jobs:
   get-source:
@@ -182,24 +193,25 @@ jobs:
           name: Delete GitHub release in case something went wrong
           command: github-release delete --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG}
           when: on_fail
-      - ms-teams/report:
-          webhook_url: $MS_TEAMS_WEBHOOK_URL
 
 workflows:
   version: 2
   test-on-commit:
     jobs:
       - get-source:
+          <<: *common_post_steps
           filters:
             tags:
               ignore: /.*/
       - test:
+          <<: *common_post_steps
           requires:
             - get-source
           filters:
             tags:
               ignore: /.*/
       - test-goreleaser:
+          <<: *common_post_steps
           requires:
             - get-source
           filters:
@@ -209,6 +221,7 @@ workflows:
   release:
     jobs:
       - get-source:
+          <<: *common_post_steps
           context: cloudradar
           filters:
             tags:
@@ -216,6 +229,7 @@ workflows:
             branches:
               ignore: /.*/
       - test:
+          <<: *common_post_steps
           context: cloudradar
           requires:
             - get-source
@@ -225,6 +239,7 @@ workflows:
             branches:
               ignore: /.*/
       - build-goreleaser:
+          <<: *common_post_steps
           context: cloudradar
           requires:
             - test
@@ -234,6 +249,7 @@ workflows:
             branches:
               ignore: /.*/
       - build-sign-msi:
+          <<: *common_post_steps
           context: cloudradar
           requires:
             - build-goreleaser
@@ -243,6 +259,7 @@ workflows:
             branches:
               ignore: /.*/
       - build-aptly:
+          <<: *common_post_steps
           context: cloudradar
           requires:
             - build-goreleaser
@@ -252,6 +269,7 @@ workflows:
             branches:
               ignore: /.*/
       - build-createrepo:
+          <<: *common_post_steps
           context: cloudradar
           requires:
             - build-goreleaser
@@ -261,6 +279,7 @@ workflows:
             branches:
               ignore: /.*/
       - release-github:
+          <<: *common_post_steps
           context: cloudradar
           requires:
             - build-sign-msi
@@ -271,6 +290,7 @@ workflows:
             branches:
               ignore: /.*/
       - build-synology-spk:
+          <<: *common_post_steps
           context: cloudradar
           requires:
             - build-goreleaser
