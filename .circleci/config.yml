@@ -2,85 +2,7 @@
 version: 2.1
 
 orbs:
-  # ms-teams: cloudradar-monitoring/ms-teams@1.0.0
-  ms-teams:
-    commands:
-      report:
-        parameters:
-          webhook_url:
-            description: The Microsoft Teams Webhook URL.
-            type: string
-          only_on_fail:
-            description: Whether send notification only if previous steps failed
-            type: boolean
-            default: false
-        steps:
-          - run:
-              name: Prepare Template
-              when: always
-              command: |
-                SHORT_SHA1=`echo -n $CIRCLE_SHA1 | head -c 7`
-
-                if [ `echo "$CIRCLE_REPOSITORY_URL" | grep "^git@github.com"` ]; then
-                  COMMIT_LINK=\[$SHORT_SHA1\]\(https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/commit/$CIRCLE_SHA1\)
-                elif [ `echo "$CIRCLE_REPOSITORY_URL" | grep "^git@bitbucket.org"` ]; then
-                  COMMIT_LINK=\[$SHORT_SHA1\]\(https://bitbucket.org/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/commit/$CIRCLE_SHA1\)
-                else
-                  >&2 echo unknown version control system: $CIRCLE_REPOSITORY_URL
-                  fail
-                fi
-
-                # Note that the "\<<" in the heredoc declaration is escaped from
-                # CircleCI's parameters syntax.
-                MS_TEAMS_MSG_TEMPLATE=$(cat \<<END_HEREDOC
-                {
-                  "@type": "MessageCard",
-                  "@context": "http://schema.org/extensions",
-                  "themeCdocker_jobolor": "__theme_color__",
-                  "summary": "CircleCI Build Notification",
-                  "sections": [
-                    {
-                      "activityTitle": "__build_status__: $CIRCLE_PROJECT_REPONAME job [${CIRCLE_JOB} #${CIRCLE_BUILD_NUM}]($CIRCLE_BUILD_URL)",
-                      "facts": [
-                        {
-                          "name": "Git ref",
-                          "value": "$CIRCLE_BRANCH $CIRCLE_TAG"
-                        },
-                        {
-                          "name": "Commit",
-                          "value": "$COMMIT_LINK"
-                        }
-                      ],
-                      "markdown": true
-                    }
-                  ]
-                }
-                END_HEREDOC
-                )
-                echo "$MS_TEAMS_MSG_TEMPLATE" > /tmp/ms_teams_message
-          - unless:
-              condition: << parameters.only_on_fail >>
-              steps:
-              - run:
-                  name: Report Build Success
-                  command: |
-                    MSG_PATH=/tmp/ms_teams_success_message
-                    sed -e 's/__build_status__/Success/' -e 's/__theme_color__/14a603/' \
-                        /tmp/ms_teams_message > $MSG_PATH
-                    curl --fail -H "Content-Type: application/json" \
-                          --data-binary @$MSG_PATH \
-                          << parameters.webhook_url >>
-                  when: on_success
-          - run:
-              name: Report Build Failure
-              command: |
-                MSG_PATH=/tmp/ms_teams_failure_message
-                sed -e 's/__build_status__/Failed/' -e 's/__theme_color__/e2091d/' \
-                    /tmp/ms_teams_message > $MSG_PATH
-                curl --fail -H "Content-Type: application/json" \
-                      --data-binary @$MSG_PATH \
-                      << parameters.webhook_url >>
-              when: on_fail
+  ms-teams: cloudradar-monitoring/ms-teams@0.0.1
 
 docker_job_setup: &docker_job
   docker:
@@ -95,7 +17,7 @@ common_workflow_setup: &common_workflow
   context: cloudradar
   post-steps:
     - ms-teams/report:
-        only_on_fail: false
+        only_on_fail: true
         webhook_url: $MS_TEAMS_WEBHOOK_URL
 
 jobs:
