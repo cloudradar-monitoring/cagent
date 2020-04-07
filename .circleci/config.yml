@@ -2,7 +2,80 @@
 version: 2.1
 
 orbs:
-  status_to_ms_teams: bluemarblepayroll/status_to_ms_teams_pure_bash@1.0.1
+  # ms-teams: cloudradar-monitoring/ms-teams@1.0.0
+  ms-teams:
+    commands:
+      report:
+        parameters:
+          webhook_url:
+            description: The Microsoft Teams Webhook URL.
+            type: string
+        steps:
+          - run:
+              name: Prepare Template
+              when: always
+              command: |
+                SHORT_SHA1=`echo -n $CIRCLE_SHA1 | head -c 7`
+
+                if [ `echo "$CIRCLE_REPOSITORY_URL" | grep "^git@github.com"` ]; then
+                  COMMIT_LINK=\[$SHORT_SHA1\]\(https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/commit/$CIRCLE_SHA1\)
+                elif [ `echo "$CIRCLE_REPOSITORY_URL" | grep "^git@bitbucket.org"` ]; then
+                  COMMIT_LINK=\[$SHORT_SHA1\]\(https://bitbucket.org/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/commit/$CIRCLE_SHA1\)
+                else
+                  >&2 echo unknown version control system: $CIRCLE_REPOSITORY_URL
+                  fail
+                fi
+
+                # Note that the "\<<" in the heredoc declaration is escaped from
+                # CircleCI's parameters syntax.
+                MS_TEAMS_MSG_TEMPLATE=$(cat \<<END_HEREDOC
+                {
+                  "@type": "MessageCard",
+                  "@context": "http://schema.org/extensions",
+                  "themeColor": "__theme_color__",
+                  "summary": "CircleCI Build Notification",
+                  "sections": [
+                    {
+                      "activityTitle": "__build_status__: $CIRCLE_PROJECT_REPONAME build [#${CIRCLE_BUILD_NUM}]($CIRCLE_BUILD_URL)",
+                      "facts": [
+                        {
+                          "name": "Branch",
+                          "value": "$CIRCLE_BRANCH"
+                        },
+                        {
+                          "name": "Commit",
+                          "value": "$COMMIT_LINK"
+                        }
+                      ],
+                      "markdown": true
+                    }
+                  ]
+                }
+                END_HEREDOC
+                )
+                echo "$MS_TEAMS_MSG_TEMPLATE" > /tmp/ms_teams_message
+
+          - run:
+              name: Report Build Success
+              command: |
+                MSG_PATH=/tmp/ms_teams_success_message
+                sed -e 's/__build_status__/Success/' -e 's/__theme_color__/14a603/' \
+                    /tmp/ms_teams_message > $MSG_PATH
+                curl --fail -H "Content-Type: application/json" \
+                      --data-binary @$MSG_PATH \
+                      << parameters.webhook_url >>
+              when: on_success
+
+          - run:
+              name: Report Build Failure
+              command: |
+                MSG_PATH=/tmp/ms_teams_failure_message
+                sed -e 's/__build_status__/Failed/' -e 's/__theme_color__/e2091d/' \
+                    /tmp/ms_teams_message > $MSG_PATH
+                curl --fail -H "Content-Type: application/json" \
+                      --data-binary @$MSG_PATH \
+                      << parameters.webhook_url >>
+              when: on_fail
 
 docker_job_setup: &docker_job
   docker:
@@ -28,7 +101,7 @@ jobs:
     steps:
       - <<: *workspace
       - run: make test
-  
+
   test-goreleaser:
     <<: *docker_job
     steps:
@@ -46,7 +119,7 @@ jobs:
           root: /go/src/github.com/cloudradar-monitoring
           paths:
             - cagent
-  
+
   build-sign-msi:
     <<: *docker_job
     steps:
@@ -55,10 +128,10 @@ jobs:
           fingerprints:
             - "b3:b7:b0:59:57:1a:bc:82:6c:3c:91:d6:23:19:f2:08"
             - "53:d2:08:dc:1a:4e:9e:29:00:d4:ba:1e:b7:5d:16:25"
-      - run: 
+      - run:
           name: Sign msi files
           command: make windows-sign
-  
+
   build-aptly:
     <<: *docker_job
     steps:
@@ -109,7 +182,7 @@ jobs:
           name: Delete GitHub release in case something went wrong
           command: github-release delete --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG}
           when: on_fail
-      - status_to_ms_teams/report:
+      - ms-teams/report:
           webhook_url: $MS_TEAMS_WEBHOOK_URL
 
 workflows:
