@@ -40,7 +40,7 @@ orbs:
                   "summary": "CircleCI Build Notification",
                   "sections": [
                     {
-                      "activityTitle": "__build_status__: $CIRCLE_PROJECT_REPONAME build [#${CIRCLE_BUILD_NUM}]($CIRCLE_BUILD_URL)",
+                      "activityTitle": "__build_status__: $CIRCLE_PROJECT_REPONAME job [${CIRCLE_JOB} #${CIRCLE_BUILD_NUM}]($CIRCLE_BUILD_URL)",
                       "facts": [
                         {
                           "name": "Git ref",
@@ -91,7 +91,8 @@ attach_workspace: &workspace
   attach_workspace:
     at: /go/src/github.com/cloudradar-monitoring
 
-common_post_steps_setup: &common_post_steps
+common_workflow_setup: &common_workflow
+  context: cloudradar
   post-steps:
     - ms-teams/report:
         only_on_fail: false
@@ -199,19 +200,19 @@ workflows:
   test-on-commit:
     jobs:
       - get-source:
-          <<: *common_post_steps
+          <<: *common_workflow
           filters:
             tags:
               ignore: /.*/
       - test:
-          <<: *common_post_steps
+          <<: *common_workflow
           requires:
             - get-source
           filters:
             tags:
               ignore: /.*/
       - test-goreleaser:
-          <<: *common_post_steps
+          <<: *common_workflow
           requires:
             - get-source
           filters:
@@ -221,16 +222,14 @@ workflows:
   release:
     jobs:
       - get-source:
-          <<: *common_post_steps
-          context: cloudradar
+          <<: *common_workflow
           filters:
             tags:
               only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$/
             branches:
               ignore: /.*/
       - test:
-          <<: *common_post_steps
-          context: cloudradar
+          <<: *common_workflow
           requires:
             - get-source
           filters:
@@ -239,8 +238,7 @@ workflows:
             branches:
               ignore: /.*/
       - build-goreleaser:
-          <<: *common_post_steps
-          context: cloudradar
+          <<: *common_workflow
           requires:
             - test
           filters:
@@ -249,8 +247,7 @@ workflows:
             branches:
               ignore: /.*/
       - build-sign-msi:
-          <<: *common_post_steps
-          context: cloudradar
+          <<: *common_workflow
           requires:
             - build-goreleaser
           filters:
@@ -259,8 +256,7 @@ workflows:
             branches:
               ignore: /.*/
       - build-aptly:
-          <<: *common_post_steps
-          context: cloudradar
+          <<: *common_workflow
           requires:
             - build-goreleaser
           filters:
@@ -269,8 +265,7 @@ workflows:
             branches:
               ignore: /.*/
       - build-createrepo:
-          <<: *common_post_steps
-          context: cloudradar
+          <<: *common_workflow
           requires:
             - build-goreleaser
           filters:
@@ -279,8 +274,7 @@ workflows:
             branches:
               ignore: /.*/
       - release-github:
-          <<: *common_post_steps
-          context: cloudradar
+          <<: *common_workflow
           requires:
             - build-sign-msi
             - build-synology-spk
@@ -290,8 +284,7 @@ workflows:
             branches:
               ignore: /.*/
       - build-synology-spk:
-          <<: *common_post_steps
-          context: cloudradar
+          <<: *common_workflow
           requires:
             - build-goreleaser
           filters:
