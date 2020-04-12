@@ -14,6 +14,11 @@ import (
 
 var monitoredProcessCache = make(map[uint32]*winapi.SystemProcessInformation)
 var lastProcessQueryTime time.Time
+var windowsEnumerator *winapi.WindowsEnumerator
+
+func init() {
+	windowsEnumerator = winapi.NewWindowsEnumerator()
+}
 
 func processes(systemMemorySize uint64) ([]*ProcStat, error) {
 	procByPid, threadsByProcPid, err := winapi.GetSystemProcessInformation(false)
@@ -31,7 +36,7 @@ func processes(systemMemorySize uint64) ([]*ProcStat, error) {
 	var updatedProcessCache = make(map[uint32]*winapi.SystemProcessInformation)
 	cmdLineRetrievalFailuresCount := 0
 	logicalCPUCount := uint8(runtime.NumCPU())
-	windowByProcessId, err := winapi.WindowByProcessId()
+	windowByProcessId, err := windowsEnumerator.Enumerate()
 	if err != nil {
 		log.Errorf("failed to list all windows by processId")
 	}
