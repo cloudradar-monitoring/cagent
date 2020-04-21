@@ -47,6 +47,17 @@ jobs:
     steps:
       - <<: *workspace
       - run:
+          name: Set env variables
+          shell: /bin/bash
+          command: |
+            if [[ ${CIRCLE_TAG} =~ -{1}((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$ ]] ; then
+              echo "setting release mode to 'release-candidate'"
+              echo "export RELEASE_MODE=release-candidate" >> $BASH_ENV
+            else
+              echo "setting release mode to 'stable'"
+              echo "export RELEASE_MODE=stable" >> $BASH_ENV
+            fi
+      - run:
           name: Build binaries
           command: make goreleaser-rm-dist
       - persist_to_workspace:
@@ -116,6 +127,26 @@ jobs:
           name: Delete GitHub release in case something went wrong
           command: github-release delete --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG}
           when: on_fail
+
+  update-repo-feed:
+    <<: *docker_job
+    steps:
+      - <<: *workspace
+      - run:
+          name: Set env variables
+          shell: /bin/bash
+          command: |
+            if [[ ${CIRCLE_TAG} =~ -{1}((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$ ]] ; then
+              echo "setting release mode to 'release-candidate'"
+              echo "export RELEASE_MODE=release-candidate" >> $BASH_ENV
+            else
+              echo "setting release mode to 'stable'"
+              echo "export RELEASE_MODE=stable" >> $BASH_ENV
+            fi
+      - run:
+          name: Update cloudradar repo with published version info
+          command: make update-feed
+          when: on_success
 
 workflows:
   version: 2
@@ -200,6 +231,15 @@ workflows:
           requires:
             - build-sign-msi
             - build-synology-spk
+          filters:
+            tags:
+              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$/
+            branches:
+              ignore: /.*/
+      - update-repo-feed:
+          <<: *common_workflow
+          requires:
+            - release-github
           filters:
             tags:
               only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$/

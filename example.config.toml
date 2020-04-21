@@ -123,3 +123,8 @@ software_raid_monitoring = true
   enable_kerneltask_monitoring = true
   # The process list is sorted by PID descending. Only the top N processes are monitored.
   max_number_monitored_processes = 500
+
+# Control how cagent installs self-updates. Windows-only
+[self_update]
+  	enabled = true         # Set to false to disable self-updates
+  	check_interval = 21600 # Cagent will check for new versions every N seconds
