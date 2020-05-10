@@ -62,7 +62,7 @@ fi
 echo -e ${CHANGELOGRAW} | github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} ${PRERELEASE} --description -
 
 # update MSI repo
-ssh_cr /home/cr/work/msi/cagent_publish.sh ${WORK_DIR}/msi ${CIRLE_TAG} ${RELEASE_MODE}
+ssh_cr /home/cr/work/msi/cagent_publish.sh ${WORK_DIR}/msi ${CIRCLE_TAG} ${RELEASE_MODE}
 
 # remove work dir
 ssh_ci rm -rf ${WORK_DIR}
