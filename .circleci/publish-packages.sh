@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
+set -x
 
 ssh_ci() {
   ssh -p 24480 -oStrictHostKeyChecking=no ci@repo.cloudradar.io "$@"
@@ -11,7 +12,7 @@ ssh_cr() {
 }
 
 github_upload() {
-  github-release upload --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} $@
+  github-release upload --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} "$@"
 }
 
 if [ -z ${RELEASE_MODE} ]; then

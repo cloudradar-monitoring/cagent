@@ -50,19 +50,13 @@ jobs:
 
   build-packages:
     <<: *docker_job
+    parameters:
+      release_mode:
+        type: string
+    environment:
+      RELEASE_MODE: << parameters.release_mode >>
     steps:
       - <<: *workspace
-      - run:
-          name: Set env variables
-          shell: /bin/bash
-          command: |
-            if [[ ${CIRCLE_TAG} =~ ^(0|[1-9]\d*)\.([1-9]\d*[02468]|[02468])\.([1-9]\d*[02468]|[02468])$ ]] ; then
-              echo "setting release mode to 'stable'"
-              echo "export RELEASE_MODE=stable" >> $BASH_ENV
-            else
-              echo "setting release mode to 'release-candidate'"
-              echo "export RELEASE_MODE=release-candidate" >> $BASH_ENV
-            fi
       - run:
           name: Build binaries and pack them
           command: make goreleaser-rm-dist
@@ -78,6 +72,11 @@ jobs:
 
   publish-packages:
     <<: *docker_job
+    parameters:
+      release_mode:
+        type: string
+    environment:
+      RELEASE_MODE: << parameters.release_mode >>
     steps:
       - <<: *workspace
       - add_ssh_keys:
@@ -152,17 +151,33 @@ workflows:
               ignore: /.*/
       - build-packages:
           <<: *common_workflow
+          name: build-packages-release-candidate
+          release_mode: release-candidate
           requires:
             - test
           filters:
             tags:
-              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
+              only: /^(0|[1-9]\d*)\.([1-9]\d*[13579]|[13579])\.(0|[1-9]\d*)$/
             branches:
               ignore: /.*/
+      - build-packages:
+          <<: *common_workflow
+          name: build-packages-stable
+          release_mode: stable
+          requires:
+            - test
+          filters:
+            tags:
+              only: /^(0|[1-9]\d*)\.([1-9]\d*[02468]|[02468])\.([1-9]\d*[02468]|[02468])$/
+            branches:
+              only:
+                - master
       - publish-packages:
           <<: *common_workflow
+          name: publish-packages-release-candidate
+          release_mode: release-candidate
           requires:
-            - build-packages
+            - build-packages-release-candidate
           filters:
             tags:
               only: /^(0|[1-9]\d*)\.([1-9]\d*[13579]|[13579])\.(0|[1-9]\d*)$/
@@ -170,8 +185,10 @@ workflows:
               ignore: /.*/
       - publish-packages:
           <<: *common_workflow
+          name: publish-packages-stable
+          release_mode: stable
           requires:
-            - build-packages
+            - build-packages-stable
           filters:
             tags:
               only: /^(0|[1-9]\d*)\.([1-9]\d*[02468]|[02468])\.([1-9]\d*[02468]|[02468])$/
