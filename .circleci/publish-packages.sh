@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
-set -x
+set -xe
 
 ssh_ci() {
   ssh -p 24480 -oStrictHostKeyChecking=no ci@repo.cloudradar.io "$@"
