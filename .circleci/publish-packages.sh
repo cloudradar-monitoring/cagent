@@ -59,7 +59,7 @@ PRERELEASE="--pre-release"
 if [ ${RELEASE_MODE} = "stable" ]; then
   PRERELEASE=
 fi
-echo -e ${CHANGELOGRAW} | github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} ${PRERELEASE} --description -
+echo -e ${CHANGELOGRAW} | sed -e 's/^"//' -e 's/"$//' | github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} ${PRERELEASE} --description -
 
 # update MSI repo
 ssh_cr /home/cr/work/msi/cagent_publish.sh ${WORK_DIR}/msi ${CIRCLE_TAG} ${RELEASE_MODE}
