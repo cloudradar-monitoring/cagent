@@ -1,0 +1,10 @@
+pkg-scripts/msi-templates/
+resources/
+dist/cagent_windows_amd64/cagent.exe
+dist/csender_windows_amd64/csender.exe
+dist/jobmon_windows_amd64/jobmon.exe
+example.config.toml
+README.md
+LICENSE
+wix.json
+build-win.bat

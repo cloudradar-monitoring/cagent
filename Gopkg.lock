@@ -18,6 +18,14 @@
   version = "0.0.4"
 
 [[projects]]
+  branch = "master"
+  digest = "1:6fb715df3bc93648ae7928ba13b89ce3608bc0278de1bb123932974b3f16b5a5"
+  name = "github.com/cloudradar-monitoring/selfupdate"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "e4ef8d691a0cdd42e4a24c46dfe8f3a9ee3feb8a"
+
+[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -85,6 +93,14 @@
   pruneopts = "UT"
   revision = "17ef3dd9d98b69acec3e85878995ada9533a9370"
   version = "v1.5.0"
+
+[[projects]]
+  digest = "1:88e0b0baeb9072f0a4afbcf12dda615fc8be001d1802357538591155998da21b"
+  name = "github.com/hashicorp/go-version"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ac23dc3fea5d1a983c43f6a0f6e2c13f0195d8bd"
+  version = "v1.2.0"
 
 [[projects]]
   digest = "1:628d50fef8c9c3a70fc87ad59d57ecfdfb121454942fb33142372bbde6c4a10e"
@@ -288,6 +304,7 @@
   input-imports = [
     "github.com/StackExchange/wmi",
     "github.com/cloudradar-monitoring/dmidecode",
+    "github.com/cloudradar-monitoring/selfupdate",
     "github.com/gentlemanautomaton/windevice",
     "github.com/gentlemanautomaton/windevice/deviceclass",
     "github.com/go-ole/go-ole",

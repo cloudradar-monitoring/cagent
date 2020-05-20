@@ -6,7 +6,7 @@ orbs:
 
 docker_job_setup: &docker_job
   docker:
-    - image: cloudradario/go-build:0.0.16
+    - image: cloudradario/go-build:0.0.17
   working_directory: /go/src/github.com/cloudradar-monitoring/cagent
 
 attach_workspace: &workspace
@@ -30,6 +30,12 @@ jobs:
           paths:
             - cagent
 
+  lint:
+    <<: *docker_job
+    steps:
+      - <<: *workspace
+      - run: golangci-lint -c .golangci.yml run
+
   test:
     <<: *docker_job
     steps:
@@ -42,79 +48,47 @@ jobs:
       - <<: *workspace
       - run: make goreleaser-snapshot
 
-  build-goreleaser:
+  build-packages:
     <<: *docker_job
+    parameters:
+      release_mode:
+        type: string
+    environment:
+      RELEASE_MODE: << parameters.release_mode >>
     steps:
       - <<: *workspace
       - run:
-          name: Build binaries
+          name: Build binaries and pack them
           command: make goreleaser-rm-dist
+      - run:
+          name: Build Synology packages
+          shell: /bin/bash
+          command: |
+            cd synology-spk && ./create_spk.sh ${CIRCLE_TAG}
       - persist_to_workspace:
           root: /go/src/github.com/cloudradar-monitoring
           paths:
             - cagent
 
-  build-sign-msi:
+  publish-packages:
     <<: *docker_job
-    steps:
-      - <<: *workspace
-      - add_ssh_keys:
-          fingerprints:
-            - "b3:b7:b0:59:57:1a:bc:82:6c:3c:91:d6:23:19:f2:08"
-            - "53:d2:08:dc:1a:4e:9e:29:00:d4:ba:1e:b7:5d:16:25"
-      - run:
-          name: Sign msi files
-          command: make windows-sign
-
-  build-aptly:
-    <<: *docker_job
+    parameters:
+      release_mode:
+        type: string
+    environment:
+      RELEASE_MODE: << parameters.release_mode >>
     steps:
       - <<: *workspace
       - add_ssh_keys:
           fingerprints:
             - "53:d2:08:dc:1a:4e:9e:29:00:d4:ba:1e:b7:5d:16:25"
+            - "53:8f:20:fd:32:2e:af:95:4f:3e:2b:05:2d:81:34:b1"
       - run:
-          name: Update aptly repository
-          command: make aptly
-
-  build-createrepo:
-    <<: *docker_job
-    steps:
-      - <<: *workspace
-      - add_ssh_keys:
-          fingerprints:
-            - "53:d2:08:dc:1a:4e:9e:29:00:d4:ba:1e:b7:5d:16:25"
+          name: Publish packages
+          command: .circleci/publish-packages.sh
       - run:
-          name: Update createrepo repository
-          command: make createrepo
-
-  build-synology-spk:
-    <<: *docker_job
-    steps:
-      - <<: *workspace
-      - run:
-          name: Build Synology packages
-          command: make synology-spk
-
-  release-github:
-    <<: *docker_job
-    steps:
-      - run:
-          name: Fetch release changelog so we can preserve it when releasing
-          command: "CHANGELOGRAW=$(curl -H \"Authorization: token ${GITHUB_TOKEN}\"  https://api.github.com/repos/cloudradar-monitoring/cagent/releases | jq \".[0].body\") && echo \"export CHANGELOGRAW=$CHANGELOGRAW\" >> $BASH_ENV"
-      - run:
-          name: Publish release
-          shell: /bin/bash
-          command: |
-            if [[ ${CIRCLE_TAG} =~ -{1}((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$ ]] ; then
-              echo -e ${CHANGELOGRAW} | github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --pre-release --description -
-            else
-              echo -e ${CHANGELOGRAW} | github-release edit --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG} --description -
-            fi
-          when: on_success
-      - run:
-          name: Delete GitHub release in case something went wrong
-          command: github-release delete --user cloudradar-monitoring --repo cagent --tag ${CIRCLE_TAG}
+          name: Cleanup in case something went wrong
+          command: .circleci/unpublish-packages.sh
           when: on_fail
 
 workflows:
@@ -123,6 +97,13 @@ workflows:
     jobs:
       - get-source:
           <<: *common_workflow
+          filters:
+            tags:
+              ignore: /.*/
+      - lint:
+          <<: *common_workflow
+          requires:
+            - get-source
           filters:
             tags:
               ignore: /.*/
@@ -147,7 +128,16 @@ workflows:
           <<: *common_workflow
           filters:
             tags:
-              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$/
+              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
+            branches:
+              ignore: /.*/
+      - lint:
+          <<: *common_workflow
+          requires:
+            - get-source
+          filters:
+            tags:
+              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
             branches:
               ignore: /.*/
       - test:
@@ -156,61 +146,53 @@ workflows:
             - get-source
           filters:
             tags:
-              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$/
+              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
             branches:
               ignore: /.*/
-      - build-goreleaser:
+      - build-packages:
           <<: *common_workflow
+          name: build-packages-release-candidate
+          release_mode: release-candidate
           requires:
             - test
           filters:
             tags:
-              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$/
+              only: /^(0|[1-9]\d*)\.([1-9]\d*[13579]|[13579])\.(0|[1-9]\d*)$/
             branches:
               ignore: /.*/
-      - build-sign-msi:
+      - build-packages:
           <<: *common_workflow
+          name: build-packages-stable
+          release_mode: stable
           requires:
-            - build-goreleaser
+            - test
           filters:
             tags:
-              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$/
+              only: /^(0|[1-9]\d*)\.([1-9]\d*[02468]|[02468])\.([1-9]\d*[02468]|[02468])$/
             branches:
-              ignore: /.*/
-      - build-aptly:
+              only:
+                - master
+      - publish-packages:
           <<: *common_workflow
+          name: publish-packages-release-candidate
+          release_mode: release-candidate
           requires:
-            - build-goreleaser
+            - build-packages-release-candidate
           filters:
             tags:
-              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
+              only: /^(0|[1-9]\d*)\.([1-9]\d*[13579]|[13579])\.(0|[1-9]\d*)$/
             branches:
               ignore: /.*/
-      - build-createrepo:
+      - publish-packages:
           <<: *common_workflow
+          name: publish-packages-stable
+          release_mode: stable
           requires:
-            - build-goreleaser
+            - build-packages-stable
           filters:
             tags:
-              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
+              only: /^(0|[1-9]\d*)\.([1-9]\d*[02468]|[02468])\.([1-9]\d*[02468]|[02468])$/
             branches:
-              ignore: /.*/
-      - release-github:
-          <<: *common_workflow
-          requires:
-            - build-sign-msi
-            - build-synology-spk
-          filters:
-            tags:
-              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$/
-            branches:
-              ignore: /.*/
-      - build-synology-spk:
-          <<: *common_workflow
-          requires:
-            - build-goreleaser
-          filters:
-            tags:
-              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$/
-            branches:
-              ignore: /.*/
+              only:
+                - master
+

@@ -16,6 +16,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/cloudradar-monitoring/selfupdate"
 	"github.com/kardianos/service"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -57,6 +58,8 @@ func main() {
 	var serviceInstallUserPtr *string
 	var serviceInstallPtr *bool
 	var settingsPtr *bool
+	var searchUpdatesPtr *bool
+	var updatePtr *bool
 
 	// Setup flag pointers
 	outputFilePtr := flag.String("o", "", "file to write the results (default ./results.out)")
@@ -76,6 +79,8 @@ func main() {
 
 	if runtime.GOOS == "windows" {
 		settingsPtr = flag.Bool("x", false, "open the settings UI")
+		updatePtr = flag.Bool("update", false, "look for updates and apply them. Requires confirmation. Use -y to suppress the confirmation.")
+		searchUpdatesPtr = flag.Bool("search-updates", false, "look for updates and print available")
 	}
 
 	versionPtr := flag.Bool("version", false, "show the cagent version")
@@ -109,9 +114,14 @@ func main() {
 		log.WithError(err).Fatalln("Failed to handle Cagent configuration")
 	}
 
-	ca := cagent.New(cfg, *cfgPathPtr)
+	ca, err := cagent.New(cfg, *cfgPathPtr)
+	if err != nil {
+		log.WithError(err).Fatalln("Initialization failed")
+	}
 
 	handleFlagPrintConfig(*printConfigPtr, cfg)
+	handleFlagSearchUpdates(searchUpdatesPtr)
+	handleFlagUpdate(updatePtr, assumeYesPtr)
 
 	if ((serviceInstallPtr == nil) || ((serviceInstallPtr != nil) && (!*serviceInstallPtr))) &&
 		((serviceInstallUserPtr == nil) || ((serviceInstallUserPtr != nil) && len(*serviceInstallUserPtr) == 0)) &&
@@ -265,6 +275,65 @@ func handleFlagSettings(settingsUI *bool, ca *cagent.Cagent) {
 		windowsShowSettingsUI(ca, false)
 		os.Exit(0)
 	}
+}
+
+func handleFlagUpdate(update *bool, assumeYes *bool) {
+	if update != nil && *update {
+		updates, err := printAvailableUpdates()
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+
+		if len(updates) == 0 {
+			os.Exit(0)
+		}
+
+		proceedInstallation := (assumeYes != nil && *assumeYes) || askForConfirmation("Proceed installation?")
+		if !proceedInstallation {
+			os.Exit(0)
+		}
+
+		fmt.Println("Downloading...")
+
+		err = selfupdate.DownloadAndInstallUpdate(updates[len(updates)-1])
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+		fmt.Println("Installer executed. Exiting.")
+		os.Exit(0)
+	}
+}
+
+func handleFlagSearchUpdates(searchUpdates *bool) {
+	if searchUpdates != nil && *searchUpdates {
+		_, err := printAvailableUpdates()
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+}
+
+func printAvailableUpdates() ([]*selfupdate.UpdateInfo, error) {
+	fmt.Println("Searching updates...")
+
+	updates, err := selfupdate.ListAvailableUpdates()
+	if err != nil {
+		return nil, errors.Wrapf(err, "while listing updates")
+	}
+
+	if len(updates) == 0 {
+		fmt.Println("No updates available")
+	} else {
+		fmt.Println("Available updates:")
+		for _, u := range updates {
+			fmt.Printf("\t%s\n", u.Version.Original())
+		}
+	}
+	return updates, nil
 }
 
 func handleFlagLogLevel(ca *cagent.Cagent, logLevel string) {

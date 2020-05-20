@@ -34,7 +34,7 @@ builds:
     - goos: darwin
       goarch: arm64
   ldflags:
-    - "-s -w -X {{.Env.PROJECT}}.Version={{.Version}}"
+    - "-s -w -X {{.Env.PROJECT}}.Version={{.Version}} -X \"{{.Env.PROJECT}}.SelfUpdatesFeedURL={{.Env.SELF_UPDATES_FEED_URL}}\""
 - id: csender
   main: ./cmd/csender
   binary: csender
@@ -107,7 +107,7 @@ builds:
   goarch:
     - amd64
   ldflags:
-    - "-s -w -X {{.Env.PROJECT}}.Version={{.Version}} -X \"{{.Env.PROJECT}}.LicenseInfo={{.Env.LICENSE_PROPRIETARY}}\""
+    - "-s -w -X {{.Env.PROJECT}}.Version={{.Version}} -X \"{{.Env.PROJECT}}.LicenseInfo={{.Env.LICENSE_PROPRIETARY}}\" -X \"{{.Env.PROJECT}}.SelfUpdatesFeedURL={{.Env.PROPRIETARY_SELF_UPDATES_FEED_URL}}\""
 - id: csender_proprietary
   main: ./cmd/csender
   binary: csender
