@@ -76,6 +76,10 @@ func New(cfg *Config, cfgPath string) (*Cagent, error) {
 }
 
 func (ca *Cagent) configureAutomaticSelfUpdates() error {
+	if !ca.Config.Updates.Enabled {
+		return nil
+	}
+
 	updatesConfig := selfupdate.DefaultConfig()
 	updatesConfig.AppName = "cagent"
 	updatesConfig.SigningCertificatedName = "cloudradar GmbH"
