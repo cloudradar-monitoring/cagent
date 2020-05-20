@@ -193,7 +193,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:52e4345e8592bcdf08663a7ff7168d49ec1b74e8f17b312a10d4aa5544b1bb22"
+  digest = "1:938b07b8bc5bb2246664c9a303521a923b9b0fe10cf7d532ebe7cee232789121"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
@@ -206,8 +206,8 @@
     "process",
   ]
   pruneopts = "UT"
-  revision = "071446942108a03a13cf0717275ad3bdbcb691b4"
-  version = "v2.19.01"
+  revision = "a81cf97fce2300934e6c625b9917103346c26ba3"
+  version = "v2.20.4"
 
 [[projects]]
   branch = "master"
@@ -253,9 +253,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:84e425bb191e91e9135aad44404507f8185a594dad341684b3985ad0c9954641"
+  digest = "1:1ba20a6930d8d3ad07e087219a37e8e78457cd6029831c6f1e11af49064faa62"
   name = "golang.org/x/sys"
   packages = [
+    "internal/unsafeheader",
     "unix",
     "windows",
     "windows/registry",
@@ -264,7 +265,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "UT"
-  revision = "e66fe6eb8e0cbfacade8b490cf55cd2494f4db62"
+  revision = "fe76b779f299728f3bd63f77ea2c815504229c3b"
 
 [[projects]]
   digest = "1:5d3e23515e7916c152cc665eda0f7eaf6fdf8fdfe7c3dbac97049bcbd649b33f"
