@@ -147,9 +147,9 @@ type StorCLIConfig struct {
 }
 
 type UpdatesMonitoringConfig struct {
-	Enabled       bool `toml:"enabled" comment:"Set 'false' to disable checking available updates"`
-	FetchTimeout  uint `toml:"fetch_timeout" comment:"Maximum time the package manager is allowed to spend fetching available updates, ignored on windows"`
-	CheckInterval uint `toml:"check_interval" comment:"Check for available updates every N seconds. Minimum is 300 seconds"`
+	Enabled       bool   `toml:"enabled" comment:"Set 'false' to disable checking available updates"`
+	FetchTimeout  uint32 `toml:"fetch_timeout" comment:"Maximum time the package manager is allowed to spend fetching available updates, ignored on windows"`
+	CheckInterval uint32 `toml:"check_interval" comment:"Check for available updates every N seconds. Minimum is 300 seconds"`
 }
 
 func (l *UpdatesMonitoringConfig) Validate() error {
@@ -570,7 +570,7 @@ func (cfg *Config) migrate(cfgDeprecated *ConfigDeprecated, metadata toml.MetaDa
 		if cfgDeprecated.WindowsUpdatesWatcherInterval <= 0 {
 			cfg.SystemUpdatesChecks.Enabled = false
 		} else {
-			cfg.SystemUpdatesChecks.CheckInterval = uint(cfgDeprecated.WindowsUpdatesWatcherInterval)
+			cfg.SystemUpdatesChecks.CheckInterval = uint32(cfgDeprecated.WindowsUpdatesWatcherInterval)
 		}
 	}
 }
