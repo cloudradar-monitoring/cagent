@@ -128,3 +128,8 @@ software_raid_monitoring = true
 [self_update]
   	enabled = true         # Set to false to disable self-updates
   	check_interval = 21600 # Cagent will check for new versions every N seconds
+
+# Cagent monitors all running docker containers and reports them for further processing to the Hub.
+# You can change the following settings.
+[docker_monitoring]
+    enabled = true
