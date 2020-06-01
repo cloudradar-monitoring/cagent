@@ -127,6 +127,8 @@ type Config struct {
 	ProcessMonitoring processes.Config `toml:"process_monitoring" comment:"Cagent monitors all running processes and reports them for further processing to the Hub.\nOn heavy loaded systems or if you don't need process monitoring at all,\nyou can change the following settings."`
 
 	Updates UpdatesConfig `toml:"self_update" comment:"Control how cagent installs self-updates. Windows-only"`
+
+	DockerMonitoring DockerMonitoringConfig `toml:"docker_monitoring" comment:"Cagent monitors all running docker containers and reports them for further processing to the Hub.\nYou can change the following settings."`
 }
 
 type ConfigDeprecated struct {
@@ -150,6 +152,10 @@ type UpdatesMonitoringConfig struct {
 	Enabled       bool   `toml:"enabled" comment:"Set 'false' to disable checking available updates"`
 	FetchTimeout  uint32 `toml:"fetch_timeout" comment:"Maximum time the package manager is allowed to spend fetching available updates, ignored on windows"`
 	CheckInterval uint32 `toml:"check_interval" comment:"Check for available updates every N seconds. Minimum is 300 seconds"`
+}
+
+type DockerMonitoringConfig struct {
+	Enabled bool `toml:"enabled" comment:"Set 'false' to disable docker monitoring'"`
 }
 
 func (l *UpdatesMonitoringConfig) Validate() error {
@@ -281,6 +287,7 @@ func NewConfig() *Config {
 			Enabled:       false,
 			CheckInterval: 21600,
 		},
+		DockerMonitoring: DockerMonitoringConfig{Enabled: true},
 	}
 
 	cfg.MinValuableConfig = *(defaultMinValuableConfig())

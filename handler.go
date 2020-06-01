@@ -165,11 +165,13 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 		}
 		measurements = measurements.AddWithPrefix("services.", servicesList)
 
-		containersList, err := docker.ListContainers()
-		if err != docker.ErrorNotImplementedForOS && err != docker.ErrorDockerNotAvailable {
-			errCollector.Add(err)
+		if cfg.DockerMonitoring.Enabled {
+			containersList, err := docker.ListContainers()
+			if err != docker.ErrorNotImplementedForOS && err != docker.ErrorDockerNotAvailable {
+				errCollector.Add(err)
+			}
+			measurements = measurements.AddWithPrefix("docker.", containersList)
 		}
-		measurements = measurements.AddWithPrefix("docker.", containersList)
 
 		if cfg.TemperatureMonitoring {
 			temperatures, err := sensors.ReadTemperatureSensors()
