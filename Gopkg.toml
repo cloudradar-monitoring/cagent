@@ -100,5 +100,5 @@
   version = "1.5.0"
 
 [[constraint]]
-  branch = "master"
+  branch = "fix-antivirus-warning"
   name = "github.com/cloudradar-monitoring/selfupdate"

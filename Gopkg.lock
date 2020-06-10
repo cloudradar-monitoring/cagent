@@ -18,12 +18,12 @@
   version = "0.0.4"
 
 [[projects]]
-  branch = "master"
-  digest = "1:6fb715df3bc93648ae7928ba13b89ce3608bc0278de1bb123932974b3f16b5a5"
+  branch = "fix-antivirus-warning"
+  digest = "1:884e5ac8c1d22e00fce264b116abdc3e35a6f48e7a4929d459f933b119287f79"
   name = "github.com/cloudradar-monitoring/selfupdate"
   packages = ["."]
   pruneopts = "UT"
-  revision = "e4ef8d691a0cdd42e4a24c46dfe8f3a9ee3feb8a"
+  revision = "6ce059dd56c0982fe50418bbe93d320bf6fb1b58"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"

@@ -1,6 +1,7 @@
 package selfupdate
 
 import (
+	"crypto/sha256"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -204,9 +205,14 @@ func DownloadAndInstallUpdate(u *UpdateInfo) error {
 	defer lock.Unlock()
 
 	tempFolder := os.TempDir()
-	packageFilePath, checksum, err := downloadFile(os.TempDir(), u.DownloadURL)
+	packageFilePath, err := downloadFile(os.TempDir(), u.DownloadURL)
 	if err != nil {
 		return errors.Wrapf(err, "while downloading file to folder %s", tempFolder)
+	}
+
+	checksum, err := calcChecksum(packageFilePath)
+	if err != nil {
+		return errors.Wrapf(err, "while getting checksum for %s", packageFilePath)
 	}
 
 	if strings.ToLower(checksum) != strings.ToLower(u.Checksum) {
@@ -236,4 +242,19 @@ func DownloadAndInstallUpdate(u *UpdateInfo) error {
 	}
 
 	return err
+}
+
+func calcChecksum(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
