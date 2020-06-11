@@ -462,12 +462,8 @@ func convertFromDirents11(buf []byte, old []byte) int {
 	dstPos := 0
 	srcPos := 0
 	for dstPos+fixedSize < len(buf) && srcPos+oldFixedSize < len(old) {
-		var dstDirent Dirent
-		var srcDirent dirent_freebsd11
-
-		// If multiple direntries are written, sometimes when we reach the final one,
-		// we may have cap of old less than size of dirent_freebsd11.
-		copy((*[unsafe.Sizeof(srcDirent)]byte)(unsafe.Pointer(&srcDirent))[:], old[srcPos:])
+		dstDirent := (*Dirent)(unsafe.Pointer(&buf[dstPos]))
+		srcDirent := (*dirent_freebsd11)(unsafe.Pointer(&old[srcPos]))
 
 		reclen := roundup(fixedSize+int(srcDirent.Namlen)+1, 8)
 		if dstPos+reclen > len(buf) {
@@ -483,7 +479,6 @@ func convertFromDirents11(buf []byte, old []byte) int {
 		dstDirent.Pad1 = 0
 
 		copy(dstDirent.Name[:], srcDirent.Name[:srcDirent.Namlen])
-		copy(buf[dstPos:], (*[unsafe.Sizeof(dstDirent)]byte)(unsafe.Pointer(&dstDirent))[:])
 		padding := buf[dstPos+fixedSize+int(dstDirent.Namlen) : dstPos+reclen]
 		for i := range padding {
 			padding[i] = 0
@@ -521,8 +516,18 @@ func PtraceGetFpRegs(pid int, fpregsout *FpReg) (err error) {
 	return ptrace(PTRACE_GETFPREGS, pid, uintptr(unsafe.Pointer(fpregsout)), 0)
 }
 
+func PtraceGetFsBase(pid int, fsbase *int64) (err error) {
+	return ptrace(PTRACE_GETFSBASE, pid, uintptr(unsafe.Pointer(fsbase)), 0)
+}
+
 func PtraceGetRegs(pid int, regsout *Reg) (err error) {
 	return ptrace(PTRACE_GETREGS, pid, uintptr(unsafe.Pointer(regsout)), 0)
+}
+
+func PtraceIO(req int, pid int, addr uintptr, out []byte, countin int) (count int, err error) {
+	ioDesc := PtraceIoDesc{Op: int32(req), Offs: (*byte)(unsafe.Pointer(addr)), Addr: (*byte)(unsafe.Pointer(&out[0])), Len: uint(countin)}
+	err = ptrace(PTRACE_IO, pid, uintptr(unsafe.Pointer(&ioDesc)), 0)
+	return int(ioDesc.Len), err
 }
 
 func PtraceLwpEvents(pid int, enable int) (err error) {

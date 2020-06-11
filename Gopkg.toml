@@ -44,7 +44,7 @@
 
 [[constraint]]
   name = "github.com/shirou/gopsutil"
-  version = "2.20.3"
+  version = "2.19.01"
 
 [[constraint]]
   name = "github.com/sirupsen/logrus"

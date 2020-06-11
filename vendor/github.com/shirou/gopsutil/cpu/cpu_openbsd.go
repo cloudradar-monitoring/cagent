@@ -8,10 +8,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os/exec"
-	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/shirou/gopsutil/internal/common"
 	"golang.org/x/sys/unix"
@@ -30,9 +28,6 @@ var (
 // sys/sysctl.h
 const (
 	CTLKern     = 1  // "high kernel": proc, limits
-	CTLHw       = 6  // CTL_HW
-	SMT         = 24 // HW_SMT
-	NCpuOnline  = 25 // HW_NCPUONLINE
 	KernCptime  = 40 // KERN_CPTIME
 	KernCptime2 = 71 // KERN_CPTIME2
 )
@@ -41,7 +36,7 @@ var ClocksPerSec = float64(128)
 
 func init() {
 	func() {
-		getconf, err := exec.LookPath("getconf")
+		getconf, err := exec.LookPath("/usr/bin/getconf")
 		if err != nil {
 			return
 		}
@@ -72,22 +67,6 @@ func init() {
 	}()
 }
 
-func smt() (bool, error) {
-	mib := []int32{CTLHw, SMT}
-	buf, _, err := common.CallSyscall(mib)
-	if err != nil {
-		return false, err
-	}
-
-	var ret bool
-	br := bytes.NewReader(buf)
-	if err := binary.Read(br, binary.LittleEndian, &ret); err != nil {
-		return false, err
-	}
-
-	return ret, nil
-}
-
 func Times(percpu bool) ([]TimesStat, error) {
 	return TimesWithContext(context.Background(), percpu)
 }
@@ -102,27 +81,13 @@ func TimesWithContext(ctx context.Context, percpu bool) ([]TimesStat, error) {
 		ncpu = 1
 	}
 
-	smt, err := smt()
-	if err == syscall.EOPNOTSUPP {
-		// if hw.smt is not applicable for this platform (e.g. i386),
-		// pretend it's enabled
-		smt = true
-	} else if err != nil {
-		return nil, err
-	}
-
 	for i := 0; i < ncpu; i++ {
-		j := i
-		if !smt {
-			j *= 2
-		}
-
-		var cpuTimes = make([]int32, CPUStates)
+		var cpuTimes = make([]int64, CPUStates)
 		var mib []int32
 		if percpu {
-			mib = []int32{CTLKern, KernCptime2, int32(j)}
-		} else {
 			mib = []int32{CTLKern, KernCptime}
+		} else {
+			mib = []int32{CTLKern, KernCptime2, int32(i)}
 		}
 		buf, _, err := common.CallSyscall(mib)
 		if err != nil {
@@ -141,10 +106,10 @@ func TimesWithContext(ctx context.Context, percpu bool) ([]TimesStat, error) {
 			Idle:   float64(cpuTimes[CPIdle]) / ClocksPerSec,
 			Irq:    float64(cpuTimes[CPIntr]) / ClocksPerSec,
 		}
-		if percpu {
-			c.CPU = fmt.Sprintf("cpu%d", j)
-		} else {
+		if !percpu {
 			c.CPU = "cpu-total"
+		} else {
+			c.CPU = fmt.Sprintf("cpu%d", i)
 		}
 		ret = append(ret, c)
 	}
@@ -169,27 +134,14 @@ func InfoWithContext(ctx context.Context) ([]InfoStat, error) {
 	}
 	c.Mhz = float64(u32)
 
-	mib := []int32{CTLHw, NCpuOnline}
-	buf, _, err := common.CallSyscall(mib)
-	if err != nil {
+	if u32, err = unix.SysctlUint32("hw.ncpuonline"); err != nil {
 		return nil, err
 	}
-
-	var ncpu int32
-	br := bytes.NewReader(buf)
-	err = binary.Read(br, binary.LittleEndian, &ncpu)
-	if err != nil {
-		return nil, err
-	}
-	c.Cores = ncpu
+	c.Cores = int32(u32)
 
 	if c.ModelName, err = unix.Sysctl("hw.model"); err != nil {
 		return nil, err
 	}
 
 	return append(ret, c), nil
-}
-
-func CountsWithContext(ctx context.Context, logical bool) (int, error) {
-	return runtime.NumCPU(), nil
 }
