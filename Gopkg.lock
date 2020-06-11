@@ -18,14 +18,6 @@
   version = "0.0.4"
 
 [[projects]]
-  branch = "master"
-  digest = "1:6fb715df3bc93648ae7928ba13b89ce3608bc0278de1bb123932974b3f16b5a5"
-  name = "github.com/cloudradar-monitoring/selfupdate"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "e4ef8d691a0cdd42e4a24c46dfe8f3a9ee3feb8a"
-
-[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -93,14 +85,6 @@
   pruneopts = "UT"
   revision = "17ef3dd9d98b69acec3e85878995ada9533a9370"
   version = "v1.5.0"
-
-[[projects]]
-  digest = "1:88e0b0baeb9072f0a4afbcf12dda615fc8be001d1802357538591155998da21b"
-  name = "github.com/hashicorp/go-version"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "ac23dc3fea5d1a983c43f6a0f6e2c13f0195d8bd"
-  version = "v1.2.0"
 
 [[projects]]
   digest = "1:628d50fef8c9c3a70fc87ad59d57ecfdfb121454942fb33142372bbde6c4a10e"
@@ -193,7 +177,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:938b07b8bc5bb2246664c9a303521a923b9b0fe10cf7d532ebe7cee232789121"
+  digest = "1:52e4345e8592bcdf08663a7ff7168d49ec1b74e8f17b312a10d4aa5544b1bb22"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
@@ -206,8 +190,8 @@
     "process",
   ]
   pruneopts = "UT"
-  revision = "a81cf97fce2300934e6c625b9917103346c26ba3"
-  version = "v2.20.4"
+  revision = "071446942108a03a13cf0717275ad3bdbcb691b4"
+  version = "v2.19.01"
 
 [[projects]]
   branch = "master"
@@ -253,10 +237,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1ba20a6930d8d3ad07e087219a37e8e78457cd6029831c6f1e11af49064faa62"
+  digest = "1:84e425bb191e91e9135aad44404507f8185a594dad341684b3985ad0c9954641"
   name = "golang.org/x/sys"
   packages = [
-    "internal/unsafeheader",
     "unix",
     "windows",
     "windows/registry",
@@ -265,7 +248,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "UT"
-  revision = "fe76b779f299728f3bd63f77ea2c815504229c3b"
+  revision = "e66fe6eb8e0cbfacade8b490cf55cd2494f4db62"
 
 [[projects]]
   digest = "1:5d3e23515e7916c152cc665eda0f7eaf6fdf8fdfe7c3dbac97049bcbd649b33f"
@@ -305,7 +288,6 @@
   input-imports = [
     "github.com/StackExchange/wmi",
     "github.com/cloudradar-monitoring/dmidecode",
-    "github.com/cloudradar-monitoring/selfupdate",
     "github.com/gentlemanautomaton/windevice",
     "github.com/gentlemanautomaton/windevice/deviceclass",
     "github.com/go-ole/go-ole",

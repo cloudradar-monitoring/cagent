@@ -6,10 +6,7 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-
-	"github.com/cloudradar-monitoring/selfupdate"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/fs"
 	"github.com/cloudradar-monitoring/cagent/pkg/monitoring/networking"
@@ -23,16 +20,13 @@ import (
 // variables set on build. Example:
 // go build -o cagent -ldflags="-X github.com/cloudradar-monitoring/cagent.Version=$(git --git-dir=src/github.com/cloudradar-monitoring/cagent/.git describe --always --long --dirty --tag)" github.com/cloudradar-monitoring/cagent/cmd/cagent
 var (
-	Version            string
-	LicenseInfo        = "released under MIT license. https://github.com/cloudradar-monitoring/cagent/"
-	SelfUpdatesFeedURL = "https://repo.cloudradar.io/windows/cagent/feed/rolling"
+	Version     string
+	LicenseInfo = "released under MIT license. https://github.com/cloudradar-monitoring/cagent/"
 )
 
 type Cagent struct {
 	Config         *Config
 	ConfigLocation string
-
-	selfUpdater *selfupdate.Updater
 
 	hubClient     *http.Client
 	hubClientOnce sync.Once
@@ -49,7 +43,7 @@ type Cagent struct {
 	smart          *smart.SMART
 }
 
-func New(cfg *Config, cfgPath string) (*Cagent, error) {
+func New(cfg *Config, cfgPath string) *Cagent {
 	ca := &Cagent{
 		Config:         cfg,
 		ConfigLocation: cfgPath,
@@ -66,36 +60,7 @@ func New(cfg *Config, cfgPath string) (*Cagent, error) {
 		}
 	}
 
-	err := ca.configureAutomaticSelfUpdates()
-	if err != nil {
-		logrus.Error(err.Error())
-		return nil, err
-	}
-
-	return ca, nil
-}
-
-func (ca *Cagent) configureAutomaticSelfUpdates() error {
-	if !ca.Config.Updates.Enabled {
-		return nil
-	}
-
-	updatesConfig := selfupdate.DefaultConfig()
-	updatesConfig.AppName = "cagent"
-	updatesConfig.SigningCertificatedName = "cloudradar GmbH"
-	updatesConfig.CurrentVersion = Version
-	updatesConfig.CheckInterval = ca.Config.Updates.GetCheckInterval()
-	updatesConfig.UpdatesFeedURL = ca.Config.Updates.URL
-	logrus.Debugf("using %s as self-updates feed URL", updatesConfig.UpdatesFeedURL)
-
-	err := selfupdate.Configure(updatesConfig)
-	if err != nil {
-		return errors.Wrapf(err, "invalid configuration for self-update")
-	}
-
-	selfupdate.SetLogger(logrus.StandardLogger())
-
-	return nil
+	return ca
 }
 
 func (ca *Cagent) userAgent() string {
@@ -108,11 +73,6 @@ func (ca *Cagent) userAgent() string {
 func (ca *Cagent) Shutdown() {
 	defer sensors.Shutdown()
 	defer updates.Shutdown()
-	defer func() {
-		if ca.selfUpdater != nil {
-			ca.selfUpdater.Shutdown()
-		}
-	}()
 
 	for name, p := range ca.vmWatchers {
 		if err := vmstat.Release(p); err != nil {

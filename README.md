@@ -27,7 +27,7 @@ Default locations:
 ## Build binaries and deb/rpm packages
 – Install [goreleaser](https://goreleaser.com/introduction/)
 ```bash
-make goreleaser-snapshot
+goreleaser --snapshot
 ```
 
 ## Build MSI package
@@ -35,13 +35,8 @@ Should be done on Windows machine
 - [Download go-msi](https://github.com/cloudradar-monitoring/go-msi/releases) and put it in the `C:\Program Files\go-msi`
 - Open command prompt(cmd.exe or powershell)
 - Go to cagent directory `cd path_to_directory`
-- Run `make goreleaser-snapshot` to build binaries
+- Run `goreleaser --snapshot` to build binaries
 - Run `build-win.bat`
-
-## Versioning model
-Cagent uses `<major>.<minor>.<buildnumber>` model for compatibility with a maximum number of package managers.
-
-Starting from version 1.4.0 packages with even `<minor>` AND `<buildnumber>` numbers are considered stable.
 
 ## S.M.A.R.T monitoring documentation
 **S.M.A.R.T** [how to](https://github.com/cloudradar-monitoring/cagent/blob/master/SMART.md)

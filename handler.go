@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/cloudradar-monitoring/selfupdate"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
@@ -165,13 +164,11 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 		}
 		measurements = measurements.AddWithPrefix("services.", servicesList)
 
-		if cfg.DockerMonitoring.Enabled {
-			containersList, err := docker.ListContainers()
-			if err != docker.ErrorNotImplementedForOS && err != docker.ErrorDockerNotAvailable {
-				errCollector.Add(err)
-			}
-			measurements = measurements.AddWithPrefix("docker.", containersList)
+		containersList, err := docker.ListContainers()
+		if err != docker.ErrorNotImplementedForOS && err != docker.ErrorDockerNotAvailable {
+			errCollector.Add(err)
 		}
+		measurements = measurements.AddWithPrefix("docker.", containersList)
 
 		if cfg.TemperatureMonitoring {
 			temperatures, err := sensors.ReadTemperatureSensors()
@@ -238,10 +235,6 @@ func (ca *Cagent) reportMeasurements(measurements common.MeasurementsMap, output
 }
 
 func (ca *Cagent) RunHeartbeat(interrupt chan struct{}) {
-	if ca.Config.Updates.Enabled {
-		ca.selfUpdater = selfupdate.StartChecking()
-	}
-
 	for {
 		err := ca.sendHeartbeat()
 		if err != nil {

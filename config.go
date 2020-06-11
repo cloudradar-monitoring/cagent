@@ -10,7 +10,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/troian/toml"
@@ -36,7 +35,6 @@ const (
 	maxHubRequestTimeout = 600
 
 	minSystemUpdatesCheckInterval = 300
-	minSelfUpdatesCheckInterval   = 600
 )
 
 var operationModes = []string{OperationModeFull, OperationModeMinimal, OperationModeHeartbeat}
@@ -125,10 +123,6 @@ type Config struct {
 	MysqlMonitoring mysql.Config `toml:"mysql_monitoring" comment:"Monitor the basic performance metrics of a MySQL or MariaDB database\n** EXPERIMENTAL                          **\n** Do not use in production environments **"`
 
 	ProcessMonitoring processes.Config `toml:"process_monitoring" comment:"Cagent monitors all running processes and reports them for further processing to the Hub.\nOn heavy loaded systems or if you don't need process monitoring at all,\nyou can change the following settings."`
-
-	Updates UpdatesConfig `toml:"self_update" comment:"Control how cagent installs self-updates. Windows-only"`
-
-	DockerMonitoring DockerMonitoringConfig `toml:"docker_monitoring" comment:"Cagent monitors all running docker containers and reports them for further processing to the Hub.\nYou can change the following settings."`
 }
 
 type ConfigDeprecated struct {
@@ -149,13 +143,9 @@ type StorCLIConfig struct {
 }
 
 type UpdatesMonitoringConfig struct {
-	Enabled       bool   `toml:"enabled" comment:"Set 'false' to disable checking available updates"`
-	FetchTimeout  uint32 `toml:"fetch_timeout" comment:"Maximum time the package manager is allowed to spend fetching available updates, ignored on windows"`
-	CheckInterval uint32 `toml:"check_interval" comment:"Check for available updates every N seconds. Minimum is 300 seconds"`
-}
-
-type DockerMonitoringConfig struct {
-	Enabled bool `toml:"enabled" comment:"Set 'false' to disable docker monitoring'"`
+	Enabled       bool `toml:"enabled" comment:"Set 'false' to disable checking available updates"`
+	FetchTimeout  uint `toml:"fetch_timeout" comment:"Maximum time the package manager is allowed to spend fetching available updates, ignored on windows"`
+	CheckInterval uint `toml:"check_interval" comment:"Check for available updates every N seconds. Minimum is 300 seconds"`
 }
 
 func (l *UpdatesMonitoringConfig) Validate() error {
@@ -169,23 +159,6 @@ func (l *UpdatesMonitoringConfig) Validate() error {
 	}
 
 	return nil
-}
-
-type UpdatesConfig struct {
-	Enabled       bool   `toml:"enabled" comment:"Set 'false' to disable self-updates"`
-	URL           string `toml:"url" comment:"URL for updates feed"`
-	CheckInterval uint32 `toml:"check_interval" comment:"Cagent will check for new versions every N seconds"`
-}
-
-func (u *UpdatesConfig) Validate() error {
-	if u.CheckInterval < minSelfUpdatesCheckInterval {
-		return fmt.Errorf("check_interval must be greater than %d seconds", minSelfUpdatesCheckInterval)
-	}
-	return nil
-}
-
-func (u *UpdatesConfig) GetCheckInterval() time.Duration {
-	return time.Duration(int64(u.CheckInterval) * int64(time.Second))
 }
 
 type JobMonitoringConfig struct {
@@ -283,11 +256,6 @@ func NewConfig() *Config {
 			CheckInterval: 14400,
 		},
 		ProcessMonitoring: processes.GetDefaultConfig(),
-		Updates: UpdatesConfig{
-			Enabled:       false,
-			CheckInterval: 21600,
-		},
-		DockerMonitoring: DockerMonitoringConfig{Enabled: true},
 	}
 
 	cfg.MinValuableConfig = *(defaultMinValuableConfig())
@@ -299,8 +267,6 @@ func NewConfig() *Config {
 		cfg.CPUUtilTypes = []string{"user", "system", "idle"}
 		cfg.VirtualMachinesStat = []string{"hyper-v"}
 		cfg.JobMonitoring.SpoolDirPath = "C:\\ProgramData\\cagent\\jobmon"
-		cfg.Updates.Enabled = true
-		cfg.Updates.URL = SelfUpdatesFeedURL
 	case "darwin":
 		cfg.JobMonitoring.SpoolDirPath = "/usr/local/var/lib/cagent/jobmon"
 	default:
@@ -536,11 +502,6 @@ func (cfg *Config) validate() error {
 		return fmt.Errorf("invalid [mysql_monitoring] config: %s", err.Error())
 	}
 
-	err = cfg.Updates.Validate()
-	if err != nil {
-		return fmt.Errorf("invalid [updates] config: %s", err.Error())
-	}
-
 	return nil
 }
 
@@ -577,7 +538,7 @@ func (cfg *Config) migrate(cfgDeprecated *ConfigDeprecated, metadata toml.MetaDa
 		if cfgDeprecated.WindowsUpdatesWatcherInterval <= 0 {
 			cfg.SystemUpdatesChecks.Enabled = false
 		} else {
-			cfg.SystemUpdatesChecks.CheckInterval = uint32(cfgDeprecated.WindowsUpdatesWatcherInterval)
+			cfg.SystemUpdatesChecks.CheckInterval = uint(cfgDeprecated.WindowsUpdatesWatcherInterval)
 		}
 	}
 }

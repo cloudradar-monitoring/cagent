@@ -6,18 +6,14 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
-	"errors"
 	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/sirupsen/logrus"
 )
-
-var ErrCommandExecutionTimeout = errors.New("command execution timeout exceeded")
 
 // Invoker executes command in context and gathers stdout/stderr output into slice
 type Invoker interface {
@@ -56,20 +52,6 @@ func RunCommandWithContext(ctx context.Context, name string, arg ...string) ([]b
 // RunCommandInBackground convenience wrapper to RunCommandWithContext
 func RunCommandInBackground(name string, arg ...string) ([]byte, error) {
 	return RunCommandWithContext(context.Background(), name, arg...)
-}
-
-// RunCommandWithTimeout runs command and returns it's standard output. If timeout exceeded the returned error is ErrCommandExecutionTimeout
-func RunCommandWithTimeout(timeout time.Duration, name string, arg ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, name, arg...)
-
-	result, err := cmd.Output()
-	if ctx.Err() == context.DeadlineExceeded {
-		err = ErrCommandExecutionTimeout
-	}
-	return result, err
 }
 
 func MergeStringMaps(mapA, mapB map[string]interface{}) map[string]interface{} {

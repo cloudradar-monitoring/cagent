@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 type pkgMgrYUM struct {
@@ -37,8 +35,13 @@ func (a *pkgMgrYUM) FetchUpdates(timeout time.Duration) error {
 }
 
 func (a *pkgMgrYUM) fetchTotalUpdates(timeout time.Duration) error {
-	out, err := common.RunCommandWithTimeout(timeout, "sudo", a.GetBinaryPath(), "-q", "check-update")
-	if err == common.ErrCommandExecutionTimeout {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "sudo", a.GetBinaryPath(), "-q", "check-update")
+
+	out, err := cmd.Output()
+	if ctx.Err() == context.DeadlineExceeded {
 		return fmt.Errorf("timeout of %s exceeded while fetching new updates", timeout)
 	}
 

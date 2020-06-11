@@ -9,8 +9,6 @@ import (
 	"os/exec"
 	"strings"
 	"time"
-
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 type dockerPsOutput struct {
@@ -21,7 +19,6 @@ type dockerPsOutput struct {
 }
 
 const dockerAvailabilityCheckCacheExpiration = 1 * time.Minute
-const cmdExecTimeout = 10 * time.Second
 
 var dockerIsAvailable bool
 var dockerAvailabilityLastRequestedAt *time.Time
@@ -38,7 +35,7 @@ func isDockerAvailable() bool {
 	dockerIsAvailable = err == nil
 
 	if dockerIsAvailable {
-		_, err := common.RunCommandWithTimeout(cmdExecTimeout, "/bin/sh", "-c", "sudo docker info")
+		err = exec.Command("/bin/sh", "-c", "sudo docker info").Run()
 		if err != nil {
 			log.WithError(err).Debug("while executing 'docker info' to check if docker is available")
 		}
@@ -81,7 +78,7 @@ func ListContainers() (map[string]interface{}, error) {
 		return nil, ErrorDockerNotAvailable
 	}
 
-	out, err := common.RunCommandWithTimeout(cmdExecTimeout, "/bin/sh", "-c", "sudo docker ps -a --format \"{{ json . }}\"")
+	out, err := exec.Command("/bin/sh", "-c", "sudo docker ps -a --format \"{{ json . }}\"").Output()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
 			err = errors.New(ee.Error() + ": " + string(ee.Stderr))
@@ -125,7 +122,7 @@ func ContainerNameByID(id string) (string, error) {
 		return "", ErrorDockerNotAvailable
 	}
 
-	out, err := common.RunCommandWithTimeout(cmdExecTimeout, "/bin/sh", "-c", fmt.Sprintf("sudo docker inspect --format \"{{ .Name }}\" %s", id))
+	out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf("sudo docker inspect --format \"{{ .Name }}\" %s", id)).Output()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
 			err = errors.New(ee.Error() + ": " + string(ee.Stderr))

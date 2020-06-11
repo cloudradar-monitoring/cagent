@@ -3,6 +3,7 @@
 package updates
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -10,8 +11,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-
-	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 type pkgMgrApt struct {
@@ -22,8 +21,13 @@ func (a *pkgMgrApt) GetBinaryPath() string {
 }
 
 func (a *pkgMgrApt) FetchUpdates(timeout time.Duration) error {
-	_, err := common.RunCommandWithTimeout(timeout, "sudo", a.GetBinaryPath(), "update", "-q", "-y")
-	if err == common.ErrCommandExecutionTimeout {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "sudo", a.GetBinaryPath(), "update", "-q", "-y")
+
+	err := cmd.Run()
+	if ctx.Err() == context.DeadlineExceeded {
 		return fmt.Errorf("timeout of %s exceeded while fetching new updates", timeout)
 	}
 

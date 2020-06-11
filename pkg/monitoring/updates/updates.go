@@ -29,14 +29,14 @@ func Shutdown() {
 	}
 }
 
-func GetWatcher(fetchTimeout, checkInterval uint32) *Watcher {
+func GetWatcher(fetchTimeout, checkInterval uint) *Watcher {
 	if watcher != nil {
 		return watcher
 	}
 
 	watcher = &Watcher{
-		fetchTimeout:    time.Duration(int64(time.Second) * int64(fetchTimeout)),
-		checkInterval:   time.Duration(int64(time.Second) * int64(checkInterval)),
+		fetchTimeout:    time.Duration(uint(time.Second) * fetchTimeout),
+		checkInterval:   time.Duration(uint(time.Second) * checkInterval),
 		lastFetchedInfo: nil,
 		interruptChan:   make(chan struct{}),
 	}
