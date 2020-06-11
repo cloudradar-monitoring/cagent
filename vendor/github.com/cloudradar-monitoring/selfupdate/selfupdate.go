@@ -199,12 +199,16 @@ func DownloadAndInstallUpdate(u *UpdateInfo) error {
 	}
 	err = lock.TryLock()
 	if err != nil {
-		return errors.Wrap(err, "could not get lock. Probably update is already running by the other process.")
+		return errors.Wrap(err, "could not get lock. Probably update is already running by another process.")
 	}
 	defer lock.Unlock()
 
-	tempFolder := os.TempDir()
-	packageFilePath, checksum, err := downloadFile(os.TempDir(), u.DownloadURL)
+	tempFolder, err := createTempDir()
+	if err != nil {
+		return errors.Wrapf(err, "while creating temp dir %s", tempFolder)
+	}
+
+	packageFilePath, checksum, err := downloadFile(tempFolder, u.DownloadURL)
 	if err != nil {
 		return errors.Wrapf(err, "while downloading file to folder %s", tempFolder)
 	}
@@ -236,4 +240,11 @@ func DownloadAndInstallUpdate(u *UpdateInfo) error {
 	}
 
 	return err
+}
+
+func createTempDir() (string, error) {
+	base := os.TempDir()
+	tempDir := filepath.Join(base, fmt.Sprintf("%s-update-%s", config.AppName, time.Now().Unix()))
+
+	return tempDir, os.MkdirAll(tempDir, 0666)
 }
