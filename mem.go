@@ -66,7 +66,7 @@ func (ca *Cagent) MemResults() (common.MeasurementsMap, *mem.VirtualMemoryStat, 
 	}
 
 	if memStat != nil && hasAvailableMemory {
-		results["available_B"] = int(memStat.Available)
+		results["available_B"] = memStat.Available
 		results["available_percent"] = floatToIntPercentRoundUP(float64(results["available_B"].(int)) / float64(memStat.Total))
 	}
 

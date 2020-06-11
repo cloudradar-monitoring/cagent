@@ -41,7 +41,12 @@ func (ca *Cagent) MemResults() (common.MeasurementsMap, *mem.VirtualMemoryStat, 
 	} else {
 		results["total_B"] = memStat.Total
 		results["available_B"] = memStat.Available
-		results["available_percent"] = floatToIntPercentRoundUP((float64(memStat.Available)) / float64(memStat.Total))
+
+		available := float64(memStat.Available)
+		if available <= 0.0 {
+			available = 0.0
+		}
+		results["available_percent"] = floatToIntPercentRoundUP(available / float64(memStat.Total))
 	}
 
 	free, err := monitoring.GetWatcher().Query(`\Memory\Free & Zero Page List Bytes`, "*")
