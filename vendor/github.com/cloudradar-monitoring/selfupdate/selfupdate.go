@@ -193,7 +193,13 @@ func parseFeed(r io.Reader) ([]*UpdateInfo, error) {
 }
 
 func DownloadAndInstallUpdate(u *UpdateInfo) error {
-	lock, err := lockfile.New(filepath.Join(os.TempDir(), fmt.Sprintf("%s-self-update.lock", config.AppName)))
+	exePath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	basePath := filepath.Dir(exePath)
+	lock, err := lockfile.New(filepath.Join(basePath, fmt.Sprintf("%s-self-update.lock", config.AppName)))
 	if err != nil {
 		return errors.Wrap(err, "could not create lock file")
 	}
@@ -243,8 +249,14 @@ func DownloadAndInstallUpdate(u *UpdateInfo) error {
 }
 
 func createTempDir() (string, error) {
-	base := os.TempDir()
-	tempDir := filepath.Join(base, fmt.Sprintf("%s-update-%s", config.AppName, time.Now().Unix()))
+	exePath, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+
+	basePath := filepath.Dir(exePath)
+
+	tempDir := filepath.Join(basePath, fmt.Sprintf("%s-update-%s", config.AppName, time.Now().Unix()))
 
 	return tempDir, os.MkdirAll(tempDir, 0666)
 }
