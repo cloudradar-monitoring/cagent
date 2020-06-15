@@ -39,7 +39,7 @@ Should be done on Windows machine
 - Run `build-win.bat`
 
 ## Versioning model
-Cagent uses `<major>.<minor>.<buildnumber>` model for compatibility with a maximum number of package managers.
+Cagent uses `<major>.<minor>.<buildnumber>` version pattern for compatibility with a maximum number of package managers.
 
 Starting from version 1.4.0 packages with even `<minor>` AND `<buildnumber>` numbers are considered stable.
 
