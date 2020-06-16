@@ -41,7 +41,7 @@ Should be done on Windows machine
 ## Versioning model
 Cagent uses `<major>.<minor>.<buildnumber>` version pattern for compatibility with a maximum number of package managers.
 
-Starting from version 1.4.0 packages with even `<minor>` AND `<buildnumber>` numbers are considered stable.
+Starting from version 1.4.0 packages with even `<minor>` number are considered stable.
 
 ## S.M.A.R.T monitoring documentation
 **S.M.A.R.T** [how to](https://github.com/cloudradar-monitoring/cagent/blob/master/SMART.md)
