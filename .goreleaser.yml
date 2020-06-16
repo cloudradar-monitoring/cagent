@@ -154,61 +154,62 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
-nfpm:
-  name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
-  maintainer: CloudRadar GmbH <ops@cloudradar.io>
+nfpms:
+  -
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    maintainer: CloudRadar GmbH <ops@cloudradar.io>
 
-  vendor: cloudradar GmbH
-  homepage: https://cloudradar.io
-  description: Monitoring agent to report CPU, disk, mem and net metrics
-  license: MIT
+    vendor: cloudradar GmbH
+    homepage: https://cloudradar.io
+    description: Monitoring agent to report CPU, disk, mem and net metrics
+    license: MIT
 
-  # Formats to be generated.
-  formats:
-    - deb
-    - rpm
+    # Formats to be generated.
+    formats:
+      - deb
+      - rpm
 
-  dependencies:
-    - sudo
+    dependencies:
+      - sudo
 
-  recommends:
-    - dmidecode
-    - usbutils
-    - ca-certificates
-    - dbus
+    recommends:
+      - dmidecode
+      - usbutils
+      - ca-certificates
+      - dbus
 
-  # Override default /usr/local/bin destination for binaries
-  bindir: /usr/bin
+    # Override default /usr/local/bin destination for binaries
+    bindir: /usr/bin
 
-  # Empty folders that should be created and managed by the packager implementation.
-  empty_folders:
-    - /var/log/cagent
-    - /var/lib/cagent/jobmon
-    - /etc/cagent
+    # Empty folders that should be created and managed by the packager implementation.
+    empty_folders:
+      - /var/log/cagent
+      - /var/lib/cagent/jobmon
+      - /etc/cagent
 
-  files:
-    "example.config.toml": "/etc/cagent/example.config.toml"
-    "cacert.pem": "/etc/cagent/cacert.pem"
-    "pkg-scripts/cagent-dmidecode": "/etc/sudoers.d/cagent-dmidecode"
-    "pkg-scripts/cagent-docker": "/etc/sudoers.d/cagent-docker"
-    "pkg-scripts/cagent-smartctl": "/etc/sudoers.d/cagent-smartctl"
+    files:
+      "example.config.toml": "/etc/cagent/example.config.toml"
+      "cacert.pem": "/etc/cagent/cacert.pem"
+      "pkg-scripts/cagent-dmidecode": "/etc/sudoers.d/cagent-dmidecode"
+      "pkg-scripts/cagent-docker": "/etc/sudoers.d/cagent-docker"
+      "pkg-scripts/cagent-smartctl": "/etc/sudoers.d/cagent-smartctl"
 
-  scripts:
-    preinstall: "pkg-scripts/preinstall.sh"
-    postinstall: "pkg-scripts/postinstall.sh"
-    preremove: "pkg-scripts/preremove.sh"
+    scripts:
+      preinstall: "pkg-scripts/preinstall.sh"
+      postinstall: "pkg-scripts/postinstall.sh"
+      preremove: "pkg-scripts/preremove.sh"
 
-  overrides:
-    deb:
-      files:
-        "pkg-scripts/cagent-apt-get": "/etc/sudoers.d/cagent-apt-get"
-    rpm:
-      files:
-        "pkg-scripts/cagent-yum": "/etc/sudoers.d/cagent-yum"
-        "pkg-scripts/cagent-dnf": "/etc/sudoers.d/cagent-dnf"
-      scripts:
-        postinstall: "pkg-scripts/postinstall-rpm.sh"
-        preremove: "pkg-scripts/preremove-rpm.sh"
+    overrides:
+      deb:
+        files:
+          "pkg-scripts/cagent-apt-get": "/etc/sudoers.d/cagent-apt-get"
+      rpm:
+        files:
+          "pkg-scripts/cagent-yum": "/etc/sudoers.d/cagent-yum"
+          "pkg-scripts/cagent-dnf": "/etc/sudoers.d/cagent-dnf"
+        scripts:
+          postinstall: "pkg-scripts/postinstall-rpm.sh"
+          preremove: "pkg-scripts/preremove-rpm.sh"
 
 release:
   github:
