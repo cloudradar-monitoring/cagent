@@ -92,7 +92,10 @@ func listPCIDevices() ([]*pciDeviceInfo, error) {
 		return nil, errors.Wrap(err, "could not capture stderr when retrieving PCI information using ghw")
 	}
 	if ghwErr != nil {
-		return nil, errors.Wrap(ghwErr, "there were error while retrieving PCI information using ghw")
+		// ignore "no such file or directory" error returned only when ghw can't find vendor DB file on a machine
+		if !strings.Contains(ghwErr.Error(), "open : no such file or directory") {
+			return nil, errors.Wrap(ghwErr, "there were error while retrieving PCI information using ghw")
+		}
 	}
 	if len(stderrOutput) > 0 {
 		// ghw only reports to stderr in case if system files are missing or there was failure while reading it
