@@ -193,7 +193,9 @@ func parseFeed(r io.Reader) ([]*UpdateInfo, error) {
 }
 
 func DownloadAndInstallUpdate(u *UpdateInfo) error {
-	lock, err := lockfile.New(filepath.Join(os.TempDir(), fmt.Sprintf("%s-self-update.lock", config.AppName)))
+	tempFolder := os.TempDir()
+
+	lock, err := lockfile.New(filepath.Join(tempFolder, fmt.Sprintf("%s-self-update.lock", config.AppName)))
 	if err != nil {
 		return errors.Wrap(err, "could not create lock file")
 	}
@@ -203,8 +205,7 @@ func DownloadAndInstallUpdate(u *UpdateInfo) error {
 	}
 	defer lock.Unlock()
 
-	tempFolder := os.TempDir()
-	packageFilePath, checksum, err := downloadFile(os.TempDir(), u.DownloadURL)
+	packageFilePath, checksum, err := downloadFile(tempFolder, u.DownloadURL)
 	if err != nil {
 		return errors.Wrapf(err, "while downloading file to folder %s", tempFolder)
 	}
