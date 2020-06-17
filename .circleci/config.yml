@@ -55,12 +55,11 @@ jobs:
         type: string
     environment:
       RELEASE_MODE: << parameters.release_mode >>
-      GORELEASER_CURRENT_TAG: ${CIRCLE_TAG}
     steps:
       - <<: *workspace
       - run:
           name: Build binaries and pack them
-          command: make goreleaser-rm-dist
+          command: GORELEASER_CURRENT_TAG=${CIRCLE_TAG} make goreleaser-rm-dist
       - run:
           name: Build Synology packages
           shell: /bin/bash
