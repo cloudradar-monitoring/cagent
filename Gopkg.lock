@@ -252,10 +252,10 @@
   revision = "135ba5f1bc04bf19feffaca04c0dcec85770ffd1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:84e425bb191e91e9135aad44404507f8185a594dad341684b3985ad0c9954641"
+  digest = "1:1ba20a6930d8d3ad07e087219a37e8e78457cd6029831c6f1e11af49064faa62"
   name = "golang.org/x/sys"
   packages = [
+    "internal/unsafeheader",
     "unix",
     "windows",
     "windows/registry",
@@ -264,7 +264,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "UT"
-  revision = "e66fe6eb8e0cbfacade8b490cf55cd2494f4db62"
+  revision = "fe76b779f299728f3bd63f77ea2c815504229c3b"
 
 [[projects]]
   digest = "1:5d3e23515e7916c152cc665eda0f7eaf6fdf8fdfe7c3dbac97049bcbd649b33f"

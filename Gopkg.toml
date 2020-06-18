@@ -102,3 +102,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/cloudradar-monitoring/selfupdate"
+
+[[override]]
+  name = "golang.org/x/sys"
+  revision = "fe76b779f299728f3bd63f77ea2c815504229c3b"
