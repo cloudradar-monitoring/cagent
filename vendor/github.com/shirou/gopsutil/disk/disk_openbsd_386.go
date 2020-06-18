@@ -11,13 +11,12 @@ const (
 )
 
 const (
-	sizeOfDiskstats = 0x70
+	sizeOfDiskstats = 0x60
 )
 
 type Diskstats struct {
 	Name       [16]int8
 	Busy       int32
-	Pad_cgo_0  [4]byte
 	Rxfer      uint64
 	Wxfer      uint64
 	Seek       uint64
@@ -29,7 +28,7 @@ type Diskstats struct {
 }
 type Timeval struct {
 	Sec  int64
-	Usec int64
+	Usec int32
 }
 
 type Diskstat struct{}
