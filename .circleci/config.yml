@@ -65,6 +65,15 @@ jobs:
           shell: /bin/bash
           command: |
             cd synology-spk && ./create_spk.sh ${CIRCLE_TAG}
+      - run:
+          name: Scan build artifacts with VirusTotal
+          command: |
+            go get github.com/cloudradar-monitoring/virustotal-scan &&
+            virustotal-scan --verbose --ignore Cylance,Jiangmin,Ikarus,MaxSecure --apikey ${VIRUSTOTAL_TOKEN} --file dist/cagent_${CIRCLE_TAG}_Windows_x86_64.zip &&
+            virustotal-scan --verbose --ignore Cylance,Jiangmin,Ikarus,MaxSecure --apikey ${VIRUSTOTAL_TOKEN} --file dist/cagent_windows_amd64/cagent.exe &&
+            virustotal-scan --verbose --ignore Cylance,Jiangmin,Ikarus,MaxSecure --apikey ${VIRUSTOTAL_TOKEN} --file dist/csender_windows_amd64/csender.exe &&
+            virustotal-scan --verbose --ignore Cylance,Jiangmin,Ikarus,MaxSecure --apikey ${VIRUSTOTAL_TOKEN} --file dist/jobmon_windows_amd64/jobmon.exe
+
       - persist_to_workspace:
           root: /go/src/github.com/cloudradar-monitoring
           paths:
