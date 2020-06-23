@@ -132,7 +132,7 @@ func processesFromProc(systemMemorySize uint64) ([]*ProcStat, error) {
 		if err != nil && err != errorProcessTerminated {
 			log.WithError(err).Errorf("failed to read stat (%s)", statFilepath)
 		} else if err == nil {
-			stat.ProcessGID = parseStatFileContent(statFileContent)
+			stat.ProcessGID = parseProcessGroupIDFromStatFile(statFileContent)
 		}
 
 		if stat.PID > 0 {
@@ -193,20 +193,76 @@ func parseProcStatusFile(b []byte) procStatus {
 	return status
 }
 
-func parseStatFileContent(b []byte) int {
-	fields := strings.Fields(string(b))
-
-	i := 1
-	for !strings.HasSuffix(fields[i], ")") {
-		i++
+func parseProcessGroupIDFromStatFile(b []byte) int {
+	statFields := procPidStatSplit(string(b))
+	resultStr := statFields[4]
+	if resultStr == "" {
+		log.Warnf("proc/stat: could not parse stat file: %s", string(b))
+		return -1
 	}
 
-	pgrp, err := strconv.ParseInt(fields[i+3], 10, 32)
+	pgrp, err := strconv.ParseInt(resultStr, 10, 32)
 	if err != nil {
-		log.WithError(err).Errorf("proc/stat: failed to convert PGRP (%s) to int", fields[i+3])
+		log.WithError(err).Warnf("proc/stat: failed to convert PGRP (%s) to int. Stat file: %s", resultStr, string(b))
 		return -1
 	}
 	return int(pgrp)
+}
+
+// procPidStatSplit tries to parse /proc/<pid>/stat file
+// from uber-archive/cpustat
+// You might think that we could split on space, but due to what can at best be called
+// a shortcoming of the /proc/pid/stat format, the comm field can have unescaped spaces, parens, etc.
+// This may be a bit paranoid, because even many common tools like htop do not handle this case well.
+func procPidStatSplit(b string) []string {
+	line := strings.TrimSpace(b)
+
+	var splitParts = make([]string, 52)
+
+	partnum := 0
+	strpos := 0
+	start := 0
+	inword := false
+	space := " "[0]
+	openParen := "("[0]
+	closeParen := ")"[0]
+	groupchar := space
+
+	for ; strpos < len(line); strpos++ {
+		if inword {
+			if line[strpos] == space && (groupchar == space || line[strpos-1] == groupchar) {
+				splitParts[partnum] = line[start:strpos]
+				partnum++
+				start = strpos
+				inword = false
+			}
+		} else {
+			if line[strpos] == openParen {
+				groupchar = closeParen
+				inword = true
+				start = strpos
+				strpos = strings.LastIndex(line, ")") - 1
+				if strpos <= start { // if we can't parse this insane field, skip to the end
+					strpos = len(line)
+					inword = false
+				}
+			} else if line[strpos] != space {
+				groupchar = space
+				inword = true
+				start = strpos
+			}
+		}
+	}
+
+	if inword {
+		splitParts[partnum] = line[start:strpos]
+		partnum++
+	}
+
+	for ; partnum < 52; partnum++ {
+		splitParts[partnum] = ""
+	}
+	return splitParts
 }
 
 func readProcFile(filename string) ([]byte, error) {
