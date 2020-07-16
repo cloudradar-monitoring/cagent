@@ -60,6 +60,11 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 		err := ca.RunOnce(outputFile, ca.Config.OperationMode == OperationModeFull)
 		if err != nil {
 			log.Error(err)
+			if err == ErrorHub429 {
+				// for error code 429, wait 10 seconds and try again
+				time.Sleep(10 * time.Second)
+				continue
+			}
 		}
 
 		select {
@@ -235,6 +240,9 @@ func (ca *Cagent) reportMeasurements(measurements common.MeasurementsMap, output
 
 	err := ca.PostResultToHub(ctx, result)
 	if err != nil {
+		if err == ErrorHub429 {
+			return err
+		}
 		err = errors.Wrap(err, "failed to POST measurement result to Hub")
 	}
 
