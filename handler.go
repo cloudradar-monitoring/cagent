@@ -32,6 +32,10 @@ type cleanupCommand struct {
 	steps []func() error
 }
 
+var (
+	ErrorHub429 = errors.New("Hub replied with a 429 error code")
+)
+
 func (c *cleanupCommand) AddStep(f func() error) {
 	c.steps = append(c.steps, f)
 }
@@ -246,6 +250,11 @@ func (ca *Cagent) RunHeartbeat(interrupt chan struct{}) {
 		err := ca.sendHeartbeat()
 		if err != nil {
 			log.WithError(err).Error("failed to send heartbeat to Hub")
+			if err == ErrorHub429 {
+				// for error code 429, wait 10 seconds and try again
+				time.Sleep(10 * time.Second)
+				continue
+			}
 		}
 
 		select {
@@ -278,6 +287,9 @@ func (ca *Cagent) sendHeartbeat() error {
 	}
 	req = req.WithContext(ctx)
 	resp, err := ca.hubClient.Do(req)
+	if resp != nil && resp.StatusCode == 429 {
+		return ErrorHub429
+	}
 	if err = ca.checkClientError(resp, err, "hub_user", "hub_password"); err != nil {
 		return errors.WithStack(err)
 	}
