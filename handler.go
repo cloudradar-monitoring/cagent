@@ -10,6 +10,7 @@ import (
 
 	"github.com/cloudradar-monitoring/selfupdate"
 	"github.com/pkg/errors"
+	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
@@ -90,9 +91,13 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 	errCollector.Add(err)
 	measurements = measurements.AddWithPrefix("fs.", fsResults)
 
-	mem, memStat, err := ca.MemResults()
-	errCollector.Add(err)
-	measurements = measurements.AddWithPrefix("mem.", mem)
+	var memStat *mem.VirtualMemoryStat
+	if ca.Config.MemMonitoring {
+		var mem common.MeasurementsMap
+		mem, memStat, err = ca.MemResults()
+		errCollector.Add(err)
+		measurements = measurements.AddWithPrefix("mem.", mem)
+	}
 
 	cpuUtilisationAnalysisResult, cpuUtilisationAnalysisIsActive, err := ca.CPUUtilisationAnalyser().Results()
 	errCollector.Add(err)
@@ -125,9 +130,11 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 		errCollector.Add(err)
 		measurements = measurements.AddWithPrefix("listeningports.", ports)
 
-		swap, err := ca.SwapResults()
-		errCollector.Add(err)
-		measurements = measurements.AddWithPrefix("swap.", swap)
+		if ca.Config.MemMonitoring {
+			swap, err := ca.SwapResults()
+			errCollector.Add(err)
+			measurements = measurements.AddWithPrefix("swap.", swap)
+		}
 
 		ca.getVMStatMeasurements(func(name string, meas common.MeasurementsMap, err error) {
 			if err == nil {
