@@ -83,9 +83,11 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 	var measurements = make(common.MeasurementsMap)
 	var cfg = ca.Config
 
-	cpum, err := ca.CPUWatcher().Results()
-	errCollector.Add(err)
-	measurements = measurements.AddWithPrefix("cpu.", cpum)
+	if ca.Config.CPUMonitoring {
+		cpum, err := ca.CPUWatcher().Results()
+		errCollector.Add(err)
+		measurements = measurements.AddWithPrefix("cpu.", cpum)
+	}
 
 	fsResults, err := ca.GetFileSystemWatcher().Results()
 	errCollector.Add(err)
@@ -99,14 +101,16 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 		measurements = measurements.AddWithPrefix("mem.", mem)
 	}
 
-	cpuUtilisationAnalysisResult, cpuUtilisationAnalysisIsActive, err := ca.CPUUtilisationAnalyser().Results()
-	errCollector.Add(err)
-	measurements = measurements.AddWithPrefix("cpu_utilisation_analysis.", cpuUtilisationAnalysisResult)
-	if cpuUtilisationAnalysisIsActive {
-		measurements = measurements.AddWithPrefix(
-			"cpu_utilisation_analysis.",
-			common.MeasurementsMap{"settings": cfg.CPUUtilisationAnalysis},
-		)
+	if ca.Config.CPUMonitoring {
+		cpuUtilisationAnalysisResult, cpuUtilisationAnalysisIsActive, err := ca.CPUUtilisationAnalyser().Results()
+		errCollector.Add(err)
+		measurements = measurements.AddWithPrefix("cpu_utilisation_analysis.", cpuUtilisationAnalysisResult)
+		if cpuUtilisationAnalysisIsActive {
+			measurements = measurements.AddWithPrefix(
+				"cpu_utilisation_analysis.",
+				common.MeasurementsMap{"settings": cfg.CPUUtilisationAnalysis},
+			)
+		}
 	}
 
 	if fullMode {
