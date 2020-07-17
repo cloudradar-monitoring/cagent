@@ -89,13 +89,16 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 		measurements = measurements.AddWithPrefix("cpu.", cpum)
 	}
 
-	fsResults, err := ca.GetFileSystemWatcher().Results()
-	errCollector.Add(err)
-	measurements = measurements.AddWithPrefix("fs.", fsResults)
+	if ca.Config.FSMonitoring {
+		fsResults, err := ca.GetFileSystemWatcher().Results()
+		errCollector.Add(err)
+		measurements = measurements.AddWithPrefix("fs.", fsResults)
+	}
 
 	var memStat *mem.VirtualMemoryStat
 	if ca.Config.MemMonitoring {
 		var mem common.MeasurementsMap
+		var err error
 		mem, memStat, err = ca.MemResults()
 		errCollector.Add(err)
 		measurements = measurements.AddWithPrefix("mem.", mem)
