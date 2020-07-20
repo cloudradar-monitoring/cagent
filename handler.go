@@ -32,6 +32,10 @@ type cleanupCommand struct {
 	steps []func() error
 }
 
+var (
+	ErrHubTooManyRequests = errors.New("Hub replied with a 429 error code")
+)
+
 func (c *cleanupCommand) AddStep(f func() error) {
 	c.steps = append(c.steps, f)
 }
@@ -56,6 +60,11 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 		err := ca.RunOnce(outputFile, ca.Config.OperationMode == OperationModeFull)
 		if err != nil {
 			log.Error(err)
+			if err == ErrHubTooManyRequests {
+				// for error code 429, wait 10 seconds and try again
+				time.Sleep(10 * time.Second)
+				continue
+			}
 		}
 
 		select {
@@ -231,6 +240,9 @@ func (ca *Cagent) reportMeasurements(measurements common.MeasurementsMap, output
 
 	err := ca.PostResultToHub(ctx, result)
 	if err != nil {
+		if err == ErrHubTooManyRequests {
+			return err
+		}
 		err = errors.Wrap(err, "failed to POST measurement result to Hub")
 	}
 
@@ -246,6 +258,11 @@ func (ca *Cagent) RunHeartbeat(interrupt chan struct{}) {
 		err := ca.sendHeartbeat()
 		if err != nil {
 			log.WithError(err).Error("failed to send heartbeat to Hub")
+			if err == ErrHubTooManyRequests {
+				// for error code 429, wait 10 seconds and try again
+				time.Sleep(10 * time.Second)
+				continue
+			}
 		}
 
 		select {
@@ -278,6 +295,9 @@ func (ca *Cagent) sendHeartbeat() error {
 	}
 	req = req.WithContext(ctx)
 	resp, err := ca.hubClient.Do(req)
+	if resp != nil && resp.StatusCode == http.StatusTooManyRequests {
+		return ErrHubTooManyRequests
+	}
 	if err = ca.checkClientError(resp, err, "hub_user", "hub_password"); err != nil {
 		return errors.WithStack(err)
 	}
