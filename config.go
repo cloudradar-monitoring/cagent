@@ -129,6 +129,14 @@ type Config struct {
 	Updates UpdatesConfig `toml:"self_update" comment:"Control how cagent installs self-updates. Windows-only"`
 
 	DockerMonitoring DockerMonitoringConfig `toml:"docker_monitoring" comment:"Cagent monitors all running docker containers and reports them for further processing to the Hub.\nYou can change the following settings."`
+
+	MemMonitoring bool `toml:"mem_monitoring" comment:"\nTurn on or off parts of the monitoring.\nPresets of the operation_mode have precedence.\nWhat's disabled by the operation_mode can't be turned on here.\nBut it can still be turned off.\n\nTurn on/off the monitoring of memory"`
+
+	CPUMonitoring bool `toml:"cpu_monitoring" comment:"Turn on/off any CPU related monitoring including the cpu_utilisation_analysis"`
+
+	FSMonitoring bool `toml:"fs_monitoring" comment:"Turn on/off any disk- and filesystem-related monitoring like fill levels and iops"`
+
+	NetMonitoring bool `toml:"net_monitoring" comment:"Turn on/off any network-related monitoring"`
 }
 
 type ConfigDeprecated struct {
@@ -288,6 +296,10 @@ func NewConfig() *Config {
 			CheckInterval: 21600,
 		},
 		DockerMonitoring: DockerMonitoringConfig{Enabled: true},
+		MemMonitoring:    true,
+		CPUMonitoring:    true,
+		FSMonitoring:     true,
+		NetMonitoring:    true,
 	}
 
 	cfg.MinValuableConfig = *(defaultMinValuableConfig())

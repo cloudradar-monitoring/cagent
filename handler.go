@@ -10,6 +10,7 @@ import (
 
 	"github.com/cloudradar-monitoring/selfupdate"
 	"github.com/pkg/errors"
+	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
@@ -91,26 +92,37 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 	var measurements = make(common.MeasurementsMap)
 	var cfg = ca.Config
 
-	cpum, err := ca.CPUWatcher().Results()
-	errCollector.Add(err)
-	measurements = measurements.AddWithPrefix("cpu.", cpum)
+	if ca.Config.CPUMonitoring {
+		cpum, err := ca.CPUWatcher().Results()
+		errCollector.Add(err)
+		measurements = measurements.AddWithPrefix("cpu.", cpum)
+	}
 
-	fsResults, err := ca.GetFileSystemWatcher().Results()
-	errCollector.Add(err)
-	measurements = measurements.AddWithPrefix("fs.", fsResults)
+	if ca.Config.FSMonitoring {
+		fsResults, err := ca.GetFileSystemWatcher().Results()
+		errCollector.Add(err)
+		measurements = measurements.AddWithPrefix("fs.", fsResults)
+	}
 
-	mem, memStat, err := ca.MemResults()
-	errCollector.Add(err)
-	measurements = measurements.AddWithPrefix("mem.", mem)
+	var memStat *mem.VirtualMemoryStat
+	if ca.Config.MemMonitoring {
+		var mem common.MeasurementsMap
+		var err error
+		mem, memStat, err = ca.MemResults()
+		errCollector.Add(err)
+		measurements = measurements.AddWithPrefix("mem.", mem)
+	}
 
-	cpuUtilisationAnalysisResult, cpuUtilisationAnalysisIsActive, err := ca.CPUUtilisationAnalyser().Results()
-	errCollector.Add(err)
-	measurements = measurements.AddWithPrefix("cpu_utilisation_analysis.", cpuUtilisationAnalysisResult)
-	if cpuUtilisationAnalysisIsActive {
-		measurements = measurements.AddWithPrefix(
-			"cpu_utilisation_analysis.",
-			common.MeasurementsMap{"settings": cfg.CPUUtilisationAnalysis},
-		)
+	if ca.Config.CPUMonitoring {
+		cpuUtilisationAnalysisResult, cpuUtilisationAnalysisIsActive, err := ca.CPUUtilisationAnalyser().Results()
+		errCollector.Add(err)
+		measurements = measurements.AddWithPrefix("cpu_utilisation_analysis.", cpuUtilisationAnalysisResult)
+		if cpuUtilisationAnalysisIsActive {
+			measurements = measurements.AddWithPrefix(
+				"cpu_utilisation_analysis.",
+				common.MeasurementsMap{"settings": cfg.CPUUtilisationAnalysis},
+			)
+		}
 	}
 
 	if fullMode {
@@ -122,9 +134,11 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 		errCollector.Add(err)
 		measurements = measurements.AddWithPrefix("system.", ipResults)
 
-		netResults, err := ca.GetNetworkWatcher().Results()
-		errCollector.Add(err)
-		measurements = measurements.AddWithPrefix("net.", netResults)
+		if ca.Config.NetMonitoring {
+			netResults, err := ca.GetNetworkWatcher().Results()
+			errCollector.Add(err)
+			measurements = measurements.AddWithPrefix("net.", netResults)
+		}
 
 		proc, processList, err := processes.GetMeasurements(memStat, &ca.Config.ProcessMonitoring)
 		errCollector.Add(err)
@@ -134,9 +148,11 @@ func (ca *Cagent) collectMeasurements(fullMode bool) (common.MeasurementsMap, Cl
 		errCollector.Add(err)
 		measurements = measurements.AddWithPrefix("listeningports.", ports)
 
-		swap, err := ca.SwapResults()
-		errCollector.Add(err)
-		measurements = measurements.AddWithPrefix("swap.", swap)
+		if ca.Config.MemMonitoring {
+			swap, err := ca.SwapResults()
+			errCollector.Add(err)
+			measurements = measurements.AddWithPrefix("swap.", swap)
+		}
 
 		ca.getVMStatMeasurements(func(name string, meas common.MeasurementsMap, err error) {
 			if err == nil {
