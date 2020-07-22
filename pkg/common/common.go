@@ -80,6 +80,9 @@ func MergeStringMaps(mapA, mapB map[string]interface{}) map[string]interface{} {
 }
 
 func RoundToTwoDecimalPlaces(v float64) float64 {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return 0
+	}
 	return math.Round(v*100) / 100
 }
 
