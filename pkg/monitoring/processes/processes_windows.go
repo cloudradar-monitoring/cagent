@@ -87,7 +87,11 @@ func processes(systemMemorySize uint64) ([]*ProcStat, error) {
 			}
 		}
 
-		memoryUsagePercent := (float64(proc.WorkingSetSize) / float64(systemMemorySize)) * 100
+		memoryUsagePercent := 0.0
+		if systemMemorySize > 0 {
+			memoryUsagePercent = (float64(proc.WorkingSetSize) / float64(systemMemorySize)) * 100
+		}
+
 		ps := &ProcStat{
 			PID:                    int(pid),
 			ParentPID:              int(proc.InheritedFromUniqueProcessID),
