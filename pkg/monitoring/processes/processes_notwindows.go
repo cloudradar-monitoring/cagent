@@ -403,7 +403,10 @@ func gatherProcessResourceUsage(proc *process.Process, systemMemorySize uint64) 
 		log.WithError(err).Error("failed to get memory info")
 		return 0, 0, 0.0, 0.0
 	}
-	memUsagePercent := (float64(memoryInfo.RSS) / float64(systemMemorySize)) * 100
+	memUsagePercent := 0.0
+	if systemMemorySize > 0 {
+		memUsagePercent = (float64(memoryInfo.RSS) / float64(systemMemorySize)) * 100
+	}
 
 	// side effect: p.Percent() call update process internally
 	cpuUsagePercent, err := proc.Percent(time.Duration(0))
