@@ -137,6 +137,9 @@ type Config struct {
 	FSMonitoring bool `toml:"fs_monitoring" comment:"Turn on/off any disk- and filesystem-related monitoring like fill levels and iops"`
 
 	NetMonitoring bool `toml:"net_monitoring" comment:"Turn on/off any network-related monitoring"`
+
+	OnHTTP5xxRetries       int     `toml:"on_http_5xx_retries" comment:"Number of retries if server replies with a 5xx code"`
+	OnHTTP5xxRetryInterval float64 `toml:"on_http_5xx_retry_interval" comment:"Interval in seconds between retries to contact server in case of a 5xx code"`
 }
 
 type ConfigDeprecated struct {
@@ -300,6 +303,9 @@ func NewConfig() *Config {
 		CPUMonitoring:    true,
 		FSMonitoring:     true,
 		NetMonitoring:    true,
+
+		OnHTTP5xxRetries:       4,
+		OnHTTP5xxRetryInterval: 2.0,
 	}
 
 	cfg.MinValuableConfig = *(defaultMinValuableConfig())
