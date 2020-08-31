@@ -191,6 +191,15 @@ func (ca *Cagent) PostResultToHub(ctx context.Context, result *Result) error {
 	}
 	req = req.WithContext(ctx)
 	resp, err := ca.hubClient.Do(req)
+
+	if resp != nil {
+		if resp.StatusCode == http.StatusTooManyRequests {
+			return ErrHubTooManyRequests
+		}
+		if resp.StatusCode >= 500 && resp.StatusCode <= 599 {
+			return ErrHubServerError
+		}
+	}
 	if err = ca.checkClientError(resp, err, "hub_user", "hub_password"); err != nil {
 		return errors.WithStack(err)
 	}

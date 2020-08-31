@@ -35,6 +35,7 @@ type cleanupCommand struct {
 
 var (
 	ErrHubTooManyRequests = errors.New("Hub replied with a 429 error code")
+	ErrHubServerError     = errors.New("Hub replied with a 5xx error code")
 )
 
 func (c *cleanupCommand) AddStep(f func() error) {
@@ -57,6 +58,8 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 		}
 	}()
 
+	retries := 0
+
 	for {
 		err := ca.RunOnce(outputFile, ca.Config.OperationMode == OperationModeFull)
 		if err != nil {
@@ -65,6 +68,15 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 				// for error code 429, wait 10 seconds and try again
 				time.Sleep(10 * time.Second)
 				continue
+			} else if err == ErrHubServerError {
+				// for error codes 5xx, wait for configured amount of time and try again
+				retries++
+				if retries > ca.Config.OnHTTP5xxRetries {
+					log.Errorf("hub connection error. giving up")
+					return
+				}
+				log.Infof("hub connection error %d/%d, retrying in %v s", retries, ca.Config.OnHTTP5xxRetries, ca.Config.OnHTTP5xxRetryInterval)
+				time.Sleep(time.Duration(ca.Config.OnHTTP5xxRetryInterval) * time.Second)
 			}
 		}
 
@@ -256,7 +268,7 @@ func (ca *Cagent) reportMeasurements(measurements common.MeasurementsMap, output
 
 	err := ca.PostResultToHub(ctx, result)
 	if err != nil {
-		if err == ErrHubTooManyRequests {
+		if err == ErrHubTooManyRequests || err == ErrHubServerError {
 			return err
 		}
 		err = errors.Wrap(err, "failed to POST measurement result to Hub")
@@ -270,6 +282,8 @@ func (ca *Cagent) RunHeartbeat(interrupt chan struct{}) {
 		ca.selfUpdater = selfupdate.StartChecking()
 	}
 
+	retries := 0
+
 	for {
 		err := ca.sendHeartbeat()
 		if err != nil {
@@ -278,6 +292,16 @@ func (ca *Cagent) RunHeartbeat(interrupt chan struct{}) {
 				// for error code 429, wait 10 seconds and try again
 				time.Sleep(10 * time.Second)
 				continue
+			}
+			if err == ErrHubServerError {
+				// for error codes 5xx, wait for configured amount of time and try again
+				retries++
+				if retries > ca.Config.OnHTTP5xxRetries {
+					log.Errorf("hub connection error. giving up")
+					return
+				}
+				log.Infof("hub connection error %d/%d, retrying in %v s", retries, ca.Config.OnHTTP5xxRetries, ca.Config.OnHTTP5xxRetryInterval)
+				time.Sleep(time.Duration(ca.Config.OnHTTP5xxRetryInterval) * time.Second)
 			}
 		}
 
@@ -311,8 +335,13 @@ func (ca *Cagent) sendHeartbeat() error {
 	}
 	req = req.WithContext(ctx)
 	resp, err := ca.hubClient.Do(req)
-	if resp != nil && resp.StatusCode == http.StatusTooManyRequests {
-		return ErrHubTooManyRequests
+	if resp != nil {
+		if resp.StatusCode == http.StatusTooManyRequests {
+			return ErrHubTooManyRequests
+		}
+		if resp.StatusCode >= 500 && resp.StatusCode <= 599 {
+			return ErrHubServerError
+		}
 	}
 	if err = ca.checkClientError(resp, err, "hub_user", "hub_password"); err != nil {
 		return errors.WithStack(err)
