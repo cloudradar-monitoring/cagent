@@ -139,7 +139,7 @@ type Config struct {
 	NetMonitoring bool `toml:"net_monitoring" comment:"Turn on/off any network-related monitoring"`
 
 	OnHTTP5xxRetries       int     `toml:"on_http_5xx_retries" comment:"Number of retries if server replies with a 5xx code"`
-	OnHTTP5xxRetryInterval float64 `toml:"on_http_5xx_retry_interval" comment:"Interval between retries to contact server in case of a 5xx code"`
+	OnHTTP5xxRetryInterval float64 `toml:"on_http_5xx_retry_interval" comment:"Interval in seconds between retries to contact server in case of a 5xx code"`
 }
 
 type ConfigDeprecated struct {
