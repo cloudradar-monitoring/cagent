@@ -63,7 +63,6 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 	for {
 		err := ca.RunOnce(outputFile, ca.Config.OperationMode == OperationModeFull)
 		if err != nil {
-			log.Error(err)
 			if err == ErrHubTooManyRequests {
 				// for error code 429, wait 10 seconds and try again
 				time.Sleep(10 * time.Second)
@@ -77,6 +76,8 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 				}
 				log.Infof("hub connection error %d/%d, retrying in %v s", retries, ca.Config.OnHTTP5xxRetries, ca.Config.OnHTTP5xxRetryInterval)
 				time.Sleep(time.Duration(ca.Config.OnHTTP5xxRetryInterval) * time.Second)
+			} else {
+				log.Error(err)
 			}
 		}
 
@@ -287,13 +288,11 @@ func (ca *Cagent) RunHeartbeat(interrupt chan struct{}) {
 	for {
 		err := ca.sendHeartbeat()
 		if err != nil {
-			log.WithError(err).Error("failed to send heartbeat to Hub")
 			if err == ErrHubTooManyRequests {
 				// for error code 429, wait 10 seconds and try again
 				time.Sleep(10 * time.Second)
 				continue
-			}
-			if err == ErrHubServerError {
+			} else if err == ErrHubServerError {
 				// for error codes 5xx, wait for configured amount of time and try again
 				retries++
 				if retries > ca.Config.OnHTTP5xxRetries {
@@ -302,6 +301,8 @@ func (ca *Cagent) RunHeartbeat(interrupt chan struct{}) {
 				}
 				log.Infof("hub connection error %d/%d, retrying in %v s", retries, ca.Config.OnHTTP5xxRetries, ca.Config.OnHTTP5xxRetryInterval)
 				time.Sleep(time.Duration(ca.Config.OnHTTP5xxRetryInterval) * time.Second)
+			} else {
+				log.WithError(err).Error("failed to send heartbeat to Hub")
 			}
 		}
 
