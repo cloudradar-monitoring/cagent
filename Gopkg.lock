@@ -193,7 +193,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:52e4345e8592bcdf08663a7ff7168d49ec1b74e8f17b312a10d4aa5544b1bb22"
+  digest = "1:953a178516062920b37b15a50a9f7b115c781edef240399a176b01d5176ff9d6"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
@@ -206,8 +206,8 @@
     "process",
   ]
   pruneopts = "UT"
-  revision = "071446942108a03a13cf0717275ad3bdbcb691b4"
-  version = "v2.19.01"
+  revision = "9aa2bee419e8b592ecf9f46018f3f1f6a5474c10"
+  version = "v2.20.8"
 
 [[projects]]
   branch = "master"
@@ -253,9 +253,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:84e425bb191e91e9135aad44404507f8185a594dad341684b3985ad0c9954641"
+  digest = "1:02ad8623bc3dd5b0138eb1c9e44b9cc58c917450f3baf0a584d978d80b6d9cf7"
   name = "golang.org/x/sys"
   packages = [
+    "internal/unsafeheader",
     "unix",
     "windows",
     "windows/registry",
@@ -264,7 +265,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "UT"
-  revision = "e66fe6eb8e0cbfacade8b490cf55cd2494f4db62"
+  revision = "be1d3432aa8f4fd677757447c4c9e7ff9bf25f73"
 
 [[projects]]
   digest = "1:5d3e23515e7916c152cc665eda0f7eaf6fdf8fdfe7c3dbac97049bcbd649b33f"
@@ -305,6 +306,7 @@
     "github.com/StackExchange/wmi",
     "github.com/cloudradar-monitoring/dmidecode",
     "github.com/cloudradar-monitoring/selfupdate",
+    "github.com/davecgh/go-spew/spew",
     "github.com/gentlemanautomaton/windevice",
     "github.com/gentlemanautomaton/windevice/deviceclass",
     "github.com/go-ole/go-ole",
