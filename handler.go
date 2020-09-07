@@ -72,10 +72,8 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 				retries++
 				if retries > ca.Config.OnHTTP5xxRetries {
 					log.Error("Run: hub connection error. giving up")
-					return
+					retries = 0
 				}
-				log.Infof("Run: hub connection error %d/%d, retrying in %v s", retries, ca.Config.OnHTTP5xxRetries, ca.Config.OnHTTP5xxRetryInterval)
-				time.Sleep(time.Duration(ca.Config.OnHTTP5xxRetryInterval) * time.Second)
 			} else {
 				log.Error(err)
 			}
@@ -84,8 +82,17 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 		select {
 		case <-interrupt:
 			return
-		case <-time.After(secToDuration(ca.Config.Interval)):
-			continue
+		default:
+			if retries > 0 {
+				log.Infof("Run: hub connection error %d/%d, retrying in %v s", retries, ca.Config.OnHTTP5xxRetries, ca.Config.OnHTTP5xxRetryInterval)
+				time.Sleep(time.Duration(ca.Config.OnHTTP5xxRetryInterval) * time.Second)
+				continue
+			}
+
+			select {
+			case <-time.After(secToDuration(ca.Config.Interval)):
+				continue
+			}
 		}
 	}
 }
@@ -297,10 +304,8 @@ func (ca *Cagent) RunHeartbeat(interrupt chan struct{}) {
 				retries++
 				if retries > ca.Config.OnHTTP5xxRetries {
 					log.Error("RunHeartbeat: hub connection error. giving up")
-					return
+					retries = 0
 				}
-				log.Infof("RunHeartbeat: hub connection error %d/%d, retrying in %v s", retries, ca.Config.OnHTTP5xxRetries, ca.Config.OnHTTP5xxRetryInterval)
-				time.Sleep(time.Duration(ca.Config.OnHTTP5xxRetryInterval) * time.Second)
 			} else {
 				log.WithError(err).Error("failed to send heartbeat to Hub")
 			}
@@ -309,8 +314,17 @@ func (ca *Cagent) RunHeartbeat(interrupt chan struct{}) {
 		select {
 		case <-interrupt:
 			return
-		case <-time.After(secToDuration(ca.Config.HeartbeatInterval)):
-			continue
+		default:
+			if retries > 0 {
+				log.Infof("RunHeartbeat: hub connection error %d/%d, retrying in %v s", retries, ca.Config.OnHTTP5xxRetries, ca.Config.OnHTTP5xxRetryInterval)
+				time.Sleep(time.Duration(ca.Config.OnHTTP5xxRetryInterval) * time.Second)
+				continue
+			}
+
+			select {
+			case <-time.After(secToDuration(ca.Config.HeartbeatInterval)):
+				continue
+			}
 		}
 	}
 }
