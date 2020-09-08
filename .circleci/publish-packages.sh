@@ -47,7 +47,7 @@ scp -P 24480 -oStrictHostKeyChecking=no ci@repo.cloudradar.io:${WORK_DIR}/msi/ca
 
 # scan signed MSI
 go get github.com/cloudradar-monitoring/virustotal-scan
-virustotal-scan --verbose --ignore Cylance,Jiangmin,Ikarus,MaxSecure --apikey ${VIRUSTOTAL_TOKEN} --file ${PROJECT_DIR}/dist/cagent_64.msi
+virustotal-scan --verbose --ignore Cylance,Jiangmin,Ikarus,MaxSecure,Microsoft --apikey ${VIRUSTOTAL_TOKEN} --file ${PROJECT_DIR}/dist/cagent_64.msi
 
 # publish built files to Github
 github_upload --name "cagent_${CIRCLE_TAG}_Windows_x86_64.msi" --file "${PROJECT_DIR}/dist/cagent_64.msi"
