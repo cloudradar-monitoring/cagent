@@ -74,6 +74,7 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 				if retries > ca.Config.OnHTTP5xxRetries {
 					log.Error("Run: hub connection error")
 					retries = 0
+					retryIn = secToDuration(ca.Config.Interval)
 				} else {
 					log.Infof("Run: hub connection error %d/%d, retrying in %v s", retries, ca.Config.OnHTTP5xxRetries, ca.Config.OnHTTP5xxRetryInterval)
 				}
@@ -300,6 +301,7 @@ func (ca *Cagent) RunHeartbeat(interrupt chan struct{}) {
 				if retries > ca.Config.OnHTTP5xxRetries {
 					log.Error("RunHeartbeat: hub connection error")
 					retries = 0
+					retryIn = secToDuration(ca.Config.HeartbeatInterval)
 				} else {
 					log.Infof("RunHeartbeat: hub connection error %d/%d, retrying in %v s", retries, ca.Config.OnHTTP5xxRetries, ca.Config.OnHTTP5xxRetryInterval)
 				}
