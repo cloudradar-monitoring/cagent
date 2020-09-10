@@ -60,6 +60,7 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 
 	retries := 0
 	retryIn := secToDuration(ca.Config.Interval)
+	var firstRetry time.Time
 
 	for {
 		err := ca.RunOnce(outputFile, ca.Config.OperationMode == OperationModeFull)
@@ -70,11 +71,17 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 			} else if err == ErrHubServerError {
 				// for error codes 5xx, wait for configured amount of time and try again
 				retryIn = time.Duration(ca.Config.OnHTTP5xxRetryInterval) * time.Second
+				if retries == 0 {
+					firstRetry = time.Now()
+				}
 				retries++
 				if retries > ca.Config.OnHTTP5xxRetries {
-					log.Error("Run: hub connection error")
 					retries = 0
-					retryIn = secToDuration(ca.Config.Interval)
+					retryIn = secToDuration(ca.Config.Interval) - time.Since(firstRetry)
+					if retryIn < 0 {
+						retryIn = 0
+					}
+					log.Errorf("Run: hub connection error, next run in %v s (out of %v s)", retryIn, secToDuration(ca.Config.Interval))
 				} else {
 					log.Infof("Run: hub connection error %d/%d, retrying in %v s", retries, ca.Config.OnHTTP5xxRetries, ca.Config.OnHTTP5xxRetryInterval)
 				}
@@ -285,6 +292,7 @@ func (ca *Cagent) RunHeartbeat(interrupt chan struct{}) {
 		ca.selfUpdater = selfupdate.StartChecking()
 	}
 
+	var firstRetry time.Time
 	retries := 0
 	retryIn := secToDuration(ca.Config.HeartbeatInterval)
 
@@ -297,11 +305,17 @@ func (ca *Cagent) RunHeartbeat(interrupt chan struct{}) {
 			} else if err == ErrHubServerError {
 				// for error codes 5xx, wait for configured amount of time and try again
 				retryIn = time.Duration(ca.Config.OnHTTP5xxRetryInterval) * time.Second
+				if retries == 0 {
+					firstRetry = time.Now()
+				}
 				retries++
 				if retries > ca.Config.OnHTTP5xxRetries {
-					log.Error("RunHeartbeat: hub connection error")
 					retries = 0
-					retryIn = secToDuration(ca.Config.HeartbeatInterval)
+					retryIn = secToDuration(ca.Config.HeartbeatInterval) - time.Since(firstRetry)
+					if retryIn < 0 {
+						retryIn = 0
+					}
+					log.Errorf("RunHeartbeat: hub connection error, next run in %v s (out of %v s)", retryIn, secToDuration(ca.Config.HeartbeatInterval))
 				} else {
 					log.Infof("RunHeartbeat: hub connection error %d/%d, retrying in %v s", retries, ca.Config.OnHTTP5xxRetries, ca.Config.OnHTTP5xxRetryInterval)
 				}
