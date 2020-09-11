@@ -61,9 +61,19 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 	retries := 0
 	retryIn := secToDuration(ca.Config.Interval)
 	var firstRetry time.Time
+	var measurements common.MeasurementsMap
+	var cleaner Cleaner
 
 	for {
-		err := ca.RunOnce(outputFile, ca.Config.OperationMode == OperationModeFull)
+		if retries == 0 {
+			log.Debug("Run: collectMeasurements")
+			measurements, cleaner = ca.collectMeasurements(ca.Config.OperationMode == OperationModeFull)
+		}
+		err := ca.reportMeasurements(measurements, outputFile)
+		if err == nil {
+			err = cleaner.Cleanup()
+		}
+
 		if err != nil {
 			if err == ErrHubTooManyRequests {
 				// for error code 429, wait 10 seconds and try again
