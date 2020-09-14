@@ -14,6 +14,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/cloudradar-monitoring/cagent"
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/proxydetect"
 )
@@ -82,6 +83,15 @@ func (cs *Csender) Send() error {
 	}
 
 	defer resp.Body.Close()
+
+	if resp != nil {
+		if resp.StatusCode == http.StatusTooManyRequests {
+			return cagent.ErrHubTooManyRequests
+		}
+		if resp.StatusCode >= 500 && resp.StatusCode <= 599 {
+			return cagent.ErrHubServerError
+		}
+	}
 
 	if err := clientError(resp, err); err != nil {
 		return err

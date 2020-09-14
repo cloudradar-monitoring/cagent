@@ -6,7 +6,9 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/apex/log"
 	"github.com/cloudradar-monitoring/cagent"
 	"github.com/cloudradar-monitoring/cagent/pkg/csender"
 )
@@ -155,9 +157,39 @@ func main() {
 		}
 	}
 
-	err = cs.Send()
-	if err != nil {
-		fatal(err.Error())
+	retries := 0
+	retryLimit := 5
+	retryInterval := 2 * time.Second
+	var retryIn time.Duration
+
+	for {
+		err = cs.Send()
+		if err == nil {
+			// graceful exit on success
+			return
+		}
+
+		if err == cagent.ErrHubTooManyRequests {
+			// for error code 429, wait 10 seconds and try again
+			retryIn = 10 * time.Second
+		} else if err == cagent.ErrHubServerError {
+			// for error codes 5xx, wait for 2 seconds and try again
+			retryIn = retryInterval
+			retries++
+			if retries > retryLimit {
+				log.Errorf("csender: hub connection error, giving up")
+				return
+			} else {
+				log.Infof("csender: hub connection error %d/%d, retrying in %v", retries, retryLimit, retryInterval)
+			}
+		} else {
+			fatal(err.Error())
+		}
+
+		select {
+		case <-time.After(retryIn):
+			continue
+		}
 	}
 }
 
