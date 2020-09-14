@@ -11,9 +11,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 
+	"github.com/cloudradar-monitoring/cagent"
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 	"github.com/cloudradar-monitoring/cagent/pkg/proxydetect"
 )
@@ -40,6 +43,45 @@ func (cs *Csender) httpClient() *http.Client {
 	}
 }
 
+// GracefulSend sends to hub with retry logic
+func (cs *Csender) GracefulSend() error {
+
+	retries := 0
+	retryLimit := 5
+	retryInterval := 2 * time.Second
+	var retryIn time.Duration
+
+	for {
+		err := cs.Send()
+		if err == nil {
+			return nil
+		}
+
+		if err == cagent.ErrHubTooManyRequests {
+			// for error code 429, wait 10 seconds and try again
+			retryIn = 10 * time.Second
+		} else if err == cagent.ErrHubServerError {
+			// for error codes 5xx, wait for 2 seconds and try again
+			retryIn = retryInterval
+			retries++
+			if retries > retryLimit {
+				log.Errorf("csender: hub connection error, giving up")
+				return nil
+			} else {
+				log.Infof("csender: hub connection error %d/%d, retrying in %v", retries, retryLimit, retryInterval)
+			}
+		} else {
+			return err
+		}
+
+		select {
+		case <-time.After(retryIn):
+			continue
+		}
+	}
+}
+
+// Send is used by csender
 func (cs *Csender) Send() error {
 	client := cs.httpClient()
 
@@ -82,6 +124,15 @@ func (cs *Csender) Send() error {
 	}
 
 	defer resp.Body.Close()
+
+	if resp != nil {
+		if resp.StatusCode == http.StatusTooManyRequests {
+			return cagent.ErrHubTooManyRequests
+		}
+		if resp.StatusCode >= 500 && resp.StatusCode <= 599 {
+			return cagent.ErrHubServerError
+		}
+	}
 
 	if err := clientError(resp, err); err != nil {
 		return err

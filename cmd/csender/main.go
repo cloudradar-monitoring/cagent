@@ -155,8 +155,7 @@ func main() {
 		}
 	}
 
-	err = cs.Send()
-	if err != nil {
+	if err := cs.GracefulSend(); err != nil {
 		fatal(err.Error())
 	}
 }
