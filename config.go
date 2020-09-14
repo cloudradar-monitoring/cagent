@@ -559,6 +559,18 @@ func (cfg *Config) validate() error {
 		return fmt.Errorf("invalid [updates] config: %s", err.Error())
 	}
 
+	if cfg.OnHTTP5xxRetries < 0 || cfg.OnHTTP5xxRetries > 5 {
+		cfg.OnHTTP5xxRetries = 5
+		log.Warn("on_http_5xx_retries value out of range (0-5). was reset to 5")
+		return nil
+	}
+
+	if cfg.OnHTTP5xxRetryInterval < 1 || cfg.OnHTTP5xxRetryInterval > 3 {
+		cfg.OnHTTP5xxRetryInterval = 3
+		log.Warn("on_http_5xx_retry_interval value out of range (1-3). was reset to 3")
+		return nil
+	}
+
 	return nil
 }
 
