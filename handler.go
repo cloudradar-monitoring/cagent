@@ -78,6 +78,7 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 			if err == ErrHubTooManyRequests {
 				// for error code 429, wait 10 seconds and try again
 				retryIn = 10 * time.Second
+				log.Errorf("Run: hub is overloaded, retrying in %v", retryIn)
 			} else if err == ErrHubServerError {
 				// for error codes 5xx, wait for configured amount of time and try again
 				retryIn = time.Duration(ca.Config.OnHTTP5xxRetryInterval) * time.Second
@@ -312,6 +313,7 @@ func (ca *Cagent) RunHeartbeat(interrupt chan struct{}) {
 			if err == ErrHubTooManyRequests {
 				// for error code 429, wait 10 seconds and try again
 				retryIn = 10 * time.Second
+				log.Errorf("RunHeartbeat: hub is overloaded, retrying in %v", retryIn)
 			} else if err == ErrHubServerError {
 				// for error codes 5xx, wait for configured amount of time and try again
 				retryIn = time.Duration(ca.Config.OnHTTP5xxRetryInterval) * time.Second

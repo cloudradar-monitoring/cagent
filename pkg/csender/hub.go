@@ -60,6 +60,7 @@ func (cs *Csender) GracefulSend() error {
 		if err == cagent.ErrHubTooManyRequests {
 			// for error code 429, wait 10 seconds and try again
 			retryIn = 10 * time.Second
+			log.Errorf("csender: hub is overloaded, retrying in %v", retryIn)
 		} else if err == cagent.ErrHubServerError {
 			// for error codes 5xx, wait for 2 seconds and try again
 			retryIn = retryInterval
