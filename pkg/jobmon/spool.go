@@ -201,7 +201,23 @@ func (s *SpoolManager) getLock(jobID string) error {
 	if err != nil {
 		return err
 	}
-	err = s.lock.TryLock()
+
+	retryLimit := 3
+	retry := 0
+	for {
+		err = s.lock.TryLock()
+		if err != nil {
+			retry++
+			if retry >= retryLimit {
+				break
+			}
+			s.logger.Error("job %s: could not get lock try %d, retrying in 10s", jobID, retry)
+			time.Sleep(10 * time.Second)
+		} else {
+			return nil
+		}
+	}
+
 	if err != nil {
 		if jobID != "" {
 			err = errors.Wrap(err, fmt.Sprintf("job %s failed, could not get lock", jobID))
