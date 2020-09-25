@@ -41,7 +41,7 @@ func NewSpoolManager(dirPath string, logger *logrus.Logger) *SpoolManager {
 }
 
 func (s *SpoolManager) NewJob(r *JobRun, forcedRun bool) (string, error) {
-	err := s.getLock()
+	err := s.getLock(r.ID)
 	if err != nil {
 		return "", err
 	}
@@ -78,7 +78,7 @@ func (s *SpoolManager) NewJob(r *JobRun, forcedRun bool) (string, error) {
 }
 
 func (s *SpoolManager) FinishJob(uniqID string, r *JobRun) error {
-	err := s.getLock()
+	err := s.getLock(r.ID)
 	if err != nil {
 		return err
 	}
@@ -88,14 +88,14 @@ func (s *SpoolManager) FinishJob(uniqID string, r *JobRun) error {
 	newFilePath := s.getFilePath(getUniqJobRunID(r.ID, true, r.StartedAt))
 	err = os.Rename(filePath, newFilePath)
 	if err != nil {
-		return errors.Wrapf(err, "could not mark job %s as finished", uniqID)
+		return errors.Wrapf(err, "could not mark job %s (unique %s) as finished", r.ID, uniqID)
 	}
 
 	return s.saveJobRun(newFilePath, r)
 }
 
 func (s *SpoolManager) GetFinishedJobs() ([]string, []*JobRun, error) {
-	err := s.getLock()
+	err := s.getLock("")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -136,7 +136,7 @@ func (s *SpoolManager) readEntryFile(path string) (*JobRun, error) {
 }
 
 func (s *SpoolManager) RemoveJobs(ids []string) error {
-	err := s.getLock()
+	err := s.getLock("")
 	if err != nil {
 		return err
 	}
@@ -191,19 +191,40 @@ func (s *SpoolManager) findDuplicateRuns(jobID string) ([]string, error) {
 	pattern := fmt.Sprintf("%s/%s_*_%s.%s", s.dirPath, markerRunning, encodedJobID, jsonExtension)
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
-		return nil, errors.Wrapf(err, "while searching %s", pattern)
+		return nil, errors.Wrapf(err, "job %s failed while searching %s", jobID, pattern)
 	}
 	return matches, nil
 }
 
-func (s *SpoolManager) getLock() error {
+func (s *SpoolManager) getLock(jobID string) error {
 	err := s.ensureSpoolDirExists()
 	if err != nil {
 		return err
 	}
-	err = s.lock.TryLock()
+
+	retryLimit := 20
+	retry := 0
+	retryIn := 500 * time.Millisecond
+	for {
+		err = s.lock.TryLock()
+		if err != nil {
+			retry++
+			if retry >= retryLimit {
+				break
+			}
+			s.logger.Errorf("job %s: could not get lock try %d/%d, retrying in %v", jobID, retry, retryLimit, retryIn)
+			time.Sleep(retryIn)
+		} else {
+			return nil
+		}
+	}
+
 	if err != nil {
-		err = errors.Wrap(err, "could not get lock")
+		if jobID != "" {
+			err = errors.Wrapf(err, "job %s failed, could not get lock", jobID)
+		} else {
+			err = errors.Wrap(err, "could not get lock")
+		}
 	}
 	return err
 }
