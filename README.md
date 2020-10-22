@@ -22,7 +22,7 @@ Default locations:
 ## Logs location
 * Mac OS: `~/.cagent/cagent.log`
 * Windows: `./cagent.log`
-* UNIX: `/etc/cagent/cagent.conf`
+* UNIX: `/var/log/cagent/cagent.log`
 
 ## Build binaries and deb/rpm packages
 – Install [goreleaser](https://goreleaser.com/introduction/)
