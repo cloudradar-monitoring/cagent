@@ -219,13 +219,6 @@ func (s *SpoolManager) getLock(jobID string) error {
 		}
 	}
 
-	if err != nil {
-		if jobID != "" {
-			err = errors.Wrapf(err, "job %s failed, could not get lock", jobID)
-		} else {
-			err = errors.Wrap(err, "could not get lock")
-		}
-	}
 	return err
 }
 
