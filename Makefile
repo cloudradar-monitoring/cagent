@@ -50,7 +50,7 @@ goimports:
 docker-goreleaser: goreleaser-precheck
 	docker run -it --rm --privileged \
 		-v ${PWD}:${PROJECT_DIR} \
-		-v $(go env GOCACHE):/root/.cache/go-build \
+		-v $(shell go env GOCACHE):/root/.cache/go-build \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w ${PROJECT_DIR} \
 		-e SELF_UPDATES_FEED_URL=$(SELF_UPDATES_FEED_URL) \
