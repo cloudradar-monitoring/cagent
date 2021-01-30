@@ -68,17 +68,13 @@ func (cs *Csender) GracefulSend() error {
 			if retries > retryLimit {
 				log.Errorf("csender: hub connection error, giving up")
 				return nil
-			} else {
-				log.Infof("csender: hub connection error %d/%d, retrying in %v", retries, retryLimit, retryInterval)
 			}
+			log.Infof("csender: hub connection error %d/%d, retrying in %v", retries, retryLimit, retryInterval)
 		} else {
 			return err
 		}
 
-		select {
-		case <-time.After(retryIn):
-			continue
-		}
+		time.Sleep(retryIn)
 	}
 }
 
