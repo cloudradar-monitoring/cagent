@@ -291,12 +291,8 @@ func execPS() ([]byte, error) {
 		return nil, err
 	}
 
-	out, err := exec.Command(bin, "axwwo", "pid,ppid,pgrp,state,command").Output()
-	if err != nil {
-		return nil, err
-	}
-
-	return out, err
+	out, _ := exec.Command(bin, "axwwo", "pid,ppid,pgrp,state,command").Output()
+	return out, nil
 }
 
 func processesFromPS(systemMemorySize uint64) ([]*ProcStat, error) {
