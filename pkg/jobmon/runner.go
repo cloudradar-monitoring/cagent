@@ -97,7 +97,7 @@ func (r *Runner) waitForInterruptionSignal(ch chan os.Signal, cmd *exec.Cmd, run
 		return
 	}
 	osSpecificCommandTermination(cmd)
-	msg := fmt.Sprintf("Jobmon has received an interruption signal and all subprocesses have been terminated. This normally means someone has ended jobmon.")
+	msg := "Jobmon has received an interruption signal and all subprocesses have been terminated. This normally means someone has ended jobmon."
 	runResult.AddError(msg)
 }
 

@@ -53,7 +53,7 @@ fs_metrics = ['a', 'b']
 	assert.Nil(t, err)
 	defer os.Remove(tmpFile.Name())
 
-	err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0755)
+	err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0600)
 	assert.Nil(t, err)
 
 	err = TryUpdateConfigFromFile(&config, tmpFile.Name())
@@ -102,7 +102,7 @@ fs_metrics = ['a', 'b']
 		assert.Nil(t, err)
 		defer os.Remove(tmpFile.Name())
 
-		err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0755)
+		err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0600)
 		assert.Nil(t, err)
 
 		config, err := HandleAllConfigSetup(tmpFile.Name())
@@ -154,7 +154,7 @@ fs_metrics = ['a', 'b']
 		assert.Nil(t, err)
 		defer os.Remove(tmpFile.Name())
 
-		err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0755)
+		err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0600)
 		assert.Nil(t, err)
 
 		_, err = HandleAllConfigSetup(tmpFile.Name())
@@ -175,7 +175,7 @@ fs_metrics = ['a', 'b']
 		assert.Nil(t, err)
 		defer os.Remove(tmpFile.Name())
 
-		err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0755)
+		err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0600)
 		assert.Nil(t, err)
 
 		_, err = HandleAllConfigSetup(tmpFile.Name())

@@ -8,5 +8,5 @@ func ReadTemperatureSensors() ([]*TemperatureSensorInfo, error) {
 }
 
 func Shutdown() {
-	
+
 }
