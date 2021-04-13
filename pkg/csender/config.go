@@ -9,10 +9,11 @@ import (
 )
 
 type Csender struct {
-	HubURL    string
-	HubToken  string
-	HubGzip   bool
-	CheckName string
+	HubURL     string
+	HubToken   string
+	HubGzip    bool
+	CheckName  string
+	RetryLimit int
 
 	version string
 	result  common.MeasurementsMap

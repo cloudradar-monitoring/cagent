@@ -47,8 +47,6 @@ func (cs *Csender) httpClient() *http.Client {
 func (cs *Csender) GracefulSend() error {
 
 	retries := 0
-	retryLimit := 5
-	retryInterval := 2 * time.Second
 	var retryIn time.Duration
 
 	for {
@@ -62,14 +60,15 @@ func (cs *Csender) GracefulSend() error {
 			retryIn = 10 * time.Second
 			log.Infof("csender: HTTP 429, too many requests, retrying in %v", retryIn)
 		} else if err == cagent.ErrHubServerError {
-			// for error codes 5xx, wait for 2 seconds and try again
-			retryIn = retryInterval
+			// for error codes 5xx, wait for 1 seconds and try again, increase by 1 second each retry
 			retries++
-			if retries > retryLimit {
+			retryIn = time.Duration(retries) * time.Second
+
+			if retries > cs.RetryLimit {
 				log.Errorf("csender: hub connection error, giving up")
 				return nil
 			}
-			log.Infof("csender: hub connection error %d/%d, retrying in %v", retries, retryLimit, retryInterval)
+			log.Infof("csender: hub connection error %d/%d, retrying in %v", retries, cs.RetryLimit, retryIn)
 		} else {
 			return err
 		}

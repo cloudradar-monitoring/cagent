@@ -70,6 +70,7 @@ func main() {
 	flag.Var(&successFlag, "s", "set success [0,1]")
 	alertMessagePtr := flag.String("a", "", "alert message")
 	warningMessagePtr := flag.String("w", "", "warning message")
+	retriesPtr := flag.String("r", "5", "number of retries")
 
 	versionPtr := flag.Bool("version", false, "show the csender version")
 	flag.Usage = func() {
@@ -103,10 +104,11 @@ func main() {
 	}
 
 	cs := csender.Csender{
-		HubURL:    *hubURLPtr,
-		HubToken:  *tokenPtr,
-		CheckName: *checkNamePtr,
-		HubGzip:   true,
+		HubURL:     *hubURLPtr,
+		HubToken:   *tokenPtr,
+		CheckName:  *checkNamePtr,
+		HubGzip:    true,
+		RetryLimit: 5,
 	}
 
 	var kvParams []string
@@ -153,6 +155,14 @@ func main() {
 		if err != nil {
 			fatal(err.Error())
 		}
+	}
+
+	if retriesPtr != nil {
+		retries, err := strconv.ParseInt(*retriesPtr, 10, 64)
+		if err != nil {
+			fatal(err.Error())
+		}
+		cs.RetryLimit = int(retries)
 	}
 
 	if err := cs.GracefulSend(); err != nil {
