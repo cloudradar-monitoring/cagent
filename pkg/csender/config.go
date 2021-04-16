@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
@@ -15,6 +16,7 @@ type Csender struct {
 	CheckName  string
 	Verbose    bool
 	RetryLimit int
+	Timeout    time.Duration
 
 	version string
 	result  common.MeasurementsMap

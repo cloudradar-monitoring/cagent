@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cloudradar-monitoring/cagent"
 	"github.com/cloudradar-monitoring/cagent/pkg/csender"
@@ -71,6 +72,7 @@ func main() {
 	alertMessagePtr := flag.String("a", "", "alert message")
 	warningMessagePtr := flag.String("w", "", "warning message")
 	retriesPtr := flag.String("r", "5", "number of retries")
+	maxTimePtr := flag.String("m", "15", "hub connection timeout in seconds")
 	verbosePtr := flag.Bool("v", false, "verbose")
 
 	versionPtr := flag.Bool("version", false, "show the csender version")
@@ -109,6 +111,7 @@ func main() {
 		HubToken:   *tokenPtr,
 		CheckName:  *checkNamePtr,
 		Verbose:    *verbosePtr,
+		Timeout:    15 * time.Second,
 		HubGzip:    true,
 		RetryLimit: 5,
 	}
@@ -165,6 +168,14 @@ func main() {
 			fatal(err.Error())
 		}
 		cs.RetryLimit = int(retries)
+	}
+
+	if maxTimePtr != nil {
+		maxTime, err := strconv.ParseInt(*maxTimePtr, 10, 64)
+		if err != nil {
+			fatal(err.Error())
+		}
+		cs.Timeout = time.Duration(maxTime) * time.Second
 	}
 
 	if err := cs.GracefulSend(); err != nil {

@@ -38,7 +38,7 @@ func (cs *Csender) httpClient() *http.Client {
 	proxydetect.UserAgent = cs.userAgent()
 
 	return &http.Client{
-		Timeout:   HubTimeout,
+		Timeout:   cs.Timeout,
 		Transport: &tr,
 	}
 }
