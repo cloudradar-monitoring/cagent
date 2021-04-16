@@ -71,6 +71,7 @@ func main() {
 	alertMessagePtr := flag.String("a", "", "alert message")
 	warningMessagePtr := flag.String("w", "", "warning message")
 	retriesPtr := flag.String("r", "5", "number of retries")
+	verbosePtr := flag.Bool("v", false, "verbose")
 
 	versionPtr := flag.Bool("version", false, "show the csender version")
 	flag.Usage = func() {
@@ -107,6 +108,7 @@ func main() {
 		HubURL:     *hubURLPtr,
 		HubToken:   *tokenPtr,
 		CheckName:  *checkNamePtr,
+		Verbose:    *verbosePtr,
 		HubGzip:    true,
 		RetryLimit: 5,
 	}

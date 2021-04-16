@@ -50,25 +50,42 @@ func (cs *Csender) GracefulSend() error {
 	var retryIn time.Duration
 
 	for {
-		err := cs.Send()
+		statusCode, err := cs.Send()
 		if err == nil {
 			return nil
+		}
+
+		if cs.Verbose {
+			if statusCode >= 200 && statusCode <= 299 {
+				fmt.Fprintln(os.Stdout, "HTTP CODE", statusCode)
+			} else {
+				fmt.Fprintln(os.Stderr, "HTTP CODE", statusCode)
+			}
 		}
 
 		if err == cagent.ErrHubTooManyRequests {
 			// for error code 429, wait 10 seconds and try again
 			retryIn = 10 * time.Second
 			log.Infof("csender: HTTP 429, too many requests, retrying in %v", retryIn)
-		} else if err == cagent.ErrHubServerError {
+			if cs.Verbose {
+				fmt.Fprintf(os.Stdout, "got HTTP %d from %s, retrying in %v\n", statusCode, cs.HubURL, retryIn)
+			}
+		} else if err == cagent.ErrHubServerError || errors.Is(err, context.DeadlineExceeded) {
 			// for error codes 5xx, wait for 1 seconds and try again, increase by 1 second each retry
 			retries++
 			retryIn = time.Duration(retries) * time.Second
 
 			if retries > cs.RetryLimit {
-				log.Errorf("csender: hub connection error, giving up")
+				log.Errorf("csender: hub connection error, giving up after %d tries", retries)
+				if cs.Verbose {
+					fmt.Fprintf(os.Stderr, "giving up after %d tries\n", retries)
+				}
 				return nil
 			}
-			log.Infof("csender: hub connection error %d/%d, retrying in %v", retries, cs.RetryLimit, retryIn)
+			log.Infof("csender: hub connection error '%s', %d/%d, retrying in %v", err, retries, cs.RetryLimit, retryIn)
+			if cs.Verbose {
+				fmt.Fprintf(os.Stdout, "got HTTP %d from %s, retrying in %v\n", statusCode, cs.HubURL, retryIn)
+			}
 		} else {
 			return err
 		}
@@ -77,17 +94,17 @@ func (cs *Csender) GracefulSend() error {
 	}
 }
 
-// Send is used by csender
-func (cs *Csender) Send() error {
+// Send is used by csender. returns status code, error
+func (cs *Csender) Send() (int, error) {
 	client := cs.httpClient()
 
 	if _, err := url.Parse(cs.HubURL); err != nil {
-		return fmt.Errorf("incorrect URL provided with -u (hub URL): %s", err.Error())
+		return 0, fmt.Errorf("incorrect URL provided with -u (hub URL): %s", err.Error())
 	}
 
 	b, err := json.Marshal(cs.result)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	var req *http.Request
@@ -99,7 +116,7 @@ func (cs *Csender) Send() error {
 		_ = zw.Close()
 		req, err = http.NewRequest("POST", cs.HubURL, &buffer)
 		if err != nil {
-			return fmt.Errorf("failed to create HTTPS request: %s", err.Error())
+			return 0, fmt.Errorf("failed to create HTTPS request: %s", err.Error())
 		}
 
 		req.Header.Set("Content-Encoding", "gzip")
@@ -108,7 +125,7 @@ func (cs *Csender) Send() error {
 	}
 
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	req.Header.Add("User-Agent", cs.userAgent())
@@ -116,33 +133,29 @@ func (cs *Csender) Send() error {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return clientError(resp, err)
+		return 0, clientError(resp, err)
 	}
 
 	defer resp.Body.Close()
 
 	if resp != nil {
 		if resp.StatusCode == http.StatusTooManyRequests {
-			return cagent.ErrHubTooManyRequests
+			return resp.StatusCode, cagent.ErrHubTooManyRequests
 		}
 		if resp.StatusCode >= 500 && resp.StatusCode <= 599 {
-			return cagent.ErrHubServerError
+			return resp.StatusCode, cagent.ErrHubServerError
 		}
 	}
 
 	if err := clientError(resp, err); err != nil {
-		return err
+		return resp.StatusCode, err
 	}
 
-	return nil
+	return resp.StatusCode, nil
 }
 
 func clientError(resp *http.Response, err error) error {
 	if err != nil {
-		if errors.Cause(err) == context.DeadlineExceeded {
-			err = errors.New("connection timeout, please check your proxy or firewall settings")
-			return err
-		}
 		return err
 	}
 

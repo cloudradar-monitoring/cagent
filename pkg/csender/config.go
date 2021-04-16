@@ -13,6 +13,7 @@ type Csender struct {
 	HubToken   string
 	HubGzip    bool
 	CheckName  string
+	Verbose    bool
 	RetryLimit int
 
 	version string
