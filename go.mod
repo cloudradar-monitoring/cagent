@@ -5,17 +5,16 @@ go 1.16
 replace github.com/kardianos/service => github.com/cloudradar-monitoring/service v1.0.1-0.20190622144052-5da1f538b7fe
 
 require (
-	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6
+	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d
 	github.com/cloudradar-monitoring/dmidecode v0.0.0-20190211163023-395107264116
 	github.com/cloudradar-monitoring/selfupdate v0.0.0-20200615195818-3bc6d247a637
 	github.com/davecgh/go-spew v1.1.1
 	github.com/gentlemanautomaton/windevice v0.0.0-20190308095644-de21ffdab1a3
 	github.com/gentlemanautomaton/winguid v0.0.0-20190307223039-3f364f74ee74 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
-	github.com/go-ole/go-ole v1.2.2
+	github.com/go-ole/go-ole v1.2.4
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/jaypipes/ghw v0.0.0-20190131082148-032dfb1f8cb2
-	github.com/jaypipes/pcidb v0.0.0-20181115143611-141a53e65d4a // indirect
+	github.com/jaypipes/ghw v0.7.0
 	github.com/kardianos/service v1.0.1-0.20190622144052-5da1f538b7fe
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/lxn/walk v0.0.0-20190515104301-6cf0bf1359a5

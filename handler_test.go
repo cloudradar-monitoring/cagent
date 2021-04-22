@@ -30,7 +30,7 @@ func TestCagentCollectMeasurements(t *testing.T) {
 	ca := helperCreateCagent(t)
 	defer ca.Shutdown()
 
-	m, _ := ca.collectMeasurements(false)
+	m, _ := ca.collectMeasurements(true)
 	errorMsg, ok := m["message"]
 	if !ok {
 		errorMsg = ""
