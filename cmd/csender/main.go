@@ -146,6 +146,11 @@ func main() {
 		if err != nil {
 			fatal(err.Error())
 		}
+	} else {
+		err := cs.SetSuccess(true)
+		if err != nil {
+			fatal(err.Error())
+		}
 	}
 
 	if alertMessagePtr != nil && *alertMessagePtr != "" {
