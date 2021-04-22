@@ -51,10 +51,6 @@ func (cs *Csender) GracefulSend() error {
 
 	for {
 		statusCode, err := cs.Send()
-		if err == nil {
-			return nil
-		}
-
 		if cs.Verbose {
 			if statusCode >= 200 && statusCode <= 299 {
 				fmt.Fprintln(os.Stdout, "HTTP CODE", statusCode)
@@ -63,12 +59,15 @@ func (cs *Csender) GracefulSend() error {
 			}
 		}
 
+		if err == nil {
+			return nil
+		}
+
 		if err == cagent.ErrHubTooManyRequests {
 			// for error code 429, wait 10 seconds and try again
 			retryIn = 10 * time.Second
-			log.Infof("csender: HTTP 429, too many requests, retrying in %v", retryIn)
 			if cs.Verbose {
-				fmt.Fprintf(os.Stdout, "got HTTP %d from %s, retrying in %v\n", statusCode, cs.HubURL, retryIn)
+				log.Infof("got HTTP %d from %s, retrying in %v", statusCode, cs.HubURL, retryIn)
 			}
 		} else if err == cagent.ErrHubServerError || errors.Is(err, context.DeadlineExceeded) {
 			// for error codes 5xx, wait for 1 seconds and try again, increase by 1 second each retry
@@ -76,15 +75,13 @@ func (cs *Csender) GracefulSend() error {
 			retryIn = time.Duration(retries) * time.Second
 
 			if retries > cs.RetryLimit {
-				log.Errorf("csender: hub connection error, giving up after %d tries", retries)
 				if cs.Verbose {
-					fmt.Fprintf(os.Stderr, "giving up after %d tries\n", retries)
+					fmt.Fprintf(os.Stderr, "hub connection error, giving up after %d retries\n", retries-1)
 				}
 				return nil
 			}
-			log.Infof("csender: hub connection error '%s', %d/%d, retrying in %v", err, retries, cs.RetryLimit, retryIn)
 			if cs.Verbose {
-				fmt.Fprintf(os.Stdout, "got HTTP %d from %s, retrying in %v\n", statusCode, cs.HubURL, retryIn)
+				fmt.Fprintf(os.Stdout, "hub connection error '%s', got HTTP %d from %s, retrying in %v\n", err, statusCode, cs.HubURL, retryIn)
 			}
 		} else {
 			return err
