@@ -2,8 +2,6 @@ module github.com/cloudradar-monitoring/cagent
 
 go 1.16
 
-replace github.com/kardianos/service => github.com/cloudradar-monitoring/service v1.0.1-0.20190622144052-5da1f538b7fe
-
 require (
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d
 	github.com/cloudradar-monitoring/dmidecode v0.0.0-20190211163023-395107264116
@@ -11,7 +9,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/gentlemanautomaton/windevice v0.0.0-20190308095644-de21ffdab1a3
 	github.com/gentlemanautomaton/winguid v0.0.0-20190307223039-3f364f74ee74 // indirect
-	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-ole/go-ole v1.2.4
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/jaypipes/ghw v0.7.0
@@ -32,6 +29,7 @@ require (
 	golang.org/x/sys v0.0.0-20191024073052-e66fe6eb8e0c
 	gopkg.in/Knetic/govaluate.v3 v3.0.0 // indirect
 	gopkg.in/toast.v1 v1.0.0-20180812000517-0a84660828b2
-	gopkg.in/yaml.v2 v2.2.2 // indirect
-	howett.net/plist v0.0.0-20181124034731-591f970eefbb
+	howett.net/plist v0.0.0-20201203080718-1454fab16a06
 )
+
+replace github.com/kardianos/service => github.com/cloudradar-monitoring/service v1.0.1-0.20190622144052-5da1f538b7fe

@@ -1,5 +1,3 @@
-github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 h1:fLjPD/aNc3UIOA6tDi6QXUemppXK3P9BI7mr2hd6gx8=
-github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d h1:G0m3OIz70MZUWq3EgK3CesDbo8upS2Vm9/P3FtgI+Jk=
 github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/cloudradar-monitoring/dmidecode v0.0.0-20190211163023-395107264116 h1:e42LZ+/rKEopcaCHhjbUUE/8iCmCdy6eesPxEajOO7I=
@@ -16,8 +14,6 @@ github.com/gentlemanautomaton/winguid v0.0.0-20190307223039-3f364f74ee74 h1:KBOU
 github.com/gentlemanautomaton/winguid v0.0.0-20190307223039-3f364f74ee74/go.mod h1:w5CgCbxt8D1rCLKpdgBQLXc+19nItCmTwA8r+pDvlro=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
-github.com/go-ole/go-ole v1.2.2 h1:QNWhweRd9D5Py2rRVboZ2L4SEoW/dyraWJCc8bgS8kE=
-github.com/go-ole/go-ole v1.2.2/go.mod h1:pnvuG7BrDMZ8ifMurTQmxwhQM/odqm9sSqNe5BUI7v4=
 github.com/go-ole/go-ole v1.2.4 h1:nNBDSCOigTSiarFpYE9J/KtEA1IOW4CNeqT9TQDqCxI=
 github.com/go-ole/go-ole v1.2.4/go.mod h1:XCwSNxSkXRo4vlyPy93sltvi/qJq0jqQhjqQNIwKuxM=
 github.com/go-sql-driver/mysql v1.5.0 h1:ozyZYNQW3x3HtqT1jira07DN2PArx2v7/mN66gGcHOs=
@@ -25,12 +21,8 @@ github.com/go-sql-driver/mysql v1.5.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LB
 github.com/hashicorp/go-version v1.2.0 h1:3vNe/fWF5CBgRIguda1meWhsZHy3m8gCJ5wx+dIzX/E=
 github.com/hashicorp/go-version v1.2.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
-github.com/jaypipes/ghw v0.0.0-20190131082148-032dfb1f8cb2 h1:zP/4s3IXJOsKrFrvZoSP7FEaBBA4mQFkdzVW172DdYg=
-github.com/jaypipes/ghw v0.0.0-20190131082148-032dfb1f8cb2/go.mod h1:d4vBgnp8ae8OOU5uJLwjor0uu3TJwAOk1Jt5DNPlnQ4=
 github.com/jaypipes/ghw v0.7.0 h1:DO0qK9hESxkOTWyd/93hjYBRL7MdVSFqaXdcR7n4pVY=
 github.com/jaypipes/ghw v0.7.0/go.mod h1:+gR9bjm3W/HnFi90liF+Fj9GpCe/Dsibl9Im8KmC7c4=
-github.com/jaypipes/pcidb v0.0.0-20181115143611-141a53e65d4a h1:uUGeGpP0oGmFn34GyYEcEy3GRMiAiIkj3qP15P6x8MA=
-github.com/jaypipes/pcidb v0.0.0-20181115143611-141a53e65d4a/go.mod h1:kPBABoOV7RNkrLIqtAdYQeUeHhmWK+NQaYdBNOFB0Iw=
 github.com/jaypipes/pcidb v0.6.0 h1:VIM7GKVaW4qba30cvB67xSCgJPTzkG8Kzw/cbs5PHWU=
 github.com/jaypipes/pcidb v0.6.0/go.mod h1:L2RGk04sfRhp5wvHO0gfRAMoLY/F3PKv/nwJeVoho0o=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
@@ -86,5 +78,6 @@ gopkg.in/toast.v1 v1.0.0-20180812000517-0a84660828b2/go.mod h1:s1Sn2yZos05Qfs7NK
 gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.2 h1:ZCJp+EgiOT7lHqUV2J862kp8Qj64Jo6az82+3Td9dZw=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
-howett.net/plist v0.0.0-20181124034731-591f970eefbb h1:jhnBjNi9UFpfpl8YZhA9CrOqpnJdvzuiHsl/dnxl11M=
 howett.net/plist v0.0.0-20181124034731-591f970eefbb/go.mod h1:vMygbs4qMhSZSc4lCUl2OEE+rDiIIJAIdR4m7MiMcm0=
+howett.net/plist v0.0.0-20201203080718-1454fab16a06 h1:QDxUo/w2COstK1wIBYpzQlHX/NqaQTcf9jyz347nI58=
+howett.net/plist v0.0.0-20201203080718-1454fab16a06/go.mod h1:vMygbs4qMhSZSc4lCUl2OEE+rDiIIJAIdR4m7MiMcm0=
