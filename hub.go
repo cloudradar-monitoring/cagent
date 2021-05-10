@@ -196,6 +196,9 @@ func (ca *Cagent) PostResultToHub(ctx context.Context, result *Result) error {
 		if resp.StatusCode == http.StatusTooManyRequests {
 			return ErrHubTooManyRequests
 		}
+		if resp.StatusCode == http.StatusUnauthorized {
+			return ErrHubUnauthorized
+		}
 		if resp.StatusCode >= 500 && resp.StatusCode <= 599 {
 			return ErrHubServerError
 		}
