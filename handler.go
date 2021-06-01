@@ -34,8 +34,11 @@ type cleanupCommand struct {
 }
 
 var (
+	// 429 error
 	ErrHubTooManyRequests = errors.New("Hub replied with a 429 error code")
-	ErrHubServerError     = errors.New("Hub replied with a 5xx error code")
+
+	// 5xx error code
+	ErrHubServerError = errors.New("Hub replied with a 5xx error code")
 )
 
 func (c *cleanupCommand) AddStep(f func() error) {

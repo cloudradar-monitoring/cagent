@@ -4,15 +4,19 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/cloudradar-monitoring/cagent/pkg/common"
 )
 
 type Csender struct {
-	HubURL    string
-	HubToken  string
-	HubGzip   bool
-	CheckName string
+	HubURL     string
+	HubToken   string
+	HubGzip    bool
+	CheckName  string
+	Verbose    bool
+	RetryLimit int
+	Timeout    time.Duration
 
 	version string
 	result  common.MeasurementsMap

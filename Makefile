@@ -44,9 +44,6 @@ goreleaser-rm-dist: goreleaser-precheck
 goreleaser-snapshot: goreleaser-precheck
 	GORELEASER_CURRENT_TAG=$(GORELEASER_CURRENT_TAG) SELF_UPDATES_FEED_URL=$(SELF_UPDATES_FEED_URL) PROPRIETARY_SELF_UPDATES_FEED_URL=$(PROPRIETARY_SELF_UPDATES_FEED_URL) goreleaser --snapshot --rm-dist
 
-goimports:
-	goimports -l $$(find . -type f -name '*.go' -not -path "./vendor/*")
-
 docker-goreleaser: goreleaser-precheck
 	docker run -it --rm --privileged \
 		-v ${PWD}:${PROJECT_DIR} \

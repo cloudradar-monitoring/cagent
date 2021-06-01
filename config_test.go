@@ -19,15 +19,17 @@ func TestNewMinimumConfig(t *testing.T) {
 	os.Setenv("CAGENT_HUB_USER", envUser)
 	os.Setenv("CAGENT_HUB_PASSWORD", envPass)
 
+	// Unset in the end for cleanup
+	defer os.Unsetenv("CAGENT_HUB_URL")
+	defer os.Unsetenv("CAGENT_HUB_USER")
+	defer os.Unsetenv("CAGENT_HUB_PASSWORD")
+
 	mvc := NewMinimumConfig()
 
 	assert.Equal(t, envURL, mvc.HubURL, "HubURL should be set from env")
 	assert.Equal(t, envUser, mvc.HubUser, "HubUser should be set from env")
 	assert.Equal(t, envPass, mvc.HubPassword, "HubPassword should be set from env")
 	assert.Equal(t, LogLevelError, mvc.LogLevel, "default log level should be error")
-
-	// Unset in the end for cleanup
-	defer os.Clearenv()
 }
 
 func TestTryUpdateConfigFromFile(t *testing.T) {
@@ -51,7 +53,7 @@ fs_metrics = ['a', 'b']
 	assert.Nil(t, err)
 	defer os.Remove(tmpFile.Name())
 
-	err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0755)
+	err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0600)
 	assert.Nil(t, err)
 
 	err = TryUpdateConfigFromFile(&config, tmpFile.Name())
@@ -100,7 +102,7 @@ fs_metrics = ['a', 'b']
 		assert.Nil(t, err)
 		defer os.Remove(tmpFile.Name())
 
-		err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0755)
+		err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0600)
 		assert.Nil(t, err)
 
 		config, err := HandleAllConfigSetup(tmpFile.Name())
@@ -152,7 +154,7 @@ fs_metrics = ['a', 'b']
 		assert.Nil(t, err)
 		defer os.Remove(tmpFile.Name())
 
-		err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0755)
+		err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0600)
 		assert.Nil(t, err)
 
 		_, err = HandleAllConfigSetup(tmpFile.Name())
@@ -173,7 +175,7 @@ fs_metrics = ['a', 'b']
 		assert.Nil(t, err)
 		defer os.Remove(tmpFile.Name())
 
-		err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0755)
+		err = ioutil.WriteFile(tmpFile.Name(), []byte(sampleConfig), 0600)
 		assert.Nil(t, err)
 
 		_, err = HandleAllConfigSetup(tmpFile.Name())

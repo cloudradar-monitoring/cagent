@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -38,7 +39,12 @@ func isDockerAvailable() bool {
 	dockerIsAvailable = err == nil
 
 	if dockerIsAvailable {
-		_, err := common.RunCommandWithTimeout(cmdExecTimeout, "/bin/sh", "-c", "sudo docker info")
+		dockerPrefix := ""
+		if runtime.GOOS == "linux" {
+			dockerPrefix = "sudo "
+		}
+
+		_, err := common.RunCommandWithTimeout(cmdExecTimeout, "/bin/sh", "-c", dockerPrefix+"docker info")
 		if err != nil {
 			log.WithError(err).Debug("while executing 'docker info' to check if docker is available")
 		}

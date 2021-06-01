@@ -38,7 +38,7 @@ func (cs *Csender) httpClient() *http.Client {
 	proxydetect.UserAgent = cs.userAgent()
 
 	return &http.Client{
-		Timeout:   HubTimeout,
+		Timeout:   cs.Timeout,
 		Transport: &tr,
 	}
 }
@@ -47,12 +47,18 @@ func (cs *Csender) httpClient() *http.Client {
 func (cs *Csender) GracefulSend() error {
 
 	retries := 0
-	retryLimit := 5
-	retryInterval := 2 * time.Second
 	var retryIn time.Duration
 
 	for {
-		err := cs.Send()
+		statusCode, err := cs.Send()
+		if cs.Verbose {
+			if statusCode >= 200 && statusCode <= 299 {
+				fmt.Fprintln(os.Stdout, "HTTP CODE", statusCode)
+			} else {
+				fmt.Fprintln(os.Stderr, "HTTP CODE", statusCode)
+			}
+		}
+
 		if err == nil {
 			return nil
 		}
@@ -60,16 +66,23 @@ func (cs *Csender) GracefulSend() error {
 		if err == cagent.ErrHubTooManyRequests {
 			// for error code 429, wait 10 seconds and try again
 			retryIn = 10 * time.Second
-			log.Infof("csender: HTTP 429, too many requests, retrying in %v", retryIn)
-		} else if err == cagent.ErrHubServerError {
-			// for error codes 5xx, wait for 2 seconds and try again
-			retryIn = retryInterval
+			if cs.Verbose {
+				log.Infof("got HTTP %d from %s, retrying in %v", statusCode, cs.HubURL, retryIn)
+			}
+		} else if err == cagent.ErrHubServerError || errors.Is(err, context.DeadlineExceeded) {
+			// for error codes 5xx, wait for 1 seconds and try again, increase by 1 second each retry
 			retries++
-			if retries > retryLimit {
-				log.Errorf("csender: hub connection error, giving up")
+			retryIn = time.Duration(retries) * time.Second
+
+			if retries > cs.RetryLimit {
+				if cs.Verbose {
+					fmt.Fprintf(os.Stderr, "hub connection error, giving up after %d retries\n", retries-1)
+				}
 				return nil
 			}
-			log.Infof("csender: hub connection error %d/%d, retrying in %v", retries, retryLimit, retryInterval)
+			if cs.Verbose {
+				fmt.Fprintf(os.Stdout, "hub connection error '%s', got HTTP %d from %s, retrying in %v\n", err, statusCode, cs.HubURL, retryIn)
+			}
 		} else {
 			return err
 		}
@@ -78,17 +91,17 @@ func (cs *Csender) GracefulSend() error {
 	}
 }
 
-// Send is used by csender
-func (cs *Csender) Send() error {
+// Send is used by csender. returns status code, error
+func (cs *Csender) Send() (int, error) {
 	client := cs.httpClient()
 
 	if _, err := url.Parse(cs.HubURL); err != nil {
-		return fmt.Errorf("incorrect URL provided with -u (hub URL): %s", err.Error())
+		return 0, fmt.Errorf("incorrect URL provided with -u (hub URL): %s", err.Error())
 	}
 
 	b, err := json.Marshal(cs.result)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	var req *http.Request
@@ -100,7 +113,7 @@ func (cs *Csender) Send() error {
 		_ = zw.Close()
 		req, err = http.NewRequest("POST", cs.HubURL, &buffer)
 		if err != nil {
-			return fmt.Errorf("failed to create HTTPS request: %s", err.Error())
+			return 0, fmt.Errorf("failed to create HTTPS request: %s", err.Error())
 		}
 
 		req.Header.Set("Content-Encoding", "gzip")
@@ -109,7 +122,7 @@ func (cs *Csender) Send() error {
 	}
 
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	req.Header.Add("User-Agent", cs.userAgent())
@@ -117,33 +130,29 @@ func (cs *Csender) Send() error {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return clientError(resp, err)
+		return 0, clientError(resp, err)
 	}
 
 	defer resp.Body.Close()
 
 	if resp != nil {
 		if resp.StatusCode == http.StatusTooManyRequests {
-			return cagent.ErrHubTooManyRequests
+			return resp.StatusCode, cagent.ErrHubTooManyRequests
 		}
 		if resp.StatusCode >= 500 && resp.StatusCode <= 599 {
-			return cagent.ErrHubServerError
+			return resp.StatusCode, cagent.ErrHubServerError
 		}
 	}
 
 	if err := clientError(resp, err); err != nil {
-		return err
+		return resp.StatusCode, err
 	}
 
-	return nil
+	return resp.StatusCode, nil
 }
 
 func clientError(resp *http.Response, err error) error {
 	if err != nil {
-		if errors.Cause(err) == context.DeadlineExceeded {
-			err = errors.New("connection timeout, please check your proxy or firewall settings")
-			return err
-		}
 		return err
 	}
 
