@@ -39,6 +39,9 @@ var (
 
 	// 5xx error code
 	ErrHubServerError = errors.New("Hub replied with a 5xx error code")
+
+	// 401 error code
+	ErrHubUnauthorized = errors.New("Hub replied with a 401 error code")
 )
 
 func (c *cleanupCommand) AddStep(f func() error) {
@@ -82,6 +85,14 @@ func (ca *Cagent) Run(outputFile *os.File, interrupt chan struct{}) {
 				// for error code 429, wait 10 seconds and try again
 				retryIn = 10 * time.Second
 				log.Infof("Run: HTTP 429, too many requests, retrying in %v", retryIn)
+			} else if err == ErrHubUnauthorized {
+				// increase sleep time by 30 seconds until it is 1 hour
+				if ca.Config.Sleep < 60*60 {
+					ca.Config.Sleep += 30
+				}
+				retries = 0
+				retryIn = time.Duration(ca.Config.Sleep) * time.Second
+				log.Infof("Run: failed to send measurements to hub. unable to authorize with provided Hub credentials (HTTP 401). waiting %v seconds until next attempt", ca.Config.Sleep)
 			} else if err == ErrHubServerError {
 				// for error codes 5xx, wait for configured amount of time and try again
 				retryIn = time.Duration(ca.Config.OnHTTP5xxRetryInterval) * time.Second
@@ -292,7 +303,7 @@ func (ca *Cagent) reportMeasurements(measurements common.MeasurementsMap, output
 
 	err := ca.PostResultToHub(ctx, result)
 	if err != nil {
-		if err == ErrHubTooManyRequests || err == ErrHubServerError {
+		if err == ErrHubTooManyRequests || err == ErrHubServerError || err == ErrHubUnauthorized {
 			return err
 		}
 		err = errors.Wrap(err, "failed to POST measurement result to Hub")
@@ -317,6 +328,14 @@ func (ca *Cagent) RunHeartbeat(interrupt chan struct{}) {
 				// for error code 429, wait 10 seconds and try again
 				retryIn = 10 * time.Second
 				log.Infof("RunHeartbeat: HTTP 429, too many requests, retrying in %v", retryIn)
+			} else if err == ErrHubUnauthorized {
+				// increase sleep time by 30 seconds until it is 1 hour
+				if ca.Config.Sleep < 60*60 {
+					ca.Config.Sleep += 30
+				}
+				retries = 0
+				retryIn = time.Duration(ca.Config.Sleep) * time.Second
+				log.Infof("Run: failed to send heartbeat to hub. unable to authorize with provided Hub credentials (HTTP 401). waiting %v seconds until next attempt", ca.Config.Sleep)
 			} else if err == ErrHubServerError {
 				// for error codes 5xx, wait for configured amount of time and try again
 				retryIn = time.Duration(ca.Config.OnHTTP5xxRetryInterval) * time.Second
@@ -372,6 +391,9 @@ func (ca *Cagent) sendHeartbeat() error {
 	if resp != nil {
 		if resp.StatusCode == http.StatusTooManyRequests {
 			return ErrHubTooManyRequests
+		}
+		if resp.StatusCode == http.StatusUnauthorized {
+			return ErrHubUnauthorized
 		}
 		if resp.StatusCode >= 500 && resp.StatusCode <= 599 {
 			return ErrHubServerError
