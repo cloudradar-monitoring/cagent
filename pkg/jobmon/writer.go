@@ -28,8 +28,8 @@ func (w *captureWriter) Write(p []byte) (n int, err error) {
 		if newLength <= w.n {
 			w.buf = append(w.buf, p...)
 		} else {
-			truncateIndex := newLength - w.n - 1
-			w.buf = append(w.buf[truncateIndex-1:], p...)
+			truncateIndex := newLength - w.n
+			w.buf = append(w.buf[truncateIndex:], p...)
 		}
 	}
 

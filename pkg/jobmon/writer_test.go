@@ -47,6 +47,24 @@ func TestCaptureWriter(t *testing.T) {
 		assert.Equal(t, "1234567890", cw.String())
 	})
 
+	t.Run("one-byte-overflow-1", func(t *testing.T) {
+		incomingStream := bytes.NewBufferString("")
+		cw := newCaptureWriter(incomingStream, 10)
+
+		_, _ = cw.Write([]byte(strings.Repeat("001234", 1)))
+		_, _ = cw.Write([]byte(strings.Repeat("56789", 1)))
+		assert.Equal(t, strings.Repeat("0123456789", 1), cw.String())
+	})
+
+	t.Run("one-byte-overflow-2", func(t *testing.T) {
+		incomingStream := bytes.NewBufferString("")
+		cw := newCaptureWriter(incomingStream, 10)
+
+		_, _ = cw.Write([]byte(strings.Repeat("00123", 1)))
+		_, _ = cw.Write([]byte(strings.Repeat("456789", 1)))
+		assert.Equal(t, strings.Repeat("0123456789", 1), cw.String())
+	})
+
 	t.Run("overflow-many", func(t *testing.T) {
 		incomingStream := bytes.NewBufferString("")
 		cw := newCaptureWriter(incomingStream, 100)
