@@ -1,4 +1,4 @@
-module github.com/cloudradar-monitoring/cagent
+module github.com/cloudradar/cagent
 
 go 1.16
 
